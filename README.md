@@ -260,6 +260,70 @@ Already configured for local use on macOS
 5. **Rate Limiting:** Add rate limiting for API endpoints
 6. **Database Backups:** Regularly backup your database
 
+## Uninstallation
+
+### Clean Uninstall (Recommended)
+
+Use the included uninstall script for a clean removal:
+
+```bash
+./uninstall.sh
+```
+
+You'll be presented with three options:
+
+**1. Light Cleanup** - Stop servers only
+- Stops any running backend and frontend servers
+- Preserves all code, dependencies, and data
+- Good for: Temporary shutdown, testing, or switching projects
+
+**2. Standard Cleanup** - Remove dependencies and data
+- Stops all servers
+- Removes Python virtual environment (`backend/venv`)
+- Removes Node modules (`frontend/node_modules`)
+- Removes database file (`backend/freezer_inventory.db`)
+- Preserves source code for reinstallation
+- Good for: Fresh start, free up disk space, before reinstalling
+
+**3. Complete Removal** - Delete entire project
+- Stops all servers
+- Removes entire project directory
+- **Cannot be undone** (unless you have a backup or git clone)
+- Good for: Permanent removal
+
+### Manual Uninstallation
+
+If you prefer manual cleanup:
+
+```bash
+# Stop any running servers (Ctrl+C in their terminals, or:)
+lsof -ti:5000 | xargs kill  # Stop backend
+lsof -ti:3000 | xargs kill  # Stop frontend
+
+# Remove dependencies and data
+rm -rf backend/venv
+rm -rf backend/__pycache__
+rm -f backend/freezer_inventory.db
+rm -rf frontend/node_modules
+rm -rf frontend/dist
+
+# Remove entire project
+cd ..
+rm -rf home-freezer-inventory
+```
+
+### What Gets Removed
+
+| Component | Location | Light | Standard | Complete |
+|-----------|----------|-------|----------|----------|
+| Running Servers | Ports 5000, 3000 | ✓ | ✓ | ✓ |
+| Python Virtual Env | `backend/venv/` | ✗ | ✓ | ✓ |
+| Node Modules | `frontend/node_modules/` | ✗ | ✓ | ✓ |
+| Database | `backend/freezer_inventory.db` | ✗ | ✓ | ✓ |
+| Source Code | All `.py`, `.jsx`, etc. | ✗ | ✗ | ✓ |
+
+**Note:** Your data is stored in `backend/freezer_inventory.db`. If you want to back up your inventory before removal, copy this file to a safe location.
+
 ## Future Enhancements
 
 - [ ] iOS companion app for camera-based QR scanning
