@@ -33,35 +33,35 @@ function App() {
     return <div className="loading">Loading...</div>;
   }
 
-  if (!user) {
-    return <Login setUser={setUser} />;
-  }
-
   return (
     <Router>
-      <div className="app">
-        <nav className="navbar">
-          <h1>🧊 Freezer Inventory</h1>
-          <nav>
-            <Link to="/">Inventory</Link>
-            <Link to="/categories">Categories</Link>
-            <Link to="/settings">Settings</Link>
+      {!user ? (
+        <Login setUser={setUser} />
+      ) : (
+        <div className="app">
+          <nav className="navbar">
+            <h1>🧊 Freezer Inventory</h1>
+            <nav>
+              <Link to="/">Inventory</Link>
+              <Link to="/categories">Categories</Link>
+              <Link to="/settings">Settings</Link>
+            </nav>
+            <div className="user-info">
+              <span>
+                {user.username} {user.role === 'admin' && '(Admin)'}
+              </span>
+              <button onClick={handleLogout}>Logout</button>
+            </div>
           </nav>
-          <div className="user-info">
-            <span>
-              {user.username} {user.role === 'admin' && '(Admin)'}
-            </span>
-            <button onClick={handleLogout}>Logout</button>
-          </div>
-        </nav>
 
-        <Routes>
-          <Route path="/" element={<Inventory />} />
-          <Route path="/categories" element={<Categories />} />
-          <Route path="/settings" element={<Settings user={user} />} />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </div>
+          <Routes>
+            <Route path="/" element={<Inventory />} />
+            <Route path="/categories" element={<Categories />} />
+            <Route path="/settings" element={<Settings user={user} />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </div>
+      )}
     </Router>
   );
 }
