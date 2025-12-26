@@ -70,11 +70,6 @@ function Login({ setUser }) {
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
-
-        <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.875rem', color: '#7f8c8d' }}>
-          <p>Default credentials:</p>
-          <p>Username: <strong>admin</strong> / Password: <strong>admin123</strong></p>
-        </div>
       </div>
     </div>
   );
