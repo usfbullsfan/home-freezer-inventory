@@ -9,7 +9,7 @@ settings_bp = Blueprint('settings', __name__)
 @jwt_required()
 def get_settings():
     """Get all settings for current user"""
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     settings = Setting.query.filter_by(user_id=current_user_id).all()
 
     # Return as dictionary for easier frontend usage
@@ -26,7 +26,7 @@ def get_settings():
 @jwt_required()
 def update_settings():
     """Update settings for current user"""
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     data = request.get_json()
 
     if not data:

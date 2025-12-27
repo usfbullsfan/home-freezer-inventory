@@ -12,7 +12,7 @@ items_bp = Blueprint('items', __name__)
 @jwt_required()
 def get_items():
     """Get all items with optional filtering"""
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     # Get query parameters
     status = request.args.get('status', 'in_freezer')
@@ -107,7 +107,7 @@ def get_item_by_qr(qr_code):
 @jwt_required()
 def create_item():
     """Create a new item"""
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     data = request.get_json()
 
     if not data or not data.get('name'):

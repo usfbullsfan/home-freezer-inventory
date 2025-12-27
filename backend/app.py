@@ -37,7 +37,6 @@ def create_app():
     with app.app_context():
         try:
             # Print database location for debugging
-            import os
             db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
             abs_db_path = os.path.abspath(db_path)
             print(f"Database will be created at: {abs_db_path}")

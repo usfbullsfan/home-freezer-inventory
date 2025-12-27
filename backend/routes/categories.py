@@ -29,7 +29,7 @@ def get_category(category_id):
 @jwt_required()
 def create_category():
     """Create a new category"""
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     data = request.get_json()
 
     if not data or not data.get('name'):

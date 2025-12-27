@@ -46,7 +46,7 @@ def login():
 
     # Create access token with 24 hour expiration
     access_token = create_access_token(
-        identity=user.id,
+        identity=str(user.id),
         expires_delta=timedelta(hours=24),
         additional_claims={'role': user.role, 'username': user.username}
     )
@@ -61,7 +61,7 @@ def login():
 @jwt_required()
 def get_current_user():
     """Get current user info from JWT token"""
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     user = User.query.get(current_user_id)
 
     if not user:
@@ -88,7 +88,7 @@ def get_users():
 @jwt_required()
 def change_password():
     """Change current user's password"""
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     user = User.query.get(current_user_id)
 
     if not user:
