@@ -64,7 +64,9 @@ pip install -r requirements.txt
 python app.py
 ```
 
-The backend will start on `http://localhost:5000`
+The backend will start on `http://localhost:5001`
+
+> **Note:** Port 5001 is used instead of 5000 to avoid conflicts with macOS AirPlay Receiver, which uses port 5000 by default.
 
 **Default Admin Credentials:**
 - Username: `admin`
@@ -297,7 +299,7 @@ If you prefer manual cleanup:
 
 ```bash
 # Stop any running servers (Ctrl+C in their terminals, or:)
-lsof -ti:5000 | xargs kill  # Stop backend
+lsof -ti:5001 | xargs kill  # Stop backend
 lsof -ti:3000 | xargs kill  # Stop frontend
 
 # Remove dependencies and data
@@ -316,7 +318,7 @@ rm -rf home-freezer-inventory
 
 | Component | Location | Light | Standard | Complete |
 |-----------|----------|-------|----------|----------|
-| Running Servers | Ports 5000, 3000 | ✓ | ✓ | ✓ |
+| Running Servers | Ports 5001, 3000 | ✓ | ✓ | ✓ |
 | Python Virtual Env | `backend/venv/` | ✗ | ✓ | ✓ |
 | Node Modules | `frontend/node_modules/` | ✗ | ✓ | ✓ |
 | Database | `backend/freezer_inventory.db` | ✗ | ✓ | ✓ |
@@ -343,7 +345,7 @@ rm -rf home-freezer-inventory
 **Backend won't start:**
 - Ensure Python virtual environment is activated
 - Check all dependencies are installed: `pip list`
-- Verify port 5000 is not in use
+- Verify port 5001 is not in use
 
 **Frontend won't start:**
 - Delete `node_modules` and reinstall: `rm -rf node_modules && npm install`
@@ -351,7 +353,7 @@ rm -rf home-freezer-inventory
 - Verify port 3000 is not in use
 
 **Can't login:**
-- Check backend is running on port 5000
+- Check backend is running on port 5001
 - Verify database was created (check for `freezer_inventory.db` in backend folder)
 - Check browser console for errors
 
