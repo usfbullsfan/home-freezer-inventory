@@ -38,7 +38,7 @@ case $choice in
         echo ""
 
         # Stop servers
-        check_and_kill_process 5000 "Backend server"
+        check_and_kill_process 5001 "Backend server"
         check_and_kill_process 3000 "Frontend server"
 
         echo ""
@@ -52,7 +52,7 @@ case $choice in
         echo ""
 
         # Stop servers
-        check_and_kill_process 5000 "Backend server"
+        check_and_kill_process 5001 "Backend server"
         check_and_kill_process 3000 "Frontend server"
 
         # Remove backend virtual environment
@@ -105,7 +105,7 @@ case $choice in
 
         if [ "$confirm" = "yes" ]; then
             # Stop servers
-            check_and_kill_process 5000 "Backend server"
+            check_and_kill_process 5001 "Backend server"
             check_and_kill_process 3000 "Frontend server"
 
             echo ""
