@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { settingsAPI } from '../services/api';
+import { settingsAPI, authAPI } from '../services/api';
 
 function Settings({ user }) {
   const [settings, setSettings] = useState({
@@ -8,6 +8,15 @@ function Settings({ user }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Password change state
+  const [passwordData, setPasswordData] = useState({
+    current_password: '',
+    new_password: '',
+    confirm_password: '',
+  });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
 
   useEffect(() => {
     loadSettings();
@@ -57,6 +66,36 @@ function Settings({ user }) {
     }
   };
 
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    // Validate passwords match
+    if (passwordData.new_password !== passwordData.confirm_password) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    // Validate password length
+    if (passwordData.new_password.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      return;
+    }
+
+    try {
+      await authAPI.changePassword(passwordData.current_password, passwordData.new_password);
+      setPasswordSuccess('Password changed successfully');
+      setPasswordData({
+        current_password: '',
+        new_password: '',
+        confirm_password: '',
+      });
+    } catch (err) {
+      setPasswordError(err.response?.data?.error || 'Failed to change password');
+    }
+  };
+
   if (loading) {
     return (
       <div className="container">
@@ -102,6 +141,57 @@ function Settings({ user }) {
         >
           Save Settings
         </button>
+      </div>
+
+      <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
+        <h3 style={{ marginBottom: '1.5rem' }}>Change Password</h3>
+
+        {passwordError && <div className="error-message">{passwordError}</div>}
+        {passwordSuccess && <div className="success-message">{passwordSuccess}</div>}
+
+        <form onSubmit={handleChangePassword}>
+          <div className="form-group">
+            <label htmlFor="current_password">Current Password</label>
+            <input
+              type="password"
+              id="current_password"
+              value={passwordData.current_password}
+              onChange={(e) => setPasswordData({ ...passwordData, current_password: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="new_password">New Password</label>
+            <input
+              type="password"
+              id="new_password"
+              value={passwordData.new_password}
+              onChange={(e) => setPasswordData({ ...passwordData, new_password: e.target.value })}
+              required
+              minLength="6"
+            />
+            <small style={{ color: '#7f8c8d', display: 'block', marginTop: '0.25rem' }}>
+              Must be at least 6 characters
+            </small>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="confirm_password">Confirm New Password</label>
+            <input
+              type="password"
+              id="confirm_password"
+              value={passwordData.confirm_password}
+              onChange={(e) => setPasswordData({ ...passwordData, confirm_password: e.target.value })}
+              required
+              minLength="6"
+            />
+          </div>
+
+          <button type="submit" className="btn btn-primary">
+            Change Password
+          </button>
+        </form>
       </div>
 
       {user && user.role === 'admin' && (

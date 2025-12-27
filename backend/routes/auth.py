@@ -82,3 +82,34 @@ def get_users():
 
     users = User.query.all()
     return jsonify([user.to_dict() for user in users]), 200
+
+
+@auth_bp.route('/change-password', methods=['POST'])
+@jwt_required()
+def change_password():
+    """Change current user's password"""
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.get_json()
+
+    if not data or not data.get('current_password') or not data.get('new_password'):
+        return jsonify({'error': 'Current password and new password required'}), 400
+
+    # Verify current password
+    if not user.check_password(data['current_password']):
+        return jsonify({'error': 'Current password is incorrect'}), 401
+
+    # Validate new password
+    if len(data['new_password']) < 6:
+        return jsonify({'error': 'New password must be at least 6 characters'}), 400
+
+    # Update password
+    user.set_password(data['new_password'])
+    db.session.commit()
+
+    return jsonify({'message': 'Password changed successfully'}), 200
+
