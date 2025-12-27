@@ -38,6 +38,28 @@ echo "Backend started (PID: $BACKEND_PID)"
 
 cd ..
 
+# Wait for backend to be ready
+echo "Waiting for backend to be ready..."
+BACKEND_READY=false
+MAX_ATTEMPTS=30
+ATTEMPT=0
+
+while [ "$BACKEND_READY" = false ] && [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+    if curl -s http://localhost:5001/api/health > /dev/null 2>&1; then
+        BACKEND_READY=true
+        echo "✓ Backend is ready!"
+    else
+        ATTEMPT=$((ATTEMPT + 1))
+        sleep 1
+    fi
+done
+
+if [ "$BACKEND_READY" = false ]; then
+    echo "Error: Backend failed to start after 30 seconds"
+    kill $BACKEND_PID
+    exit 1
+fi
+
 # Start frontend
 echo "Starting frontend server..."
 cd frontend
