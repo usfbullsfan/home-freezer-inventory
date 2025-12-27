@@ -64,8 +64,8 @@ fi
 echo "Starting frontend server..."
 cd frontend
 
-# Check if node_modules exists
-if [ ! -d "node_modules" ]; then
+# Check if node_modules exists and esbuild is properly installed
+if [ ! -d "node_modules" ] || [ ! -f "node_modules/esbuild/bin/esbuild" ]; then
     echo "Installing frontend dependencies..."
     npm install
 fi
