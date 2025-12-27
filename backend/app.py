@@ -35,7 +35,19 @@ def create_app():
 
     # Initialize database and create default data
     with app.app_context():
-        db.create_all()
+        try:
+            # Print database location for debugging
+            import os
+            db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+            abs_db_path = os.path.abspath(db_path)
+            print(f"Database will be created at: {abs_db_path}")
+
+            db.create_all()
+            print("Database tables created successfully")
+        except Exception as e:
+            print(f"ERROR creating database: {e}")
+            import traceback
+            traceback.print_exc()
 
         # Create default admin user if none exists
         if not User.query.filter_by(role='admin').first():
