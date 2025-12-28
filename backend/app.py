@@ -4,13 +4,18 @@ from flask_jwt_extended import JWTManager
 from models import db, User, Category
 import os
 
-def create_app():
+def create_app(test_config=None):
     app = Flask(__name__)
 
     # Configuration
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///freezer_inventory.db'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'dev-secret-key-change-in-production')
+    if test_config is None:
+        # Production configuration
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///freezer_inventory.db'
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'dev-secret-key-change-in-production')
+    else:
+        # Test configuration
+        app.config.update(test_config)
 
     # Initialize extensions
     db.init_app(app)
@@ -33,53 +38,54 @@ def create_app():
     def health_check():
         return jsonify({'status': 'healthy'}), 200
 
-    # Initialize database and create default data
-    with app.app_context():
-        try:
-            # Print database location for debugging
-            db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
-            abs_db_path = os.path.abspath(db_path)
-            print(f"Database will be created at: {abs_db_path}")
+    # Initialize database and create default data (skip in test mode)
+    if not app.config.get('TESTING', False):
+        with app.app_context():
+            try:
+                # Print database location for debugging
+                db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+                abs_db_path = os.path.abspath(db_path)
+                print(f"Database will be created at: {abs_db_path}")
 
-            db.create_all()
-            print("Database tables created successfully")
-        except Exception as e:
-            print(f"ERROR creating database: {e}")
-            import traceback
-            traceback.print_exc()
+                db.create_all()
+                print("Database tables created successfully")
+            except Exception as e:
+                print(f"ERROR creating database: {e}")
+                import traceback
+                traceback.print_exc()
 
-        # Create default admin user if none exists
-        if not User.query.filter_by(role='admin').first():
-            admin = User(username='admin', role='admin')
-            admin.set_password('admin123')  # Change this in production!
-            db.session.add(admin)
-            print("Created default admin user (username: admin, password: admin123)")
+            # Create default admin user if none exists
+            if not User.query.filter_by(role='admin').first():
+                admin = User(username='admin', role='admin')
+                admin.set_password('admin123')  # Change this in production!
+                db.session.add(admin)
+                print("Created default admin user (username: admin, password: admin123)")
 
-        # Create default categories if none exist
-        if not Category.query.first():
-            default_categories = [
-                {'name': 'Beef', 'days': 180, 'system': True},
-                {'name': 'Pork', 'days': 180, 'system': True},
-                {'name': 'Chicken', 'days': 270, 'system': True},
-                {'name': 'Fish', 'days': 180, 'system': True},
-                {'name': 'Ice Cream', 'days': 90, 'system': True},
-                {'name': 'Appetizers', 'days': 180, 'system': True},
-                {'name': 'Entrees', 'days': 180, 'system': True},
-                {'name': 'Prepared Meals', 'days': 90, 'system': True},
-                {'name': 'Staples', 'days': 365, 'system': True},
-            ]
+            # Create default categories if none exist
+            if not Category.query.first():
+                default_categories = [
+                    {'name': 'Beef', 'days': 180, 'system': True},
+                    {'name': 'Pork', 'days': 180, 'system': True},
+                    {'name': 'Chicken', 'days': 270, 'system': True},
+                    {'name': 'Fish', 'days': 180, 'system': True},
+                    {'name': 'Ice Cream', 'days': 90, 'system': True},
+                    {'name': 'Appetizers', 'days': 180, 'system': True},
+                    {'name': 'Entrees', 'days': 180, 'system': True},
+                    {'name': 'Prepared Meals', 'days': 90, 'system': True},
+                    {'name': 'Staples', 'days': 365, 'system': True},
+                ]
 
-            for cat_data in default_categories:
-                category = Category(
-                    name=cat_data['name'],
-                    default_expiration_days=cat_data['days'],
-                    is_system=cat_data['system']
-                )
-                db.session.add(category)
+                for cat_data in default_categories:
+                    category = Category(
+                        name=cat_data['name'],
+                        default_expiration_days=cat_data['days'],
+                        is_system=cat_data['system']
+                    )
+                    db.session.add(category)
 
-            print(f"Created {len(default_categories)} default categories")
+                print(f"Created {len(default_categories)} default categories")
 
-        db.session.commit()
+            db.session.commit()
 
     return app
 
