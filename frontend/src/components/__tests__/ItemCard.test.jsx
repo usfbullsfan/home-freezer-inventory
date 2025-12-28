@@ -32,14 +32,24 @@ describe('ItemCard', () => {
     expect(screen.getByText(/Beef/)).toBeInTheDocument();
   });
 
-  it('displays QR code', () => {
+  it('displays QR code when QR button is clicked', () => {
     render(<ItemCard item={mockItem} onEdit={mockOnEdit} onStatusChange={mockOnStatusChange} />);
-    expect(screen.getByText(/FRZ-ABC123/)).toBeInTheDocument();
+
+    // QR code is hidden initially
+    expect(screen.queryByText('FRZ-ABC123')).not.toBeInTheDocument();
+
+    // Click QR button to show QR code
+    const qrButton = screen.getByText('QR');
+    fireEvent.click(qrButton);
+
+    // Now QR code should be visible
+    expect(screen.getByText('FRZ-ABC123')).toBeInTheDocument();
   });
 
   it('calculates days in freezer', () => {
     render(<ItemCard item={mockItem} onEdit={mockOnEdit} onStatusChange={mockOnStatusChange} />);
-    expect(screen.getByText(/0 days in freezer/)).toBeInTheDocument();
+    expect(screen.getByText('Days in freezer:')).toBeInTheDocument();
+    expect(screen.getByText(/0 days/)).toBeInTheDocument();
   });
 
   it('shows expiration warning for items expiring soon', () => {
@@ -69,21 +79,22 @@ describe('ItemCard', () => {
     expect(mockOnEdit).toHaveBeenCalled();
   });
 
-  it('calls onStatusChange when Consume button is clicked', () => {
+  it('calls onStatusChange when Consumed button is clicked', () => {
     render(<ItemCard item={mockItem} onEdit={mockOnEdit} onStatusChange={mockOnStatusChange} />);
-    const consumeButton = screen.getByText('Consume');
+    const consumeButton = screen.getByText('Consumed');
     fireEvent.click(consumeButton);
     expect(mockOnStatusChange).toHaveBeenCalledWith('consumed');
   });
 
-  it('does not render days in freezer for negative values', () => {
+  it('does not render negative days in freezer', () => {
     const futureItem = {
       ...mockItem,
       added_date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString()
     };
 
     render(<ItemCard item={futureItem} onEdit={mockOnEdit} onStatusChange={mockOnStatusChange} />);
-    expect(screen.getByText(/0 days in freezer/)).toBeInTheDocument();
+    expect(screen.getByText('Days in freezer:')).toBeInTheDocument();
+    expect(screen.getByText(/0 days/)).toBeInTheDocument();
   });
 
   it('displays notes when present', () => {

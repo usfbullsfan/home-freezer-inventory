@@ -9,13 +9,14 @@ from datetime import datetime
 # Add parent directory to path so we can import app modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app import app as flask_app
+from app import create_app
 from models import db, User, Category, Item, Setting
 
 
 @pytest.fixture
 def app():
     """Create application for testing"""
+    flask_app = create_app()
     flask_app.config.update({
         'TESTING': True,
         'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
