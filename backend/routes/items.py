@@ -120,6 +120,11 @@ def create_item():
     if Item.query.filter_by(qr_code=qr_code).first():
         return jsonify({'error': 'QR code already exists'}), 400
 
+    # Parse added_date if provided
+    added_date = None
+    if data.get('added_date'):
+        added_date = datetime.fromisoformat(data['added_date'])
+
     # Calculate expiration date if not provided
     expiration_date = None
     if data.get('expiration_date'):
@@ -127,7 +132,9 @@ def create_item():
     elif data.get('category_id'):
         category = Category.query.get(data['category_id'])
         if category and category.default_expiration_days:
-            expiration_date = datetime.utcnow() + timedelta(days=category.default_expiration_days)
+            # Use custom added_date if provided, otherwise use current time
+            base_date = added_date or datetime.utcnow()
+            expiration_date = base_date + timedelta(days=category.default_expiration_days)
 
     item = Item(
         qr_code=qr_code,
@@ -140,6 +147,10 @@ def create_item():
         notes=data.get('notes'),
         added_by_user_id=current_user_id
     )
+
+    # Set added_date if provided (must be set after creation to override default)
+    if added_date:
+        item.added_date = added_date
 
     db.session.add(item)
     db.session.commit()
@@ -169,6 +180,8 @@ def update_item(item_id):
         item.weight_unit = data['weight_unit']
     if 'category_id' in data:
         item.category_id = data['category_id']
+    if 'added_date' in data:
+        item.added_date = datetime.fromisoformat(data['added_date']) if data['added_date'] else datetime.utcnow()
     if 'expiration_date' in data:
         item.expiration_date = datetime.fromisoformat(data['expiration_date']) if data['expiration_date'] else None
     if 'notes' in data:

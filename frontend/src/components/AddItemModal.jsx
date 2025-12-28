@@ -9,6 +9,7 @@ function AddItemModal({ item, categories, onClose, onSave }) {
     weight: '',
     weight_unit: 'lb',
     category_id: '',
+    added_date: '',
     expiration_date: '',
     notes: '',
   });
@@ -24,6 +25,9 @@ function AddItemModal({ item, categories, onClose, onSave }) {
         weight: item.weight || '',
         weight_unit: item.weight_unit || 'lb',
         category_id: item.category_id || '',
+        added_date: item.added_date
+          ? new Date(item.added_date).toISOString().split('T')[0]
+          : '',
         expiration_date: item.expiration_date
           ? new Date(item.expiration_date).toISOString().split('T')[0]
           : '',
@@ -55,7 +59,7 @@ function AddItemModal({ item, categories, onClose, onSave }) {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, keepOpen = false) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -75,12 +79,37 @@ function AddItemModal({ item, categories, onClose, onSave }) {
         await itemsAPI.createItem(submitData);
       }
 
-      onSave();
+      if (keepOpen) {
+        // Reset form for next entry, but keep category selected
+        const savedCategoryId = formData.category_id;
+        const savedCategoryExpiration = formData.expiration_date;
+
+        setFormData({
+          qr_code: '',
+          name: '',
+          source: '',
+          weight: '',
+          weight_unit: 'lb',
+          category_id: savedCategoryId,
+          added_date: '',
+          expiration_date: savedCategoryExpiration,
+          notes: '',
+        });
+
+        // Trigger a soft refresh to update the items list in the background
+        onSave(true);
+      } else {
+        onSave();
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save item. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddAndCreateMore = (e) => {
+    handleSubmit(e, true);
   };
 
   return (
@@ -182,6 +211,20 @@ function AddItemModal({ item, categories, onClose, onSave }) {
           </div>
 
           <div className="form-group">
+            <label htmlFor="added_date">Date Added to Freezer</label>
+            <input
+              type="date"
+              id="added_date"
+              name="added_date"
+              value={formData.added_date}
+              onChange={handleChange}
+            />
+            <small style={{ color: '#7f8c8d' }}>
+              Leave blank to use today's date
+            </small>
+          </div>
+
+          <div className="form-group">
             <label htmlFor="expiration_date">Expiration Date</label>
             <input
               type="date"
@@ -216,6 +259,16 @@ function AddItemModal({ item, categories, onClose, onSave }) {
             >
               Cancel
             </button>
+            {!item?.id && (
+              <button
+                type="button"
+                className="btn btn-success"
+                onClick={handleAddAndCreateMore}
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : 'Add + Create More'}
+              </button>
+            )}
             <button
               type="submit"
               className="btn btn-primary"

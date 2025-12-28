@@ -72,9 +72,11 @@ function Inventory() {
     setShowAddModal(true);
   };
 
-  const handleItemSaved = () => {
-    setShowAddModal(false);
-    setEditingItem(null);
+  const handleItemSaved = (keepOpen = false) => {
+    if (!keepOpen) {
+      setShowAddModal(false);
+      setEditingItem(null);
+    }
     loadItems();
   };
 
