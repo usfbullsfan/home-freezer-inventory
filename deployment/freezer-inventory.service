@@ -1,0 +1,30 @@
+[Unit]
+Description=Freezer Inventory Tracker Backend (Gunicorn)
+After=network.target
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/freezer-inventory/backend
+Environment="PATH=/var/www/freezer-inventory/backend/venv/bin"
+
+# Run Gunicorn
+ExecStart=/var/www/freezer-inventory/backend/venv/bin/gunicorn \
+    --workers 2 \
+    --bind 127.0.0.1:5001 \
+    --timeout 120 \
+    --access-logfile /var/www/freezer-inventory/backend/logs/access.log \
+    --error-logfile /var/www/freezer-inventory/backend/logs/error.log \
+    app:app
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
