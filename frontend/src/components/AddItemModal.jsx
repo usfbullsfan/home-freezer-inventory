@@ -115,11 +115,14 @@ function AddItemModal({ item, categories, onClose, onSave }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{item && item.id ? 'Edit Item' : 'Add New Item'}</h2>
+        <div className="modal-header">
+          <h2>{item && item.id ? 'Edit Item' : 'Add New Item'}</h2>
+        </div>
 
-        {error && <div className="error-message">{error}</div>}
+        <div className="modal-content">
+          {error && <div className="error-message">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} id="item-form">
           <div className="form-group">
             <label htmlFor="name">Item Name *</label>
             <input
@@ -249,35 +252,37 @@ function AddItemModal({ item, categories, onClose, onSave }) {
               placeholder="Any additional notes about this item..."
             />
           </div>
+          </form>
+        </div>
 
-          <div className="modal-actions">
+        <div className="modal-actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={onClose}
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          {!item?.id && (
             <button
               type="button"
-              className="btn btn-secondary"
-              onClick={onClose}
+              className="btn btn-success"
+              onClick={handleAddAndCreateMore}
               disabled={loading}
             >
-              Cancel
+              {loading ? 'Saving...' : 'Add + Create More'}
             </button>
-            {!item?.id && (
-              <button
-                type="button"
-                className="btn btn-success"
-                onClick={handleAddAndCreateMore}
-                disabled={loading}
-              >
-                {loading ? 'Saving...' : 'Add + Create More'}
-              </button>
-            )}
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={loading}
-            >
-              {loading ? 'Saving...' : item && item.id ? 'Update Item' : 'Add Item'}
-            </button>
-          </div>
-        </form>
+          )}
+          <button
+            type="submit"
+            form="item-form"
+            className="btn btn-primary"
+            disabled={loading}
+          >
+            {loading ? 'Saving...' : item && item.id ? 'Update Item' : 'Add Item'}
+          </button>
+        </div>
       </div>
     </div>
   );
