@@ -6,7 +6,7 @@ describe('ItemCard', () => {
   const mockItem = {
     id: 1,
     name: 'Ribeye Steak',
-    qr_code: 'FRZ-ABC123',
+    qr_code: 'ABC123',
     source: 'Costco',
     weight: 2.5,
     weight_unit: 'lb',
@@ -32,18 +32,18 @@ describe('ItemCard', () => {
     expect(screen.getByText(/Beef/)).toBeInTheDocument();
   });
 
-  it('displays QR code when QR button is clicked', () => {
+  it('displays item code when Code button is clicked', () => {
     render(<ItemCard item={mockItem} onEdit={mockOnEdit} onStatusChange={mockOnStatusChange} />);
 
-    // QR code is hidden initially
-    expect(screen.queryByText('FRZ-ABC123')).not.toBeInTheDocument();
+    // Item code is hidden initially
+    expect(screen.queryByText('ABC123')).not.toBeInTheDocument();
 
-    // Click QR button to show QR code
-    const qrButton = screen.getByText('QR');
-    fireEvent.click(qrButton);
+    // Click Code button to show item code
+    const codeButton = screen.getByText('Code');
+    fireEvent.click(codeButton);
 
-    // Now QR code should be visible
-    expect(screen.getByText('FRZ-ABC123')).toBeInTheDocument();
+    // Now item code should be visible
+    expect(screen.getByText('ABC123')).toBeInTheDocument();
   });
 
   it('calculates days in freezer', () => {
