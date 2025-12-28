@@ -88,7 +88,12 @@ def update_category(category_id):
 @categories_bp.route('/<int:category_id>', methods=['DELETE'])
 @jwt_required()
 def delete_category(category_id):
-    """Delete a category"""
+    """Delete a category (admin only)"""
+    # Check if user is admin
+    claims = get_jwt()
+    if claims.get('role') != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+
     category = Category.query.get(category_id)
 
     if not category:

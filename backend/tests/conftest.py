@@ -16,13 +16,14 @@ from models import db, User, Category, Item, Setting
 @pytest.fixture
 def app():
     """Create application for testing"""
-    flask_app = create_app()
-    flask_app.config.update({
+    test_config = {
         'TESTING': True,
         'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
+        'SQLALCHEMY_TRACK_MODIFICATIONS': False,
         'JWT_SECRET_KEY': 'test-secret-key',
         'SECRET_KEY': 'test-secret-key',
-    })
+    }
+    flask_app = create_app(test_config=test_config)
 
     # Create tables
     with flask_app.app_context():
