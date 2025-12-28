@@ -115,7 +115,7 @@ function ItemCard({ item, onEdit, onStatusChange }) {
           onClick={() => setShowQR(!showQR)}
           style={{ flex: 0.5 }}
         >
-          QR
+          Code
         </button>
         <button
           className="btn btn-primary"
@@ -159,7 +159,7 @@ function ItemCard({ item, onEdit, onStatusChange }) {
             alt={`QR Code for ${item.name}`}
           />
           <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#7f8c8d' }}>
-            Scan this code to quickly access this item
+            Write this code on your bag or scan the QR code to quickly access this item
           </p>
         </div>
       )}

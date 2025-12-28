@@ -124,5 +124,11 @@ class Setting(db.Model):
 
 
 def generate_qr_code():
-    """Generate a unique QR code identifier"""
-    return f"FRZ-{uuid.uuid4().hex[:12].upper()}"
+    """Generate a unique alphanumeric code identifier (e.g., ABC123)"""
+    import random
+    import string
+
+    # Generate 3 random uppercase letters + 3 random digits
+    letters = ''.join(random.choices(string.ascii_uppercase, k=3))
+    digits = ''.join(random.choices(string.digits, k=3))
+    return f"{letters}{digits}"

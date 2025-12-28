@@ -33,7 +33,11 @@ def test_create_item_success(client, auth_headers_admin):
     assert response.json['weight'] == 2.5
     assert response.json['status'] == 'in_freezer'
     assert 'qr_code' in response.json
-    assert response.json['qr_code'].startswith('FRZ-')
+    # Verify new format: 3 letters + 3 digits (e.g., ABC123)
+    qr_code = response.json['qr_code']
+    assert len(qr_code) == 6
+    assert qr_code[:3].isalpha() and qr_code[:3].isupper()
+    assert qr_code[3:].isdigit()
 
 
 def test_create_item_with_custom_qr_code(client, auth_headers_admin):

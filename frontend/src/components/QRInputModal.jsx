@@ -21,24 +21,24 @@ function QRInputModal({ onClose, onSubmit }) {
 
         <div className="modal-content">
           <p style={{ marginBottom: '1rem', color: '#7f8c8d' }}>
-            Enter the QR code manually or paste it from a scanner.
-            In a future version, you'll be able to scan directly with your camera.
+            Enter the item code manually or paste it from a scanner.
+            You can write these simple codes directly on bags!
           </p>
 
           <form onSubmit={handleSubmit} id="qr-form">
             <div className="form-group">
-              <label htmlFor="qr_code">QR Code / Barcode</label>
+              <label htmlFor="qr_code">Item Code</label>
               <input
                 type="text"
                 id="qr_code"
                 value={qrCode}
                 onChange={(e) => setQrCode(e.target.value)}
-                placeholder="e.g., FRZ-ABC123DEF456"
+                placeholder="e.g., ABC123"
                 autoFocus
                 required
               />
               <small style={{ color: '#7f8c8d' }}>
-                Enter the code printed on your item's label
+                Enter the 6-character code written on your item's bag
               </small>
             </div>
           </form>
