@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { settingsAPI, authAPI } from '../services/api';
+import UserManagement from '../components/UserManagement';
 
 function Settings({ user }) {
   const [settings, setSettings] = useState({
@@ -193,6 +194,10 @@ function Settings({ user }) {
           </button>
         </form>
       </div>
+
+      {user && user.role === 'admin' && (
+        <UserManagement currentUser={user} />
+      )}
 
       {user && user.role === 'admin' && (
         <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>

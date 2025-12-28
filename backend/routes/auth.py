@@ -6,8 +6,15 @@ from datetime import timedelta
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/register', methods=['POST'])
+@jwt_required()
 def register():
-    """Register a new user (admin only in production, open for MVP)"""
+    """Register a new user (admin only)"""
+    from flask_jwt_extended import get_jwt
+    claims = get_jwt()
+
+    if claims.get('role') != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+
     data = request.get_json()
 
     if not data or not data.get('username') or not data.get('password'):
@@ -112,4 +119,94 @@ def change_password():
     db.session.commit()
 
     return jsonify({'message': 'Password changed successfully'}), 200
+
+
+@auth_bp.route('/users/<int:user_id>', methods=['PUT'])
+@jwt_required()
+def update_user(user_id):
+    """Update user details (admin only)"""
+    from flask_jwt_extended import get_jwt
+    claims = get_jwt()
+
+    if claims.get('role') != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.get_json()
+
+    # Update username if provided
+    if 'username' in data and data['username'] != user.username:
+        if User.query.filter_by(username=data['username']).first():
+            return jsonify({'error': 'Username already exists'}), 400
+        user.username = data['username']
+
+    # Update role if provided
+    if 'role' in data:
+        if data['role'] not in ['admin', 'user']:
+            return jsonify({'error': 'Invalid role. Must be "admin" or "user"'}), 400
+        user.role = data['role']
+
+    db.session.commit()
+
+    return jsonify({
+        'message': 'User updated successfully',
+        'user': user.to_dict()
+    }), 200
+
+
+@auth_bp.route('/users/<int:user_id>', methods=['DELETE'])
+@jwt_required()
+def delete_user(user_id):
+    """Delete a user (admin only)"""
+    from flask_jwt_extended import get_jwt
+    claims = get_jwt()
+
+    if claims.get('role') != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+
+    current_user_id = int(get_jwt_identity())
+
+    # Prevent admin from deleting themselves
+    if user_id == current_user_id:
+        return jsonify({'error': 'Cannot delete your own account'}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    db.session.delete(user)
+    db.session.commit()
+
+    return jsonify({'message': 'User deleted successfully'}), 200
+
+
+@auth_bp.route('/users/<int:user_id>/reset-password', methods=['POST'])
+@jwt_required()
+def reset_user_password(user_id):
+    """Reset a user's password (admin only)"""
+    from flask_jwt_extended import get_jwt
+    claims = get_jwt()
+
+    if claims.get('role') != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.get_json()
+    if not data or not data.get('new_password'):
+        return jsonify({'error': 'New password required'}), 400
+
+    # Validate new password
+    if len(data['new_password']) < 6:
+        return jsonify({'error': 'Password must be at least 6 characters'}), 400
+
+    user.set_password(data['new_password'])
+    db.session.commit()
+
+    return jsonify({'message': 'Password reset successfully'}), 200
 

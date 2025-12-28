@@ -30,6 +30,15 @@ export const authAPI = {
   getUsers: () =>
     api.get('/auth/users'),
 
+  updateUser: (userId, data) =>
+    api.put(`/auth/users/${userId}`, data),
+
+  deleteUser: (userId) =>
+    api.delete(`/auth/users/${userId}`),
+
+  resetUserPassword: (userId, newPassword) =>
+    api.post(`/auth/users/${userId}/reset-password`, { new_password: newPassword }),
+
   changePassword: (currentPassword, newPassword) =>
     api.post('/auth/change-password', { current_password: currentPassword, new_password: newPassword }),
 };
