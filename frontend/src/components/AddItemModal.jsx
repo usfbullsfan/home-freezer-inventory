@@ -136,37 +136,38 @@ function AddItemModal({ item, categories, onClose, onSave }) {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="qr_code">QR Code / Barcode</label>
-            <input
-              type="text"
-              id="qr_code"
-              name="qr_code"
-              value={formData.qr_code}
-              onChange={handleChange}
-              placeholder="Leave blank to auto-generate"
-              disabled={item && item.id} // Can't change QR code of existing item
-            />
-            {formData.qr_code && (
-              <small style={{ color: '#7f8c8d' }}>
-                This code will be used to identify this item
-              </small>
-            )}
+          <div className="form-row form-row-2">
+            <div className="form-group">
+              <label htmlFor="source">Source</label>
+              <input
+                type="text"
+                id="source"
+                name="source"
+                value={formData.source}
+                onChange={handleChange}
+                placeholder="e.g., Costco"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="category_id">Category</label>
+              <select
+                id="category_id"
+                name="category_id"
+                value={formData.category_id}
+                onChange={handleCategoryChange}
+              >
+                <option value="">Select</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="source">Source</label>
-            <input
-              type="text"
-              id="source"
-              name="source"
-              value={formData.source}
-              onChange={handleChange}
-              placeholder="e.g., Costco, Butcher Shop"
-            />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+          <div className="form-row form-row-3">
             <div className="form-group">
               <label htmlFor="weight">Weight</label>
               <input
@@ -196,60 +197,52 @@ function AddItemModal({ item, categories, onClose, onSave }) {
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="category_id">Category</label>
-            <select
-              id="category_id"
-              name="category_id"
-              value={formData.category_id}
-              onChange={handleCategoryChange}
-            >
-              <option value="">Select a category</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name} (default {cat.default_expiration_days} days)
-                </option>
-              ))}
-            </select>
+          <div className="form-row form-row-2">
+            <div className="form-group">
+              <label htmlFor="added_date">Date Added</label>
+              <input
+                type="date"
+                id="added_date"
+                name="added_date"
+                value={formData.added_date}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="expiration_date">Expires</label>
+              <input
+                type="date"
+                id="expiration_date"
+                name="expiration_date"
+                value={formData.expiration_date}
+                onChange={handleChange}
+              />
+            </div>
           </div>
 
           <div className="form-group">
-            <label htmlFor="added_date">Date Added to Freezer</label>
+            <label htmlFor="qr_code">QR Code (optional)</label>
             <input
-              type="date"
-              id="added_date"
-              name="added_date"
-              value={formData.added_date}
+              type="text"
+              id="qr_code"
+              name="qr_code"
+              value={formData.qr_code}
               onChange={handleChange}
+              placeholder="Auto-generated if blank"
+              disabled={item && item.id}
             />
-            <small style={{ color: '#7f8c8d' }}>
-              Leave blank to use today's date
-            </small>
           </div>
 
           <div className="form-group">
-            <label htmlFor="expiration_date">Expiration Date</label>
-            <input
-              type="date"
-              id="expiration_date"
-              name="expiration_date"
-              value={formData.expiration_date}
-              onChange={handleChange}
-            />
-            <small style={{ color: '#7f8c8d' }}>
-              Leave blank to use category default, or enter specific date
-            </small>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="notes">Notes</label>
+            <label htmlFor="notes">Notes (optional)</label>
             <textarea
               id="notes"
               name="notes"
               value={formData.notes}
               onChange={handleChange}
-              rows="3"
-              placeholder="Any additional notes about this item..."
+              rows="2"
+              placeholder="Additional notes..."
             />
           </div>
           </form>
