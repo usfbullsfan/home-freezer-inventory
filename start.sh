@@ -31,8 +31,8 @@ fi
 source venv/bin/activate
 pip install -r requirements.txt > /dev/null 2>&1
 
-# Start backend in background
-python app.py &
+# Start backend in background with gunicorn
+gunicorn "app:create_app()" --bind 0.0.0.0:5001 --workers 2 --access-logfile - &
 BACKEND_PID=$!
 echo "Backend started (PID: $BACKEND_PID)"
 
