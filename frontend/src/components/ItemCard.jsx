@@ -23,9 +23,9 @@ function ItemCard({ item, onEdit, onStatusChange }) {
       }
 
       // Check if it's one of the oldest (older than 6 months)
-      const daysInFreezer = Math.floor(
+      const daysInFreezer = Math.max(0, Math.floor(
         (new Date() - new Date(item.added_date)) / (1000 * 60 * 60 * 24)
-      );
+      ));
       if (daysInFreezer > 180) {
         classes += ' oldest';
       }
@@ -40,9 +40,10 @@ function ItemCard({ item, onEdit, onStatusChange }) {
   };
 
   const getDaysInFreezer = () => {
-    return Math.floor(
+    const days = Math.floor(
       (new Date() - new Date(item.added_date)) / (1000 * 60 * 60 * 24)
     );
+    return Math.max(0, days); // Ensure it's never negative
   };
 
   const getDaysUntilExpiry = () => {
