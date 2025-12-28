@@ -29,11 +29,14 @@ def get_items():
         setting_name='track_history'
     ).first()
 
+    # Default to tracking history if setting doesn't exist
+    track_history_enabled = True if not track_history else track_history.setting_value == 'true'
+
     # Build query
     query = Item.query
 
     # Filter by status
-    if not track_history or track_history.setting_value != 'true':
+    if not track_history_enabled:
         # Only show items in freezer if history tracking is off
         query = query.filter_by(status='in_freezer')
     elif status != 'all':
