@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, render_template_string
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, Item, Category, User, Setting, generate_qr_code
 from datetime import datetime, timedelta
@@ -6,6 +6,7 @@ import qrcode
 import io
 import requests
 import os
+import base64
 
 items_bp = Blueprint('items', __name__)
 
@@ -636,3 +637,210 @@ def search_image():
             'image_url': None,
             'message': 'No image found or image fetching disabled'
         }), 200
+
+
+@items_bp.route('/print-labels', methods=['POST'])
+@jwt_required()
+def print_labels():
+    """Generate printable QR code labels for selected items.
+
+    Accepts JSON body with:
+    - item_ids: List of item IDs to print labels for
+    - show_name: Boolean, include item name on label
+    - show_expiration: Boolean, include expiration date on label
+    - show_category: Boolean, include category on label
+    - show_weight: Boolean, include weight/size on label
+    """
+    data = request.get_json()
+
+    if not data or not data.get('item_ids'):
+        return jsonify({'error': 'item_ids is required'}), 400
+
+    item_ids = data['item_ids']
+    show_name = data.get('show_name', False)
+    show_expiration = data.get('show_expiration', False)
+    show_category = data.get('show_category', False)
+    show_weight = data.get('show_weight', False)
+
+    # Fetch items
+    items = Item.query.filter(Item.id.in_(item_ids)).all()
+
+    if not items:
+        return jsonify({'error': 'No items found'}), 404
+
+    # Generate QR code images as base64
+    labels_data = []
+    for item in items:
+        # Generate QR code
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=2,
+        )
+        qr_data = f"freezer-item:{item.qr_code}"
+        qr.add_data(qr_data)
+        qr.make(fit=True)
+
+        img = qr.make_image(fill_color="black", back_color="white")
+
+        # Convert to base64
+        img_io = io.BytesIO()
+        img.save(img_io, 'PNG')
+        img_io.seek(0)
+        img_base64 = base64.b64encode(img_io.getvalue()).decode()
+
+        # Build label data
+        label_info = {
+            'qr_code': item.qr_code,
+            'qr_image': f"data:image/png;base64,{img_base64}",
+        }
+
+        if show_name:
+            label_info['name'] = item.name
+        if show_expiration and item.expiration_date:
+            label_info['expiration'] = item.expiration_date.strftime('%m/%d/%Y')
+        if show_category and item.category:
+            label_info['category'] = item.category.name
+        if show_weight and item.weight:
+            label_info['weight'] = f"{item.weight} {item.weight_unit}"
+
+        labels_data.append(label_info)
+
+    # Generate HTML template for printing
+    html_template = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Freezer Inventory Labels</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 0.5in;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .label-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.25in;
+            padding: 0;
+        }
+
+        .label {
+            width: 1.5in;
+            height: 1.5in;
+            border: 1px solid #000;
+            padding: 0.1in;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            page-break-inside: avoid;
+            background: white;
+        }
+
+        .label img {
+            width: 0.9in;
+            height: 0.9in;
+            margin-bottom: 0.05in;
+        }
+
+        .label .qr-code-text {
+            font-size: 11pt;
+            font-weight: bold;
+            margin-bottom: 0.03in;
+            font-family: 'Courier New', monospace;
+        }
+
+        .label .info {
+            font-size: 7pt;
+            line-height: 1.1;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .label .info-line {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 1.3in;
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            body {
+                margin: 0;
+                padding: 0;
+            }
+        }
+
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .print-button:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button no-print" onclick="window.print()">🖨️ Print Labels</button>
+
+    <div class="label-container">
+        {% for label in labels %}
+        <div class="label">
+            <img src="{{ label.qr_image }}" alt="QR Code">
+            <div class="qr-code-text">{{ label.qr_code }}</div>
+            {% if label.name or label.expiration or label.category or label.weight %}
+            <div class="info">
+                {% if label.name %}
+                <div class="info-line"><strong>{{ label.name }}</strong></div>
+                {% endif %}
+                {% if label.category %}
+                <div class="info-line">{{ label.category }}</div>
+                {% endif %}
+                {% if label.weight %}
+                <div class="info-line">{{ label.weight }}</div>
+                {% endif %}
+                {% if label.expiration %}
+                <div class="info-line">Exp: {{ label.expiration }}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
+    '''
+
+    html = render_template_string(html_template, labels=labels_data)
+    return html, 200, {'Content-Type': 'text/html'}

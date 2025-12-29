@@ -80,6 +80,28 @@ export const itemsAPI = {
 
   searchImage: (productName, categoryName) =>
     api.post('/items/search-image', { product_name: productName, category_name: categoryName }),
+
+  printLabels: async (itemIds, options = {}) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch('/api/items/print-labels', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        item_ids: itemIds,
+        ...options,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to generate labels');
+    }
+
+    const html = await response.text();
+    return html;
+  },
 };
 
 // Categories API
