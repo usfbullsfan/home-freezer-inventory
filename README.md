@@ -182,9 +182,35 @@ The app can automatically fetch product images to help visually identify items i
 **Admin Controls:**
 - Admins can enable/disable automatic image fetching system-wide
 - Setting stored in database (default: enabled)
-- Useful for controlling API usage or bandwidth
 
-### 5. Frontend Setup
+### 5. Database Migrations
+
+If you're upgrading from a previous version, you may need to run migration scripts to update your database schema.
+
+**Available Migration Scripts:**
+
+1. **migrate_usda_and_images.py** - Main migration for USDA categories and image support
+   ```bash
+   cd backend
+   python migrate_usda_and_images.py
+   ```
+   - Adds `image_url` column to items table
+   - Updates categories with USDA/FDA expiration guidelines
+   - Adds new granular categories (Beef Steak/Roast/Ground, etc.)
+   - Renames "Prepared Meals" to "Leftovers"
+
+2. **migrate_remove_turkey_ground.py** - Remove Turkey, Ground category
+   ```bash
+   cd backend
+   python migrate_remove_turkey_ground.py
+   ```
+   - Removes the "Turkey, Ground" category (not commonly used)
+   - Reassigns any items to the "Turkey" category
+   - Safe to run even if category doesn't exist
+
+**All migration scripts are idempotent** - they can be run multiple times safely without causing issues.
+
+### 6. Frontend Setup
 
 Open a new terminal window:
 
