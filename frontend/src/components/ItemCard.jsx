@@ -95,7 +95,7 @@ function ItemCard({ item, onEdit, onStatusChange }) {
         )}
         {item.weight && (
           <p>
-            <strong>Weight:</strong>
+            <strong>Size:</strong>
             <span>{item.weight} {item.weight_unit}</span>
           </p>
         )}

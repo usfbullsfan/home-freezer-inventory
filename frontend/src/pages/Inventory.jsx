@@ -259,6 +259,7 @@ function Inventory() {
             setEditingItem(null);
           }}
           onSave={handleItemSaved}
+          onCategoryCreated={loadCategories}
         />
       )}
 

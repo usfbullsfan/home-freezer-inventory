@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { itemsAPI } from '../services/api';
+import { itemsAPI, categoriesAPI } from '../services/api';
 
-function AddItemModal({ item, categories, onClose, onSave }) {
+function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) {
   const [formData, setFormData] = useState({
     qr_code: '',
     upc: '',
@@ -19,6 +19,12 @@ function AddItemModal({ item, categories, onClose, onSave }) {
   const [loading, setLoading] = useState(false);
   const [upcLookupLoading, setUpcLookupLoading] = useState(false);
   const [upcMessage, setUpcMessage] = useState('');
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
+  const [newCategoryData, setNewCategoryData] = useState({
+    name: '',
+    default_expiration_days: 180,
+  });
+  const [categoryError, setCategoryError] = useState('');
 
   useEffect(() => {
     if (item) {
@@ -55,6 +61,14 @@ function AddItemModal({ item, categories, onClose, onSave }) {
 
   const handleCategoryChange = (e) => {
     const categoryId = e.target.value;
+
+    // Check if user selected "Create New Category" option
+    if (categoryId === 'CREATE_NEW') {
+      setShowCreateCategory(true);
+      setFormData((prev) => ({ ...prev, category_id: '' }));
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, category_id: categoryId }));
 
     // Auto-calculate expiration date based on category default
@@ -69,6 +83,49 @@ function AddItemModal({ item, categories, onClose, onSave }) {
         }));
       }
     }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryData.name.trim()) {
+      setCategoryError('Category name is required');
+      return;
+    }
+
+    try {
+      const response = await categoriesAPI.createCategory(newCategoryData);
+      const createdCategory = response.data;
+
+      // Close the create form
+      setShowCreateCategory(false);
+      setCategoryError('');
+      setNewCategoryData({ name: '', default_expiration_days: 180 });
+
+      // Notify parent to refresh categories
+      if (onCategoryCreated) {
+        await onCategoryCreated();
+      }
+
+      // Auto-select the newly created category
+      setFormData((prev) => ({ ...prev, category_id: createdCategory.id }));
+
+      // Auto-calculate expiration date based on new category's default
+      if (createdCategory.default_expiration_days && !formData.expiration_date) {
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + createdCategory.default_expiration_days);
+        setFormData((prev) => ({
+          ...prev,
+          expiration_date: expirationDate.toISOString().split('T')[0],
+        }));
+      }
+    } catch (err) {
+      setCategoryError(err.response?.data?.error || 'Failed to create category');
+    }
+  };
+
+  const handleCancelCreateCategory = () => {
+    setShowCreateCategory(false);
+    setCategoryError('');
+    setNewCategoryData({ name: '', default_expiration_days: 180 });
   };
 
   const handleLookupUPC = async () => {
@@ -306,13 +363,76 @@ function AddItemModal({ item, categories, onClose, onSave }) {
                     {cat.name}
                   </option>
                 ))}
+                <option value="CREATE_NEW" style={{ fontWeight: 'bold', color: '#3498db' }}>
+                  + Create New Category
+                </option>
               </select>
             </div>
           </div>
 
+          {/* Inline category creation form */}
+          {showCreateCategory && (
+            <div style={{
+              background: '#f0f8ff',
+              padding: '1rem',
+              borderRadius: '6px',
+              marginBottom: '1rem',
+              border: '2px solid #3498db'
+            }}>
+              <h4 style={{ margin: '0 0 0.75rem 0', color: '#2c3e50' }}>Create New Category</h4>
+              {categoryError && (
+                <div className="error-message" style={{ marginBottom: '0.75rem' }}>
+                  {categoryError}
+                </div>
+              )}
+              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                <label htmlFor="new_category_name">Category Name *</label>
+                <input
+                  type="text"
+                  id="new_category_name"
+                  value={newCategoryData.name}
+                  onChange={(e) => setNewCategoryData({ ...newCategoryData, name: e.target.value })}
+                  placeholder="e.g., Lamb, Sausages"
+                  autoFocus
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                <label htmlFor="new_category_expiration">Default Expiration Days</label>
+                <input
+                  type="number"
+                  id="new_category_expiration"
+                  value={newCategoryData.default_expiration_days}
+                  onChange={(e) => setNewCategoryData({ ...newCategoryData, default_expiration_days: parseInt(e.target.value) })}
+                  min="1"
+                />
+                <small style={{ color: '#7f8c8d', display: 'block', marginTop: '0.25rem' }}>
+                  Default: 180 days (6 months)
+                </small>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleCreateCategory}
+                  style={{ flex: 1 }}
+                >
+                  Create Category
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleCancelCreateCategory}
+                  style={{ flex: 1 }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="form-row form-row-3">
             <div className="form-group">
-              <label htmlFor="weight">Weight</label>
+              <label htmlFor="weight">Size</label>
               <input
                 type="number"
                 id="weight"
@@ -336,6 +456,7 @@ function AddItemModal({ item, categories, onClose, onSave }) {
                 <option value="oz">oz</option>
                 <option value="kg">kg</option>
                 <option value="g">g</option>
+                <option value="units">units</option>
               </select>
             </div>
           </div>
