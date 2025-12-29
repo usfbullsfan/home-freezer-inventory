@@ -10,7 +10,10 @@ def create_app(test_config=None):
     # Configuration
     if test_config is None:
         # Production configuration
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///freezer_inventory.db'
+        # Use absolute path for database to ensure it's always in the backend directory
+        basedir = os.path.abspath(os.path.dirname(__file__))
+        db_path = os.path.join(basedir, 'freezer_inventory.db')
+        app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'dev-secret-key-change-in-production')
     else:

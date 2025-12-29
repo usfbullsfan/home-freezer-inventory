@@ -50,3 +50,5 @@ logs/
 .coverage
 htmlcov/
 .pytest_cache/
+backend/*.db.backup_*
+frontend/package-lock*.json
