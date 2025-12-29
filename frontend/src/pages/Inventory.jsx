@@ -116,7 +116,7 @@ function Inventory() {
       if (err.response?.status === 404) {
         // Item not found, create new
         const create = window.confirm(
-          `QR Code not found in database.\n\nWould you like to create a new item with this code?`
+          `Item code not found in database.\n\nWould you like to create a new item with this code?`
         );
 
         if (create) {
@@ -124,7 +124,7 @@ function Inventory() {
           setShowAddModal(true);
         }
       } else {
-        alert('Failed to lookup QR code');
+        alert('Failed to lookup item code');
       }
       setShowQRModal(false);
     }
@@ -162,7 +162,7 @@ function Inventory() {
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <button className="btn btn-secondary" onClick={() => setShowQRModal(true)}>
-            📷 Scan QR Code
+            🔍 Locate Item by Code
           </button>
           <button className="btn btn-success" onClick={handleAddItem}>
             ➕ Add Item
