@@ -5,6 +5,12 @@ echo "Freezer Inventory Tracker"
 echo "PRODUCTION MODE"
 echo "================================"
 echo ""
+echo "NOTE: This script builds the frontend and starts the backend."
+echo "For production deployment, you'll need to serve the frontend"
+echo "static files from frontend/dist/ using:"
+echo "  - nginx/Apache as a reverse proxy (recommended)"
+echo "  - OR serve via Flask (add static file routes to app.py)"
+echo ""
 
 # Check if Python is installed
 if ! command -v python3 &> /dev/null; then
