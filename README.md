@@ -1,11 +1,14 @@
 # 🧊 Freezer Inventory Tracker
 
-A web-based application for tracking freezer inventory with QR code support. Perfect for managing portioned meats, frozen goods, and keeping track of expiration dates.
+A web-based application for tracking freezer inventory with alphanumeric code labeling. Perfect for managing portioned meats, frozen goods, and keeping track of expiration dates.
+
+> **⚠️ IMPORTANT DISCLAIMER**
+> This application was developed with the assistance of Claude AI (Anthropic). While functional, this code should be thoroughly tested and reviewed before deploying to a production environment. Use at your own risk and ensure proper security measures are in place, especially if exposing to the internet.
 
 ## Features
 
 - 📦 **Item Management**: Add, edit, and track individual freezer items
-- 🏷️ **QR Code Support**: Generate unique QR codes for each item and scan them for quick access
+- 🏷️ **Simple Alphanumeric Codes**: Generate unique codes (e.g., ABC123) for each item for easy identification
 - 🔍 **Smart Search & Filter**: Search by name, source, category, and date ranges
 - 📊 **Expiration Tracking**: Automatic expiration date calculation based on category defaults
 - 📅 **Sort Options**: Sort by date added, expiration date, or name
@@ -13,6 +16,8 @@ A web-based application for tracking freezer inventory with QR code support. Per
 - 📝 **History Tracking**: Optional tracking of consumed and discarded items
 - 👥 **Multi-User Support**: Admin and user roles with authentication
 - ⚠️ **Smart Alerts**: Highlights items expiring soon or already expired
+- 🚀 **Production Ready**: Includes gunicorn for production deployment
+- ✅ **Testing Suite**: Comprehensive pytest-based tests for backend functionality
 
 ## Tech Stack
 
@@ -20,7 +25,8 @@ A web-based application for tracking freezer inventory with QR code support. Per
 - Python Flask
 - SQLAlchemy (SQLite database)
 - Flask-JWT-Extended for authentication
-- QR code generation with `qrcode` library
+- Gunicorn for production WSGI server
+- Pytest for comprehensive testing
 
 **Frontend:**
 - React with Vite
@@ -60,13 +66,23 @@ source venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the backend server
+# Run the backend server (development)
 python app.py
+
+# OR run with gunicorn (production-like)
+gunicorn -w 4 -b 0.0.0.0:5001 'app:create_app()'
 ```
 
 The backend will start on `http://localhost:5001`
 
 > **Note:** Port 5001 is used instead of 5000 to avoid conflicts with macOS AirPlay Receiver, which uses port 5000 by default.
+
+**For convenience, you can also use the startup scripts:**
+```bash
+# From the project root directory
+./start.sh              # Development mode
+./start-production.sh   # Production mode with gunicorn
+```
 
 **Default Admin Credentials:**
 - Username: `admin`
@@ -107,25 +123,25 @@ The frontend will start on `http://localhost:3000`
    - **Weight**: Item weight (e.g., 1.5 lb)
    - **Category**: Select from predefined or custom categories
    - **Expiration Date**: Auto-calculated or manually entered
-   - **QR Code**: Leave blank to auto-generate or enter existing barcode
+   - **Code**: Leave blank to auto-generate a unique alphanumeric code
    - **Notes**: Any additional information
 
 3. Click **"Add Item"** to save
 
-### Using QR Codes
+### Using Item Codes
 
-**Generating QR Codes:**
-- When you add an item, a unique QR code is automatically generated
-- Click the **"QR"** button on any item card to view and print its QR code
-- Print the QR code and attach it to your vacuum-sealed bags
+**Generating Item Codes:**
+- When you add an item, a unique alphanumeric code is automatically generated (e.g., ABC123)
+- Each item displays its code on the item card
+- Write or print these simple codes on labels for your freezer items
 
-**Scanning QR Codes (MVP):**
-- Click **"Scan QR Code"** button
-- Enter the QR code manually (e.g., `FRZ-ABC123DEF456`)
+**Looking Up Items:**
+- Click **"Scan Code"** button
+- Enter the alphanumeric code manually (e.g., `ABC123`)
 - The app will find the item and let you mark it as consumed or edit it
 - If the code doesn't exist, you'll be prompted to create a new item
 
-**Future Enhancement:** Camera-based QR scanning via iOS app or web camera API
+> **Note:** The application originally used QR codes but has been simplified to use easy-to-read alphanumeric codes for better usability
 
 ### Managing Categories
 
@@ -166,14 +182,13 @@ The frontend will start on `http://localhost:3000`
 ### Items
 - `GET /api/items/` - Get all items (with filters)
 - `GET /api/items/:id` - Get specific item
-- `GET /api/items/qr/:qr_code` - Get item by QR code
+- `GET /api/items/code/:code` - Get item by alphanumeric code
 - `POST /api/items/` - Create new item
 - `PUT /api/items/:id` - Update item
 - `PUT /api/items/:id/status` - Update item status
 - `DELETE /api/items/:id` - Delete item (admin only)
 - `GET /api/items/expiring-soon` - Get items expiring soon
 - `GET /api/items/oldest` - Get oldest items
-- `GET /api/items/qr/:qr_code/image` - Get QR code image
 
 ### Categories
 - `GET /api/categories/` - Get all categories
@@ -234,10 +249,10 @@ Already configured for local use on macOS
 - id, name, default_expiration_days, created_by_user_id, is_system
 
 **Items Table:**
-- id, qr_code, name, source, weight, weight_unit
+- id, qr_code (stores alphanumeric code), name, source, weight, weight_unit
 - category_id, added_date, expiration_date
 - status (in_freezer, consumed, thrown_out)
-- removed_date, notes, added_by_user_id
+- removed_date, notes, added_by_user_id, created_at, updated_at
 
 **Settings Table:**
 - id, user_id, setting_name, setting_value
@@ -326,19 +341,45 @@ rm -rf home-freezer-inventory
 
 **Note:** Your data is stored in `backend/freezer_inventory.db`. If you want to back up your inventory before removal, copy this file to a safe location.
 
+## Testing
+
+The application includes a comprehensive test suite using pytest:
+
+```bash
+cd backend
+
+# Run all tests
+pytest
+
+# Run tests with coverage
+pytest --cov=. --cov-report=html
+
+# Run specific test file
+pytest tests/test_items.py
+
+# Or use the convenience script from project root
+./run-tests.sh
+```
+
+Test coverage includes:
+- Authentication endpoints
+- Item CRUD operations
+- Category management
+- Settings functionality
+
 ## Future Enhancements
 
-- [ ] iOS companion app for camera-based QR scanning
+- [ ] iOS companion app for barcode scanning
 - [ ] Progressive Web App (PWA) support
-- [ ] Barcode scanner integration
+- [ ] Physical barcode integration
 - [ ] Export inventory to CSV/PDF
 - [ ] Statistics and reports dashboard
-- [ ] Mobile-responsive QR scanning
 - [ ] Shopping list generation from low stock items
 - [ ] Recipe integration
 - [ ] Voice commands for hands-free operation
 - [ ] Multi-freezer support
 - [ ] Item location tracking (shelf, drawer, etc.)
+- [ ] Printable labels with codes
 
 ## Troubleshooting
 
@@ -357,13 +398,13 @@ rm -rf home-freezer-inventory
 - Verify database was created (check for `freezer_inventory.db` in backend folder)
 - Check browser console for errors
 
-**QR codes not generating:**
-- Ensure `qrcode` Python package is installed
+**Item codes not generating:**
 - Check backend logs for errors
+- Ensure database is properly initialized
 
 ## License
 
-MIT License - Feel free to use and modify for your needs
+See LICENSE file for details. This project is provided as-is with no warranties.
 
 ## Contributing
 
