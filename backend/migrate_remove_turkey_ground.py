@@ -20,16 +20,39 @@ from datetime import datetime
 def migrate_database():
     """Remove Turkey, Ground category and reassign items."""
 
-    # Get database path from environment or use default
-    db_path = os.environ.get('DATABASE_PATH', 'freezer_inventory.db')
+    # Get database path from environment or check common locations
+    db_path = os.environ.get('DATABASE_PATH')
+
+    if not db_path:
+        # Check common locations
+        possible_paths = [
+            'freezer_inventory.db',  # Current directory
+            '../freezer_inventory.db',  # Parent directory
+            'backend/freezer_inventory.db',  # If run from root
+            os.path.expanduser('~/freezer_inventory.db'),  # Home directory
+        ]
+
+        for path in possible_paths:
+            if os.path.exists(path):
+                db_path = path
+                break
+
+        if not db_path:
+            print("❌ Database not found in common locations:")
+            for path in possible_paths:
+                abs_path = os.path.abspath(path)
+                print(f"   - {abs_path}")
+            print()
+            print("   Please set DATABASE_PATH environment variable:")
+            print("   export DATABASE_PATH=/path/to/freezer_inventory.db")
+            sys.exit(1)
 
     if not os.path.exists(db_path):
         print(f"❌ Database not found at: {db_path}")
-        print("   Please ensure you're running this from the backend directory")
-        print("   or set DATABASE_PATH environment variable")
         sys.exit(1)
 
-    print(f"🔧 Migrating database: {db_path}")
+    abs_path = os.path.abspath(db_path)
+    print(f"🔧 Migrating database: {abs_path}")
     print()
 
     # Connect to database
