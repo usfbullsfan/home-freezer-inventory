@@ -16,6 +16,7 @@ function Categories() {
   });
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     loadCategories();
@@ -39,6 +40,7 @@ function Categories() {
     setEditingCategory(null);
     setFormData({ name: '', default_expiration_days: 180, image_url: '' });
     setSelectedFile(null);
+    setFormError('');
     setShowForm(true);
   };
 
@@ -50,6 +52,7 @@ function Categories() {
       image_url: category.image_url || '',
     });
     setSelectedFile(null);
+    setFormError('');
     setShowForm(true);
   };
 
@@ -59,20 +62,20 @@ function Categories() {
       // Validate file type
       const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
       if (!allowedTypes.includes(file.type)) {
-        setError('Invalid file type. Please select an image (PNG, JPEG, GIF, or WebP).');
+        setFormError('Invalid file type. Please select an image (PNG, JPEG, GIF, or WebP).');
         e.target.value = '';
         return;
       }
 
       // Validate file size (5MB)
       if (file.size > 5 * 1024 * 1024) {
-        setError('File too large. Maximum size is 5MB.');
+        setFormError('File too large. Maximum size is 5MB.');
         e.target.value = '';
         return;
       }
 
       setSelectedFile(file);
-      setError('');
+      setFormError('');
 
       // Create a preview URL
       const reader = new FileReader();
@@ -87,6 +90,7 @@ function Categories() {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setFormError('');
 
     let imageUrl = formData.image_url;
 
@@ -97,7 +101,7 @@ function Categories() {
         const response = await uploadsAPI.uploadCategoryImage(selectedFile);
         imageUrl = response.data.image_url;
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to upload image');
+        setFormError(err.response?.data?.error || 'Failed to upload image');
         setUploadingImage(false);
         return;
       }
@@ -213,6 +217,7 @@ function Categories() {
             </div>
 
             <div className="modal-content">
+              {formError && <div className="error-message">{formError}</div>}
               <form onSubmit={handleSubmit} id="category-form">
                 <div className="form-group">
                   <label htmlFor="name">Category Name *</label>
