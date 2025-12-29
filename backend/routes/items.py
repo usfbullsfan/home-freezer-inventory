@@ -503,18 +503,6 @@ def lookup_upc(upc):
                 product_name = product_data.get('title', '')
                 brand = product_data.get('brand', '')
                 category = product_data.get('category', '')
-                description = product_data.get('description', '')
-
-                # Build notes with additional product info
-                notes_parts = []
-                if brand:
-                    notes_parts.append(f'Brand: {brand}')
-                if category:
-                    notes_parts.append(f'Category: {category}')
-                if description and description != product_name:
-                    notes_parts.append(description)
-
-                notes = ' | '.join(notes_parts) if notes_parts else ''
 
                 # Get product image from UPC Item DB
                 image_url = None
@@ -533,7 +521,7 @@ def lookup_upc(upc):
                         'name': product_name,
                         'brand': brand,
                         'category': category,
-                        'notes': notes,
+                        'notes': '',
                         'upc': upc,
                         'image_url': image_url
                     },
@@ -582,21 +570,6 @@ def lookup_upc(upc):
             brand = product_data.get('brand', '')
             category = product_data.get('category', '')
 
-            # Build notes with additional product info
-            notes_parts = []
-            if brand:
-                notes_parts.append(f'Brand: {brand}')
-            if category:
-                notes_parts.append(f'Category: {category}')
-
-            # Add other useful info if available
-            if product_data.get('size'):
-                notes_parts.append(f'Size: {product_data.get("size")}')
-            if product_data.get('model'):
-                notes_parts.append(f'Model: {product_data.get("model")}')
-
-            notes = ' | '.join(notes_parts) if notes_parts else ''
-
             # Try to get product image
             # Priority: 1. UPC API image, 2. Pexels search
             image_url = product_data.get('images', [None])[0] if product_data.get('images') else None
@@ -612,7 +585,7 @@ def lookup_upc(upc):
                     'name': product_name,
                     'brand': brand,
                     'category': category,
-                    'notes': notes,
+                    'notes': '',
                     'upc': upc,
                     'image_url': image_url
                 },
