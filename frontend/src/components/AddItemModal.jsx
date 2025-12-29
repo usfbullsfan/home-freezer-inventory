@@ -81,10 +81,10 @@ function AddItemModal({ item, categories, onClose, onSave }) {
 
       if (result.found && result.data) {
         // Auto-fill form fields with UPC lookup data
+        // Note: Don't populate 'source' - that's for store names (Costco, etc), not brands
         setFormData(prev => ({
           ...prev,
           name: result.data.name || prev.name,
-          source: result.data.brand || prev.source,
           notes: result.data.notes || prev.notes,
           category_id: result.data.category_id || prev.category_id,
         }));
