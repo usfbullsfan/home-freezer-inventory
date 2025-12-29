@@ -64,6 +64,7 @@ class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     qr_code = db.Column(db.String(255), unique=True, nullable=False)
     upc = db.Column(db.String(50))  # Universal Product Code (barcode)
+    image_url = db.Column(db.String(500))  # URL to product image
     name = db.Column(db.String(200), nullable=False)
     source = db.Column(db.String(200))  # e.g., "Costco"
     weight = db.Column(db.Float)
@@ -88,6 +89,7 @@ class Item(db.Model):
             'id': self.id,
             'qr_code': self.qr_code,
             'upc': self.upc,
+            'image_url': self.image_url,
             'name': self.name,
             'source': self.source,
             'weight': self.weight,

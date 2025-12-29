@@ -10,6 +10,61 @@ import os
 items_bp = Blueprint('items', __name__)
 
 
+def fetch_product_image(product_name, category_name=None):
+    """Fetch product image from Pexels API.
+
+    Args:
+        product_name: Name of the product to search for
+        category_name: Optional category to refine search
+
+    Returns:
+        str: Image URL if found, None otherwise
+    """
+    # Check if image fetching is enabled (system setting)
+    enable_images = Setting.query.filter_by(
+        user_id=None,
+        setting_name='enable_image_fetching'
+    ).first()
+
+    if not enable_images or enable_images.setting_value != 'true':
+        return None
+
+    # Check if Pexels API key is configured
+    pexels_api_key = os.environ.get('PEXELS_API_KEY')
+    if not pexels_api_key:
+        return None
+
+    try:
+        # Build search query - use category + food for better results
+        if category_name:
+            search_query = f"{category_name} food"
+        else:
+            search_query = f"{product_name} food"
+
+        # Call Pexels API
+        response = requests.get(
+            'https://api.pexels.com/v1/search',
+            headers={'Authorization': pexels_api_key},
+            params={
+                'query': search_query,
+                'per_page': 1,
+                'orientation': 'square'
+            },
+            timeout=5
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('photos') and len(data['photos']) > 0:
+                # Return medium-sized image URL
+                return data['photos'][0]['src']['medium']
+
+        return None
+
+    except requests.RequestException:
+        return None
+
+
 @items_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_items():
@@ -150,6 +205,7 @@ def create_item():
     item = Item(
         qr_code=qr_code,
         upc=data.get('upc'),
+        image_url=data.get('image_url'),
         name=data['name'],
         source=data.get('source'),
         weight=data.get('weight'),
@@ -192,6 +248,8 @@ def update_item(item_id):
         item.name = data['name']
     if 'upc' in data:
         item.upc = data['upc']
+    if 'image_url' in data:
+        item.image_url = data['image_url']
     if 'source' in data:
         item.source = data['source']
     if 'weight' in data:
@@ -337,7 +395,8 @@ def lookup_upc(upc):
                 'category': local_item.category.name if local_item.category else None,
                 'category_id': local_item.category_id,
                 'notes': local_item.notes,
-                'upc': local_item.upc
+                'upc': local_item.upc,
+                'image_url': local_item.image_url
             },
             'message': f'You already have "{local_item.name}" in your inventory!'
         }), 200
@@ -394,6 +453,14 @@ def lookup_upc(upc):
 
             notes = ' | '.join(notes_parts) if notes_parts else ''
 
+            # Try to get product image
+            # Priority: 1. UPC API image, 2. Pexels search
+            image_url = product_data.get('images', [None])[0] if product_data.get('images') else None
+
+            # If no image from UPC API, try Pexels
+            if not image_url:
+                image_url = fetch_product_image(product_name, category)
+
             return jsonify({
                 'found': True,
                 'source': 'api',
@@ -402,7 +469,8 @@ def lookup_upc(upc):
                     'brand': brand,
                     'category': category,
                     'notes': notes,
-                    'upc': upc
+                    'upc': upc,
+                    'image_url': image_url
                 },
                 'message': f'Found product: {product_name}'
             }), 200
@@ -427,4 +495,36 @@ def lookup_upc(upc):
             'source': 'error',
             'message': 'UPC lookup service unavailable. Please enter item details manually.',
             'data': {'upc': upc}
+        }), 200
+
+
+@items_bp.route('/search-image', methods=['POST'])
+@jwt_required()
+def search_image():
+    """Search for product image using Pexels API.
+
+    Accepts JSON body with 'product_name' and optional 'category_name'.
+    Returns image URL if found.
+    """
+    data = request.get_json()
+
+    if not data or not data.get('product_name'):
+        return jsonify({'error': 'Product name is required'}), 400
+
+    product_name = data['product_name']
+    category_name = data.get('category_name')
+
+    image_url = fetch_product_image(product_name, category_name)
+
+    if image_url:
+        return jsonify({
+            'found': True,
+            'image_url': image_url,
+            'message': 'Image found successfully'
+        }), 200
+    else:
+        return jsonify({
+            'found': False,
+            'image_url': None,
+            'message': 'No image found or image fetching disabled'
         }), 200
