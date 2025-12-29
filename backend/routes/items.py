@@ -143,6 +143,7 @@ def create_item():
 
     item = Item(
         qr_code=qr_code,
+        upc=data.get('upc'),
         name=data['name'],
         source=data.get('source'),
         weight=data.get('weight'),
@@ -177,6 +178,8 @@ def update_item(item_id):
     # Update fields if provided
     if 'name' in data:
         item.name = data['name']
+    if 'upc' in data:
+        item.upc = data['upc']
     if 'source' in data:
         item.source = data['source']
     if 'weight' in data:
