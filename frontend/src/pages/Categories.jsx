@@ -150,51 +150,55 @@ function Categories() {
       {showForm && (
         <div className="modal-overlay" onClick={() => setShowForm(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>{editingCategory ? 'Edit Category' : 'Add New Category'}</h2>
+            <div className="modal-header">
+              <h2>{editingCategory ? 'Edit Category' : 'Add New Category'}</h2>
+            </div>
 
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label htmlFor="name">Category Name *</label>
-                <input
-                  type="text"
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  placeholder="e.g., Lamb"
-                />
-              </div>
+            <div className="modal-content">
+              <form onSubmit={handleSubmit} id="category-form">
+                <div className="form-group">
+                  <label htmlFor="name">Category Name *</label>
+                  <input
+                    type="text"
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                    placeholder="e.g., Lamb"
+                  />
+                </div>
 
-              <div className="form-group">
-                <label htmlFor="default_expiration_days">Default Expiration (days) *</label>
-                <input
-                  type="number"
-                  id="default_expiration_days"
-                  value={formData.default_expiration_days}
-                  onChange={(e) =>
-                    setFormData({ ...formData, default_expiration_days: parseInt(e.target.value) })
-                  }
-                  required
-                  min="1"
-                />
-                <small style={{ color: '#7f8c8d' }}>
-                  Items in this category will default to this expiration period
-                </small>
-              </div>
+                <div className="form-group">
+                  <label htmlFor="default_expiration_days">Default Expiration (days) *</label>
+                  <input
+                    type="number"
+                    id="default_expiration_days"
+                    value={formData.default_expiration_days}
+                    onChange={(e) =>
+                      setFormData({ ...formData, default_expiration_days: parseInt(e.target.value) })
+                    }
+                    required
+                    min="1"
+                  />
+                  <small style={{ color: '#7f8c8d' }}>
+                    Items in this category will default to this expiration period
+                  </small>
+                </div>
+              </form>
+            </div>
 
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowForm(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  {editingCategory ? 'Update Category' : 'Add Category'}
-                </button>
-              </div>
-            </form>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowForm(false)}
+              >
+                Cancel
+              </button>
+              <button type="submit" form="category-form" className="btn btn-primary">
+                {editingCategory ? 'Update Category' : 'Add Category'}
+              </button>
+            </div>
           </div>
         </div>
       )}
