@@ -37,16 +37,34 @@ def migrate_database():
     cursor = conn.cursor()
 
     try:
-        # Find Turkey, Ground category
-        cursor.execute("SELECT id FROM categories WHERE name = ?", ('Turkey, Ground',))
+        # First, let's see all turkey-related categories
+        cursor.execute("SELECT id, name FROM categories WHERE name LIKE '%urkey%'")
+        turkey_categories = cursor.fetchall()
+
+        if turkey_categories:
+            print("📋 Found turkey-related categories:")
+            for cat_id, cat_name in turkey_categories:
+                print(f"   - ID {cat_id}: '{cat_name}'")
+            print()
+
+        # Find Turkey, Ground category (try different variations)
+        cursor.execute(
+            "SELECT id FROM categories WHERE name IN (?, ?, ?, ?)",
+            ('Turkey, Ground', 'Turkey Ground', 'turkey, ground', 'Turkey,Ground')
+        )
         turkey_ground = cursor.fetchone()
 
         if not turkey_ground:
             print("✅ Turkey, Ground category not found - already removed or never existed")
+            print("   (Checked variations: 'Turkey, Ground', 'Turkey Ground', etc.)")
             return
 
         turkey_ground_id = turkey_ground[0]
-        print(f"📋 Found 'Turkey, Ground' category (ID: {turkey_ground_id})")
+
+        # Get the actual name
+        cursor.execute("SELECT name FROM categories WHERE id = ?", (turkey_ground_id,))
+        actual_name = cursor.fetchone()[0]
+        print(f"📋 Found '{actual_name}' category (ID: {turkey_ground_id})")
 
         # Find Turkey category (to reassign items)
         cursor.execute("SELECT id FROM categories WHERE name = ?", ('Turkey',))
