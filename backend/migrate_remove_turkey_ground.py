@@ -37,6 +37,15 @@ def migrate_database():
     cursor = conn.cursor()
 
     try:
+        # Show ALL categories to help debug
+        cursor.execute("SELECT id, name FROM categories ORDER BY name")
+        all_categories = cursor.fetchall()
+
+        print("📋 All categories in database:")
+        for cat_id, cat_name in all_categories:
+            print(f"   - ID {cat_id}: '{cat_name}'")
+        print()
+
         # First, let's see all turkey-related categories
         cursor.execute("SELECT id, name FROM categories WHERE name LIKE '%urkey%'")
         turkey_categories = cursor.fetchall()
