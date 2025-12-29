@@ -5,6 +5,12 @@ echo "Freezer Inventory Tracker"
 echo "PRODUCTION MODE"
 echo "================================"
 echo ""
+echo "NOTE: This script builds the frontend and starts the backend."
+echo "For production deployment, you'll need to serve the frontend"
+echo "static files from frontend/dist/ using:"
+echo "  - nginx/Apache as a reverse proxy (recommended)"
+echo "  - OR serve via Flask (add static file routes to app.py)"
+echo ""
 
 # Check if Python is installed
 if ! command -v python3 &> /dev/null; then
@@ -50,6 +56,9 @@ fi
 source venv/bin/activate
 pip install -r requirements.txt > /dev/null 2>&1
 
+# Create logs directory if it doesn't exist
+mkdir -p logs
+
 # Start Gunicorn
 # --workers: Number of worker processes (recommend 2-4 workers for small deployments)
 # --bind: Address and port to bind to
@@ -65,5 +74,5 @@ gunicorn \
     --timeout 120 \
     --access-logfile logs/access.log \
     --error-logfile logs/error.log \
-    app:app
+    "app:create_app()"
 
