@@ -113,14 +113,7 @@ The app supports automatic product lookup via UPC/barcode scanning. This feature
    UPC_API_KEY=your_api_key_here
    ```
 
-4. **Run the database migration** (if upgrading from a version without UPC support):
-   ```bash
-   cd backend
-   python migrate_usda_and_images.py
-   ```
-   This safely adds the UPC column to your existing database without losing data.
-
-5. Restart the backend server for changes to take effect
+4. Restart the backend server for changes to take effect
 
 **How it works:**
 - When adding an item, enter or scan the UPC code
@@ -158,14 +151,7 @@ The app can automatically fetch product images to help visually identify items i
    PEXELS_API_KEY=your_api_key_here
    ```
 
-3. **Run the database migration** (if upgrading from a version without image support):
-   ```bash
-   cd backend
-   python migrate_usda_and_images.py
-   ```
-   This adds the image_url column and updates categories with USDA guidelines.
-
-4. Restart the backend server for changes to take effect
+3. Restart the backend server for changes to take effect
 
 **How it works:**
 - When using UPC lookup, the app tries to get the product image from the UPC database first
@@ -183,34 +169,7 @@ The app can automatically fetch product images to help visually identify items i
 - Admins can enable/disable automatic image fetching system-wide
 - Setting stored in database (default: enabled)
 
-### 5. Database Migrations
-
-If you're upgrading from a previous version, you may need to run migration scripts to update your database schema.
-
-**Available Migration Scripts:**
-
-1. **migrate_usda_and_images.py** - Main migration for USDA categories and image support
-   ```bash
-   cd backend
-   python migrate_usda_and_images.py
-   ```
-   - Adds `image_url` column to items table
-   - Updates categories with USDA/FDA expiration guidelines
-   - Adds new granular categories (Beef Steak/Roast/Ground, etc.)
-   - Renames "Prepared Meals" to "Leftovers"
-
-2. **migrate_remove_turkey_ground.py** - Remove Turkey, Ground category
-   ```bash
-   cd backend
-   python migrate_remove_turkey_ground.py
-   ```
-   - Removes the "Turkey, Ground" category (not commonly used)
-   - Reassigns any items to the "Turkey" category
-   - Safe to run even if category doesn't exist
-
-**All migration scripts are idempotent** - they can be run multiple times safely without causing issues.
-
-### 6. Frontend Setup
+### 5. Frontend Setup
 
 Open a new terminal window:
 
