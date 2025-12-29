@@ -108,6 +108,12 @@ export const settingsAPI = {
   updateSettings: (data) =>
     api.put('/settings/', data),
 
+  getSystemSettings: () =>
+    api.get('/settings/system'),
+
+  updateSystemSettings: (data) =>
+    api.put('/settings/system', data),
+
   purgeHistory: () =>
     api.post('/settings/purge-history'),
 

@@ -16,7 +16,7 @@ function QRInputModal({ onClose, onSubmit }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Enter QR Code</h2>
+          <h2>Locate Item by Code</h2>
         </div>
 
         <div className="modal-content">
