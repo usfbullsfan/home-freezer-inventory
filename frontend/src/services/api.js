@@ -104,6 +104,56 @@ export const settingsAPI = {
 
   purgeHistory: () =>
     api.post('/settings/purge-history'),
+
+  getBackupInfo: () =>
+    api.get('/settings/backup/info'),
+
+  downloadBackup: async () => {
+    const token = localStorage.getItem('token');
+    const response = await fetch('/api/settings/backup/download', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to download backup');
+    }
+
+    // Get filename from Content-Disposition header if available
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = 'freezer_inventory_backup.db';
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
+    }
+
+    // Create blob and download
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    return response;
+  },
+
+  restoreBackup: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/settings/backup/restore', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
 };
 
 export default api;

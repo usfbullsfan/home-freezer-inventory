@@ -10,6 +10,13 @@ function Settings({ user }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Backup/Restore state
+  const [backupInfo, setBackupInfo] = useState(null);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupError, setBackupError] = useState('');
+  const [backupSuccess, setBackupSuccess] = useState('');
+  const [restoreFile, setRestoreFile] = useState(null);
+
   // Password change state
   const [passwordData, setPasswordData] = useState({
     current_password: '',
@@ -21,7 +28,10 @@ function Settings({ user }) {
 
   useEffect(() => {
     loadSettings();
-  }, []);
+    if (user && user.role === 'admin') {
+      loadBackupInfo();
+    }
+  }, [user]);
 
   const loadSettings = async () => {
     setLoading(true);
@@ -94,6 +104,75 @@ function Settings({ user }) {
       });
     } catch (err) {
       setPasswordError(err.response?.data?.error || 'Failed to change password');
+    }
+  };
+
+  const loadBackupInfo = async () => {
+    try {
+      const response = await settingsAPI.getBackupInfo();
+      setBackupInfo(response.data);
+    } catch (err) {
+      console.error('Failed to load backup info:', err);
+    }
+  };
+
+  const handleDownloadBackup = async () => {
+    setBackupError('');
+    setBackupSuccess('');
+    setBackupLoading(true);
+
+    try {
+      await settingsAPI.downloadBackup();
+      setBackupSuccess('Backup downloaded successfully');
+    } catch (err) {
+      setBackupError(err.response?.data?.error || 'Failed to download backup');
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleRestoreBackup = async () => {
+    if (!restoreFile) {
+      setBackupError('Please select a backup file');
+      return;
+    }
+
+    if (!window.confirm(
+      'Are you sure you want to restore from this backup? This will replace your current database. A backup of your current database will be created automatically.'
+    )) {
+      return;
+    }
+
+    setBackupError('');
+    setBackupSuccess('');
+    setBackupLoading(true);
+
+    try {
+      const response = await settingsAPI.restoreBackup(restoreFile);
+      setBackupSuccess(response.data.message);
+      setRestoreFile(null);
+
+      // Reload backup info after successful restore
+      setTimeout(() => {
+        loadBackupInfo();
+      }, 1000);
+    } catch (err) {
+      setBackupError(err.response?.data?.error || 'Failed to restore backup');
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.name.endsWith('.db')) {
+        setBackupError('Please select a valid .db file');
+        setRestoreFile(null);
+        return;
+      }
+      setRestoreFile(file);
+      setBackupError('');
     }
   };
 
@@ -197,6 +276,80 @@ function Settings({ user }) {
 
       {user && user.role === 'admin' && (
         <UserManagement currentUser={user} />
+      )}
+
+      {user && user.role === 'admin' && (
+        <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
+          <h3 style={{ marginBottom: '1.5rem' }}>Backup & Restore</h3>
+
+          {backupError && <div className="error-message">{backupError}</div>}
+          {backupSuccess && <div className="success-message">{backupSuccess}</div>}
+
+          {backupInfo && (
+            <div style={{
+              background: '#f8f9fa',
+              padding: '1rem',
+              borderRadius: '4px',
+              marginBottom: '1.5rem',
+              border: '1px solid #e9ecef'
+            }}>
+              <h4 style={{ marginBottom: '0.75rem', fontSize: '1rem' }}>Current Database Information</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.5rem', fontSize: '0.9rem' }}>
+                <strong>Size:</strong>
+                <span>{backupInfo.file_size}</span>
+                <strong>Last Modified:</strong>
+                <span>{new Date(backupInfo.last_modified).toLocaleString()}</span>
+                <strong>Total Items:</strong>
+                <span>{backupInfo.total_items} ({backupInfo.active_items} active)</span>
+                <strong>Categories:</strong>
+                <span>{backupInfo.total_categories}</span>
+                <strong>Users:</strong>
+                <span>{backupInfo.total_users}</span>
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginBottom: '2rem' }}>
+            <h4 style={{ marginBottom: '0.5rem' }}>Download Backup</h4>
+            <p style={{ color: '#7f8c8d', marginBottom: '1rem' }}>
+              Download a complete backup of your freezer inventory database. Save this file in a safe location.
+            </p>
+            <button
+              className="btn btn-primary"
+              onClick={handleDownloadBackup}
+              disabled={backupLoading}
+            >
+              {backupLoading ? 'Downloading...' : 'Download Backup'}
+            </button>
+          </div>
+
+          <div>
+            <h4 style={{ marginBottom: '0.5rem' }}>Restore from Backup</h4>
+            <p style={{ color: '#7f8c8d', marginBottom: '1rem' }}>
+              Upload a previously saved backup file to restore your database. Your current database will be backed up automatically before restoring.
+            </p>
+            <div style={{ marginBottom: '1rem' }}>
+              <input
+                type="file"
+                accept=".db"
+                onChange={handleFileSelect}
+                style={{ marginBottom: '0.5rem' }}
+              />
+              {restoreFile && (
+                <div style={{ color: '#27ae60', fontSize: '0.9rem' }}>
+                  Selected: {restoreFile.name} ({(restoreFile.size / 1024).toFixed(2)} KB)
+                </div>
+              )}
+            </div>
+            <button
+              className="btn btn-primary"
+              onClick={handleRestoreBackup}
+              disabled={backupLoading || !restoreFile}
+            >
+              {backupLoading ? 'Restoring...' : 'Restore Backup'}
+            </button>
+          </div>
+        </div>
       )}
 
       {user && user.role === 'admin' && (
