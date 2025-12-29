@@ -94,13 +94,15 @@ The backend will start on `http://localhost:5001`
 
 The app supports automatic product lookup via UPC/barcode scanning. This feature is **optional** but highly recommended for quickly adding packaged items.
 
-**To enable UPC lookup:**
+**UPC lookup works out of the box!** The app uses UPC Item DB's free trial API as the primary source (no API key required). For additional lookups, you can optionally configure a UPCDatabase.org API key as a fallback.
 
-1. Get a free API key from [UPCDatabase.org](https://upcdatabase.org/api)
+**Optional: Add fallback UPC API:**
+
+1. Get a free API key from [UPCDatabase.org](https://upcdatabase.org/api) (optional)
    - Free tier includes 100 lookups/month, 25 searches/month
    - Sign up and get your API key from the dashboard
 
-2. Create a `.env` file in the project root:
+2. Create a `.env` file in the project root (if not already exists):
    ```bash
    # Copy the example file
    cp .env.example .env
@@ -114,7 +116,7 @@ The app supports automatic product lookup via UPC/barcode scanning. This feature
 4. **Run the database migration** (if upgrading from a version without UPC support):
    ```bash
    cd backend
-   python migrate_add_upc.py
+   python migrate_usda_and_images.py
    ```
    This safely adds the UPC column to your existing database without losing data.
 
@@ -124,8 +126,9 @@ The app supports automatic product lookup via UPC/barcode scanning. This feature
 - When adding an item, enter or scan the UPC code
 - Click "Lookup" to search for the product
 - The app first checks your local inventory for existing items with that UPC
-- If not found locally, it queries the UPCDatabase API
-- Product name, brand, and category are auto-filled
+- If not found locally, it tries UPC Item DB (free, no API key needed)
+- If still not found and you have a UPC_API_KEY, it tries UPCDatabase.org
+- Product name, brand, category, and image are auto-filled
 - You can edit any auto-filled information before saving
 - Items without UPCs can still be added manually
 

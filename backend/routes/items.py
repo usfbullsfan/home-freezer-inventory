@@ -478,14 +478,81 @@ def lookup_upc(upc):
             'message': f'You already have "{local_item.name}" in your inventory!'
         }), 200
 
-    # Not found locally, try external API
+    # Not found locally, try external APIs
+    # Priority: 1. UPC Item DB (free, good images), 2. UPCDatabase.org (requires key)
+
+    # Try UPC Item DB API first (trial endpoint, no key required)
+    try:
+        response = requests.get(
+            f'https://api.upcitemdb.com/prod/trial/lookup',
+            params={'upc': upc},
+            timeout=5
+        )
+
+        if response.status_code == 200:
+            api_data = response.json()
+
+            # Log the response for debugging
+            import logging
+            logging.info(f"UPC Item DB Response: {api_data}")
+
+            # Check if product was found
+            if api_data.get('code') == 'OK' and api_data.get('items'):
+                product_data = api_data['items'][0]
+
+                product_name = product_data.get('title', '')
+                brand = product_data.get('brand', '')
+                category = product_data.get('category', '')
+                description = product_data.get('description', '')
+
+                # Build notes with additional product info
+                notes_parts = []
+                if brand:
+                    notes_parts.append(f'Brand: {brand}')
+                if category:
+                    notes_parts.append(f'Category: {category}')
+                if description and description != product_name:
+                    notes_parts.append(description)
+
+                notes = ' | '.join(notes_parts) if notes_parts else ''
+
+                # Get product image from UPC Item DB
+                image_url = None
+                if product_data.get('images'):
+                    # Use first image from array
+                    image_url = product_data['images'][0]
+
+                # If no image from UPC Item DB, try Pexels
+                if not image_url:
+                    image_url = fetch_product_image(product_name, category)
+
+                return jsonify({
+                    'found': True,
+                    'source': 'upcitemdb',
+                    'data': {
+                        'name': product_name,
+                        'brand': brand,
+                        'category': category,
+                        'notes': notes,
+                        'upc': upc,
+                        'image_url': image_url
+                    },
+                    'message': f'Found product: {product_name}'
+                }), 200
+
+    except requests.RequestException as e:
+        # UPC Item DB failed, will try fallback
+        import logging
+        logging.warning(f"UPC Item DB lookup failed: {e}")
+
+    # Fallback to UPCDatabase.org API
     api_key = os.environ.get('UPC_API_KEY')
 
     if not api_key:
         return jsonify({
             'found': False,
             'source': 'none',
-            'message': 'UPC API key not configured. Please enter item details manually.',
+            'message': 'UPC not found. Please enter item details manually.',
             'data': {'upc': upc}
         }), 200
 
@@ -502,7 +569,7 @@ def lookup_upc(upc):
 
             # Log the response for debugging
             import logging
-            logging.info(f"UPC API Response: {api_data}")
+            logging.info(f"UPCDatabase.org Response: {api_data}")
 
             # Extract relevant fields from API response
             # Handle both direct fields and nested 'items' array structure
@@ -540,7 +607,7 @@ def lookup_upc(upc):
 
             return jsonify({
                 'found': True,
-                'source': 'api',
+                'source': 'upcdatabase',
                 'data': {
                     'name': product_name,
                     'brand': brand,
