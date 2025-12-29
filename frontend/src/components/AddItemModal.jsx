@@ -4,6 +4,7 @@ import { itemsAPI } from '../services/api';
 function AddItemModal({ item, categories, onClose, onSave }) {
   const [formData, setFormData] = useState({
     qr_code: '',
+    upc: '',
     name: '',
     source: '',
     weight: '',
@@ -15,11 +16,14 @@ function AddItemModal({ item, categories, onClose, onSave }) {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [upcLookupLoading, setUpcLookupLoading] = useState(false);
+  const [upcMessage, setUpcMessage] = useState('');
 
   useEffect(() => {
     if (item) {
       setFormData({
         qr_code: item.qr_code || '',
+        upc: item.upc || '',
         name: item.name || '',
         source: item.source || '',
         weight: item.weight || '',
@@ -41,6 +45,12 @@ function AddItemModal({ item, categories, onClose, onSave }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const validateUPC = (upc) => {
+    // UPC must be exactly 12 digits
+    const upcRegex = /^\d{12}$/;
+    return upcRegex.test(upc);
+  };
+
   const handleCategoryChange = (e) => {
     const categoryId = e.target.value;
     setFormData((prev) => ({ ...prev, category_id: categoryId }));
@@ -59,9 +69,60 @@ function AddItemModal({ item, categories, onClose, onSave }) {
     }
   };
 
+  const handleLookupUPC = async () => {
+    if (!formData.upc || !formData.upc.trim()) {
+      setUpcMessage('Please enter a UPC code');
+      return;
+    }
+
+    const upcValue = formData.upc.trim();
+
+    // Validate UPC format (12 digits)
+    if (!validateUPC(upcValue)) {
+      setUpcMessage('Invalid UPC format. UPC must be exactly 12 digits.');
+      return;
+    }
+
+    setUpcLookupLoading(true);
+    setUpcMessage('');
+    setError('');
+
+    try {
+      const response = await itemsAPI.lookupUPC(upcValue);
+      const result = response.data;
+
+      // Only show message if not found locally or if there's an error
+      if (result.source !== 'local') {
+        setUpcMessage(result.message);
+      }
+
+      if (result.found && result.data) {
+        // Auto-fill form fields with UPC lookup data
+        // Note: Don't populate 'source' - that's for store names (Costco, etc), not brands
+        setFormData(prev => ({
+          ...prev,
+          name: result.data.name || prev.name,
+          notes: result.data.notes || prev.notes,
+          category_id: result.data.category_id || prev.category_id,
+        }));
+      }
+    } catch (err) {
+      setError('Failed to lookup UPC. Please try again or enter details manually.');
+    } finally {
+      setUpcLookupLoading(false);
+    }
+  };
+
   const handleSubmit = async (e, keepOpen = false) => {
     e.preventDefault();
     setError('');
+
+    // Validate UPC if provided
+    if (formData.upc && formData.upc.trim() && !validateUPC(formData.upc.trim())) {
+      setError('Invalid UPC format. UPC must be exactly 12 digits.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -69,6 +130,7 @@ function AddItemModal({ item, categories, onClose, onSave }) {
         ...formData,
         weight: formData.weight ? parseFloat(formData.weight) : null,
         category_id: formData.category_id ? parseInt(formData.category_id) : null,
+        upc: formData.upc && formData.upc.trim() ? formData.upc.trim() : null,
       };
 
       if (item && item.id) {
@@ -86,6 +148,7 @@ function AddItemModal({ item, categories, onClose, onSave }) {
 
         setFormData({
           qr_code: '',
+          upc: '',
           name: '',
           source: '',
           weight: '',
@@ -95,6 +158,7 @@ function AddItemModal({ item, categories, onClose, onSave }) {
           expiration_date: savedCategoryExpiration,
           notes: '',
         });
+        setUpcMessage('');
 
         // Trigger a soft refresh to update the items list in the background
         onSave(true);
@@ -121,8 +185,55 @@ function AddItemModal({ item, categories, onClose, onSave }) {
 
         <div className="modal-content">
           {error && <div className="error-message">{error}</div>}
+          {upcMessage && (
+            <div className={upcMessage.includes('already have') || upcMessage.includes('Found product') ? 'success-message' : 'error-message'} style={{ fontSize: '0.9rem' }}>
+              {upcMessage}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} id="item-form">
+          {/* UPC Lookup Section */}
+          <div style={{
+            background: '#f8f9fa',
+            padding: '1rem',
+            borderRadius: '6px',
+            marginBottom: '1rem',
+            border: '1px solid #e0e0e0'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem' }}>
+              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                <label htmlFor="upc" style={{ fontSize: '0.9rem', marginBottom: '0.35rem' }}>
+                  UPC / Barcode (Optional)
+                </label>
+                <input
+                  type="text"
+                  id="upc"
+                  name="upc"
+                  value={formData.upc}
+                  onChange={handleChange}
+                  placeholder="e.g., 012345678901"
+                  style={{ padding: '0.65rem' }}
+                />
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleLookupUPC}
+                disabled={upcLookupLoading || !formData.upc}
+                style={{
+                  padding: '0.65rem 1rem',
+                  fontSize: '0.9rem',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {upcLookupLoading ? '🔍 Looking up...' : '🔍 Lookup'}
+              </button>
+            </div>
+            <small style={{ color: '#6c757d', display: 'block', marginTop: '0.5rem', fontSize: '0.8rem' }}>
+              Scan or enter the barcode to auto-fill product details
+            </small>
+          </div>
+
           <div className="form-group">
             <label htmlFor="name">Item Name *</label>
             <input

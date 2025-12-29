@@ -2,7 +2,11 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from models import db, User, Category
+from dotenv import load_dotenv
 import os
+
+# Load environment variables from .env file
+load_dotenv()
 
 def create_app(test_config=None):
     app = Flask(__name__)
