@@ -111,7 +111,14 @@ The app supports automatic product lookup via UPC/barcode scanning. This feature
    UPC_API_KEY=your_api_key_here
    ```
 
-4. Restart the backend server for changes to take effect
+4. **Run the database migration** (if upgrading from a version without UPC support):
+   ```bash
+   cd backend
+   python migrate_add_upc.py
+   ```
+   This safely adds the UPC column to your existing database without losing data.
+
+5. Restart the backend server for changes to take effect
 
 **How it works:**
 - When adding an item, enter or scan the UPC code
