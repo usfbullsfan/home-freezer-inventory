@@ -95,19 +95,11 @@ The backend will start on `http://localhost:5001`
 If you're updating from an earlier version, run the migration script to add support for custom category images:
 
 ```bash
-# Make sure you're in the backend directory with venv activated
 cd backend
-source venv/bin/activate  # On macOS/Linux
-
-# Run the migration
-python migrate_add_category_images.py
+python3 migrate_add_category_images.py
 ```
 
-Or run it directly using the venv's Python:
-```bash
-cd backend
-./venv/bin/python migrate_add_category_images.py
-```
+The migration script will automatically find your database in either `backend/` or `backend/instance/` and add the required column.
 
 ### 3. UPC/Barcode Lookup Setup (Optional)
 
