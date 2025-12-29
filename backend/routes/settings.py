@@ -78,6 +78,63 @@ def purge_history():
     }), 200
 
 
+@settings_bp.route('/system', methods=['GET'])
+@jwt_required()
+def get_system_settings():
+    """Get system-wide settings (admin only)"""
+    claims = get_jwt()
+
+    if claims.get('role') != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+
+    # Get system settings (user_id is None)
+    settings = Setting.query.filter_by(user_id=None).all()
+
+    # Return as dictionary
+    settings_dict = {s.setting_name: s.setting_value for s in settings}
+
+    # Set defaults if not present
+    if 'enable_image_fetching' not in settings_dict:
+        settings_dict['enable_image_fetching'] = 'true'
+
+    return jsonify(settings_dict), 200
+
+
+@settings_bp.route('/system', methods=['PUT'])
+@jwt_required()
+def update_system_settings():
+    """Update system-wide settings (admin only)"""
+    claims = get_jwt()
+
+    if claims.get('role') != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'error': 'No settings provided'}), 400
+
+    for setting_name, setting_value in data.items():
+        setting = Setting.query.filter_by(
+            user_id=None,
+            setting_name=setting_name
+        ).first()
+
+        if setting:
+            setting.setting_value = str(setting_value)
+        else:
+            setting = Setting(
+                user_id=None,
+                setting_name=setting_name,
+                setting_value=str(setting_value)
+            )
+            db.session.add(setting)
+
+    db.session.commit()
+
+    return jsonify({'message': 'System settings updated successfully'}), 200
+
+
 @settings_bp.route('/backup/download', methods=['GET'])
 @jwt_required()
 def download_backup():

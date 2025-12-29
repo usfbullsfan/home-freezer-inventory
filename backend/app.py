@@ -1,7 +1,7 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from models import db, User, Category
+from models import db, User, Category, Setting
 from dotenv import load_dotenv
 import os
 
@@ -69,17 +69,33 @@ def create_app(test_config=None):
                 print("Created default admin user (username: admin, password: admin123)")
 
             # Create default categories if none exist
+            # Based on USDA/FDA freezer storage guidelines for food quality
+            # Note: Food stored at 0°F is safe indefinitely; these dates are for quality only
             if not Category.query.first():
                 default_categories = [
-                    {'name': 'Beef', 'days': 180, 'system': True},
-                    {'name': 'Pork', 'days': 180, 'system': True},
+                    # Beef - USDA recommends 12 months for steaks/roasts, 3-4 months for ground
+                    {'name': 'Beef, Steak', 'days': 365, 'system': True},
+                    {'name': 'Beef, Roast', 'days': 365, 'system': True},
+                    {'name': 'Beef, Ground', 'days': 120, 'system': True},
+                    # Pork - USDA recommends 4-6 months for roasts/chops, 3-4 months for ground
+                    {'name': 'Pork, Roast', 'days': 180, 'system': True},
+                    {'name': 'Pork, Chops', 'days': 180, 'system': True},
+                    {'name': 'Pork, Ground', 'days': 120, 'system': True},
+                    # Poultry - USDA recommends 9 months for parts, 3-4 months for ground
                     {'name': 'Chicken', 'days': 270, 'system': True},
+                    {'name': 'Turkey', 'days': 270, 'system': True},
+                    {'name': 'Chicken, Ground', 'days': 120, 'system': True},
+                    # Other proteins
                     {'name': 'Fish', 'days': 180, 'system': True},
-                    {'name': 'Ice Cream', 'days': 90, 'system': True},
-                    {'name': 'Appetizers', 'days': 180, 'system': True},
-                    {'name': 'Entrees', 'days': 180, 'system': True},
-                    {'name': 'Prepared Meals', 'days': 90, 'system': True},
-                    {'name': 'Staples', 'days': 365, 'system': True},
+                    # Produce - USDA recommends 8-12 months for blanched vegetables and frozen fruits
+                    {'name': 'Vegetables', 'days': 300, 'system': True},
+                    {'name': 'Fruits', 'days': 300, 'system': True},
+                    # Frozen prepared foods - USDA recommends 3-4 months for frozen dinners/entrees
+                    {'name': 'Ice Cream', 'days': 60, 'system': True},
+                    {'name': 'Appetizers', 'days': 90, 'system': True},
+                    {'name': 'Entrees', 'days': 90, 'system': True},
+                    {'name': 'Leftovers', 'days': 90, 'system': True},
+                    {'name': 'Staples', 'days': 90, 'system': True},
                 ]
 
                 for cat_data in default_categories:
@@ -91,6 +107,22 @@ def create_app(test_config=None):
                     db.session.add(category)
 
                 print(f"Created {len(default_categories)} default categories")
+
+            # Create system-wide settings if they don't exist
+            # System settings use user_id = None
+            enable_images_setting = Setting.query.filter_by(
+                user_id=None,
+                setting_name='enable_image_fetching'
+            ).first()
+
+            if not enable_images_setting:
+                enable_images_setting = Setting(
+                    user_id=None,
+                    setting_name='enable_image_fetching',
+                    setting_value='true'
+                )
+                db.session.add(enable_images_setting)
+                print("Created system setting: enable_image_fetching = true")
 
             db.session.commit()
 

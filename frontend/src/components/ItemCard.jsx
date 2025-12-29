@@ -55,8 +55,26 @@ function ItemCard({ item, onEdit, onStatusChange }) {
 
   return (
     <div className={getCardClass()}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-        <h3>{item.name}</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem' }}>
+        {item.image_url && (
+          <img
+            src={item.image_url}
+            alt={item.name}
+            style={{
+              width: '60px',
+              height: '60px',
+              objectFit: 'cover',
+              borderRadius: '8px',
+              flexShrink: 0
+            }}
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 style={{ margin: 0, marginBottom: '0.25rem' }}>{item.name}</h3>
+        </div>
         <span className={getStatusClass()}>
           {item.status.replace('_', ' ')}
         </span>

@@ -6,9 +6,14 @@ function Settings({ user }) {
   const [settings, setSettings] = useState({
     track_history: 'true',
   });
+  const [systemSettings, setSystemSettings] = useState({
+    enable_image_fetching: 'true',
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [systemError, setSystemError] = useState('');
+  const [systemSuccess, setSystemSuccess] = useState('');
 
   // Backup/Restore state
   const [backupInfo, setBackupInfo] = useState(null);
@@ -30,6 +35,7 @@ function Settings({ user }) {
     loadSettings();
     if (user && user.role === 'admin') {
       loadBackupInfo();
+      loadSystemSettings();
     }
   }, [user]);
 
@@ -56,6 +62,30 @@ function Settings({ user }) {
       setSuccess('Settings saved successfully');
     } catch (err) {
       setError('Failed to save settings');
+    }
+  };
+
+  const loadSystemSettings = async () => {
+    setSystemError('');
+
+    try {
+      const response = await settingsAPI.getSystemSettings();
+      setSystemSettings(response.data);
+    } catch (err) {
+      setSystemError('Failed to load system settings');
+    }
+  };
+
+  const handleSaveSystemSettings = async () => {
+    setSystemError('');
+    setSystemSuccess('');
+
+    try {
+      await settingsAPI.updateSystemSettings(systemSettings);
+      setSystemSuccess('System settings saved successfully');
+      setTimeout(() => setSystemSuccess(''), 3000);
+    } catch (err) {
+      setSystemError('Failed to save system settings');
     }
   };
 
@@ -275,6 +305,42 @@ function Settings({ user }) {
       </div>
 
       {user && user.role === 'admin' && (
+        <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
+          <h3 style={{ marginBottom: '1.5rem' }}>System Settings (Admin)</h3>
+
+          {systemError && <div className="error-message">{systemError}</div>}
+          {systemSuccess && <div className="success-message">{systemSuccess}</div>}
+
+          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={systemSettings.enable_image_fetching === 'true'}
+                onChange={(e) =>
+                  setSystemSettings({
+                    ...systemSettings,
+                    enable_image_fetching: e.target.checked ? 'true' : 'false',
+                  })
+                }
+                style={{ marginRight: '0.5rem', width: 'auto' }}
+              />
+              Enable automatic product image fetching
+            </label>
+            <small style={{ color: '#7f8c8d', marginLeft: '1.5rem', display: 'block', marginTop: '0.25rem' }}>
+              When enabled, the system will automatically fetch product images from Pexels when adding items via UPC lookup. Disable this to conserve API quota or bandwidth.
+            </small>
+          </div>
+
+          <button
+            className="btn btn-primary"
+            onClick={handleSaveSystemSettings}
+          >
+            Save System Settings
+          </button>
+        </div>
+      )}
+
+      {user && user.role === 'admin' && (
         <UserManagement currentUser={user} />
       )}
 
@@ -374,7 +440,7 @@ function Settings({ user }) {
           <strong>Freezer Inventory Tracker</strong> - MVP Version
         </p>
         <p style={{ color: '#7f8c8d', marginTop: '0.5rem' }}>
-          Track your freezer inventory with ease. Add items, scan QR codes, and never lose track of what's in your freezer.
+          Track your freezer inventory with ease. Add items with simple codes and never lose track of what's in your freezer.
         </p>
       </div>
     </div>

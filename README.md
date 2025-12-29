@@ -94,13 +94,15 @@ The backend will start on `http://localhost:5001`
 
 The app supports automatic product lookup via UPC/barcode scanning. This feature is **optional** but highly recommended for quickly adding packaged items.
 
-**To enable UPC lookup:**
+**UPC lookup works out of the box!** The app uses UPC Item DB's free trial API as the primary source (no API key required). For additional lookups, you can optionally configure a UPCDatabase.org API key as a fallback.
 
-1. Get a free API key from [UPCDatabase.org](https://upcdatabase.org/api)
+**Optional: Add fallback UPC API:**
+
+1. Get a free API key from [UPCDatabase.org](https://upcdatabase.org/api) (optional)
    - Free tier includes 100 lookups/month, 25 searches/month
    - Sign up and get your API key from the dashboard
 
-2. Create a `.env` file in the project root:
+2. Create a `.env` file in the project root (if not already exists):
    ```bash
    # Copy the example file
    cp .env.example .env
@@ -111,21 +113,15 @@ The app supports automatic product lookup via UPC/barcode scanning. This feature
    UPC_API_KEY=your_api_key_here
    ```
 
-4. **Run the database migration** (if upgrading from a version without UPC support):
-   ```bash
-   cd backend
-   python migrate_add_upc.py
-   ```
-   This safely adds the UPC column to your existing database without losing data.
-
-5. Restart the backend server for changes to take effect
+4. Restart the backend server for changes to take effect
 
 **How it works:**
 - When adding an item, enter or scan the UPC code
 - Click "Lookup" to search for the product
 - The app first checks your local inventory for existing items with that UPC
-- If not found locally, it queries the UPCDatabase API
-- Product name, brand, and category are auto-filled
+- If not found locally, it tries UPC Item DB (free, no API key needed)
+- If still not found and you have a UPC_API_KEY, it tries UPCDatabase.org
+- Product name, brand, category, and image are auto-filled
 - You can edit any auto-filled information before saving
 - Items without UPCs can still be added manually
 
@@ -140,7 +136,40 @@ The app supports automatic product lookup via UPC/barcode scanning. This feature
 - ✅ For deployment/CI-CD, use GitHub Secrets or your platform's environment variable management
 - ⚠️ Never commit real API keys to the repository
 
-### 4. Frontend Setup
+### 4. Product Image Support (Optional)
+
+The app can automatically fetch product images to help visually identify items in your freezer. This feature is **optional** and works alongside UPC lookup.
+
+**To enable automatic image fetching:**
+
+1. Get a free API key from [Pexels](https://www.pexels.com/api/)
+   - Free tier includes 200 requests/hour with unlimited monthly requests
+   - Sign up and get your API key from the API section
+
+2. Add your API key to `.env`:
+   ```bash
+   PEXELS_API_KEY=your_api_key_here
+   ```
+
+3. Restart the backend server for changes to take effect
+
+**How it works:**
+- When using UPC lookup, the app tries to get the product image from the UPC database first
+- If no image is found, it searches Pexels for a relevant food photo based on the category
+- Product images are displayed as thumbnails in the inventory list
+- Larger images appear in the item details modal
+- Images gracefully fall back if unavailable
+
+**Without API key:**
+- UPC-provided images (if available) will still work
+- Pexels image search will be skipped
+- All other functionality remains unchanged
+
+**Admin Controls:**
+- Admins can enable/disable automatic image fetching system-wide
+- Setting stored in database (default: enabled)
+
+### 5. Frontend Setup
 
 Open a new terminal window:
 
@@ -202,16 +231,40 @@ The frontend will start on `http://localhost:3000`
 4. **Edit Category**: Update name or default expiration days
 5. **Delete Category**: Remove custom categories (system categories are protected)
 
-**Default Categories:**
-- Beef (180 days)
-- Pork (180 days)
-- Chicken (270 days)
-- Fish (180 days)
-- Ice Cream (90 days)
-- Appetizers (180 days)
-- Entrees (180 days)
-- Prepared Meals (90 days)
-- Staples (365 days)
+**⚠️ IMPORTANT: Food Safety Disclaimer**
+
+> **Expiration dates are for QUALITY, not safety.** According to USDA guidelines, food stored continuously at 0°F (-18°C) is safe indefinitely. The recommended storage times below are for maintaining best quality (flavor, color, texture) only. Always inspect food before consuming and follow safe food handling practices.
+
+**Default Categories (Based on USDA/FDA Guidelines):**
+
+*Beef:*
+- Beef, Steak (365 days / 12 months)
+- Beef, Roast (365 days / 12 months)
+- Beef, Ground (120 days / 3-4 months)
+
+*Pork:*
+- Pork, Roast (180 days / 4-6 months)
+- Pork, Chops (180 days / 4-6 months)
+- Pork, Ground (120 days / 3-4 months)
+
+*Poultry:*
+- Chicken (270 days / 9 months)
+- Turkey (270 days / 9 months)
+- Chicken, Ground (120 days / 3-4 months)
+
+*Other:*
+- Fish (180 days / 6 months)
+- Vegetables (300 days / 8-12 months)
+- Fruits (300 days / 8-12 months)
+- Ice Cream (60 days / 1-2 months)
+- Appetizers (90 days / 3-4 months)
+- Entrees (90 days / 3-4 months)
+- Leftovers (90 days / 3-4 months)
+- Staples (90 days / 3-4 months)
+
+**Sources:**
+- [USDA Food Safety and Inspection Service - Freezing and Food Safety](https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/food-safety-basics/freezing-and-food-safety)
+- [FoodSafety.gov - Cold Food Storage Charts](https://www.foodsafety.gov/food-safety-charts/cold-food-storage-charts)
 
 ### Settings
 

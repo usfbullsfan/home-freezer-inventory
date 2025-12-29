@@ -53,7 +53,7 @@ class Category(db.Model):
             'name': self.name,
             'default_expiration_days': self.default_expiration_days,
             'created_by_user_id': self.created_by_user_id,
-            'created_at': self.created_at.isoformat(),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
             'is_system': self.is_system
         }
 
@@ -64,6 +64,7 @@ class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     qr_code = db.Column(db.String(255), unique=True, nullable=False)
     upc = db.Column(db.String(50))  # Universal Product Code (barcode)
+    image_url = db.Column(db.String(500))  # URL to product image
     name = db.Column(db.String(200), nullable=False)
     source = db.Column(db.String(200))  # e.g., "Costco"
     weight = db.Column(db.Float)
@@ -88,6 +89,7 @@ class Item(db.Model):
             'id': self.id,
             'qr_code': self.qr_code,
             'upc': self.upc,
+            'image_url': self.image_url,
             'name': self.name,
             'source': self.source,
             'weight': self.weight,

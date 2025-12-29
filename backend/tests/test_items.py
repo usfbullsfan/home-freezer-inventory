@@ -261,3 +261,73 @@ def test_filter_items_by_status(client, auth_headers_admin):
     assert response.status_code == 200
     assert len(response.json) == 1
     assert response.json[0]['status'] == 'consumed'
+
+
+def test_create_item_with_image_url(client, auth_headers_admin):
+    """Test creating item with image URL"""
+    response = client.post('/api/items/',
+        json={
+            'name': 'Ribeye Steak',
+            'image_url': 'https://example.com/ribeye.jpg'
+        },
+        headers=auth_headers_admin
+    )
+
+    assert response.status_code == 201
+    assert response.json['name'] == 'Ribeye Steak'
+    assert response.json['image_url'] == 'https://example.com/ribeye.jpg'
+
+
+def test_create_item_with_upc(client, auth_headers_admin):
+    """Test creating item with UPC code"""
+    response = client.post('/api/items/',
+        json={
+            'name': 'Test Product',
+            'upc': '012345678905'
+        },
+        headers=auth_headers_admin
+    )
+
+    assert response.status_code == 201
+    assert response.json['upc'] == '012345678905'
+
+
+def test_update_item_image_url(client, auth_headers_admin, sample_item):
+    """Test updating item's image URL"""
+    item_id = sample_item['id']
+    response = client.put(f'/api/items/{item_id}',
+        json={
+            'image_url': 'https://example.com/updated-image.jpg'
+        },
+        headers=auth_headers_admin
+    )
+
+    assert response.status_code == 200
+    assert response.json['image_url'] == 'https://example.com/updated-image.jpg'
+
+
+def test_search_image_endpoint(client, auth_headers_admin):
+    """Test the search-image endpoint"""
+    response = client.post('/api/items/search-image',
+        json={
+            'product_name': 'Ribeye Steak',
+            'category_name': 'Beef'
+        },
+        headers=auth_headers_admin
+    )
+
+    assert response.status_code == 200
+    assert 'image_url' in response.json
+    # Without actual Pexels API key in tests, image_url will be None
+    # This just verifies the endpoint works
+
+
+def test_search_image_missing_product_name(client, auth_headers_admin):
+    """Test search-image endpoint without product name"""
+    response = client.post('/api/items/search-image',
+        json={},
+        headers=auth_headers_admin
+    )
+
+    assert response.status_code == 400
+    assert 'error' in response.json

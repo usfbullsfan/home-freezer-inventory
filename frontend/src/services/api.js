@@ -77,6 +77,9 @@ export const itemsAPI = {
 
   lookupUPC: (upc) =>
     api.get(`/items/lookup-upc/${upc}`),
+
+  searchImage: (productName, categoryName) =>
+    api.post('/items/search-image', { product_name: productName, category_name: categoryName }),
 };
 
 // Categories API
@@ -104,6 +107,12 @@ export const settingsAPI = {
 
   updateSettings: (data) =>
     api.put('/settings/', data),
+
+  getSystemSettings: () =>
+    api.get('/settings/system'),
+
+  updateSystemSettings: (data) =>
+    api.put('/settings/system', data),
 
   purgeHistory: () =>
     api.post('/settings/purge-history'),
