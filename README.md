@@ -127,6 +127,12 @@ The app supports automatic product lookup via UPC/barcode scanning. This feature
 - Manual entry of product details is required
 - Local UPC search still works for items you've already added
 
+**Security Note:**
+- ✅ The `.env` file is in `.gitignore` and will **never** be committed to the repository
+- ✅ Only `.env.example` (with placeholder values) is tracked in git
+- ✅ For deployment/CI-CD, use GitHub Secrets or your platform's environment variable management
+- ⚠️ Never commit real API keys to the repository
+
 ### 4. Frontend Setup
 
 Open a new terminal window:
