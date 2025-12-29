@@ -82,7 +82,6 @@ def create_app(test_config=None):
                     {'name': 'Chicken', 'days': 270, 'system': True},
                     {'name': 'Turkey', 'days': 270, 'system': True},
                     {'name': 'Chicken, Ground', 'days': 120, 'system': True},
-                    {'name': 'Turkey, Ground', 'days': 120, 'system': True},
                     # Other proteins
                     {'name': 'Fish', 'days': 180, 'system': True},
                     # Produce - USDA recommends 8-12 months for blanched vegetables and frozen fruits

@@ -266,7 +266,6 @@ The frontend will start on `http://localhost:3000`
 - Chicken (270 days / 9 months)
 - Turkey (270 days / 9 months)
 - Chicken, Ground (120 days / 3-4 months)
-- Turkey, Ground (120 days / 3-4 months)
 
 *Other:*
 - Fish (180 days / 6 months)

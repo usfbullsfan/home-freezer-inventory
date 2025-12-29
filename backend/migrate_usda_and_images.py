@@ -85,7 +85,6 @@ def migrate_database():
             ('Pork, Ground', 120, True),  # Ground pork: 3-4 months
             ('Turkey', 270, True),  # Turkey parts: 9 months
             ('Chicken, Ground', 120, True),  # Ground chicken: 3-4 months
-            ('Turkey, Ground', 120, True),  # Ground turkey: 3-4 months
             ('Vegetables', 300, True),  # Blanched vegetables: 8-12 months
             ('Fruits', 300, True),  # Frozen fruits: 8-12 months
         ]

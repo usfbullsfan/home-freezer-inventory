@@ -25,56 +25,47 @@ def get_category_stock_image(category_name):
     # Normalize category name for matching
     category_lower = category_name.lower()
 
-    # Mapping of specific category patterns to search terms
+    # Hardcoded stock images for each category
     # Order matters: more specific patterns first
-    category_patterns = [
+    stock_images = {
         # Beef varieties (most specific first)
-        ('beef, steak', 'raw ribeye steak'),
-        ('beef, roast', 'raw beef roast'),
-        ('beef, ground', 'raw ground beef'),
-        ('beef', 'raw beef steak'),
+        'beef, steak': 'https://images.pexels.com/photos/6896518/pexels-photo-6896518.jpeg',
+        'beef, roast': 'https://images.pexels.com/photos/11898916/pexels-photo-11898916.jpeg',
+        'beef, ground': 'https://images.pexels.com/photos/128401/pexels-photo-128401.jpeg',
 
         # Pork varieties
-        ('pork, roast', 'raw pork roast'),
-        ('pork, chops', 'raw pork chops'),
-        ('pork, ground', 'raw ground pork'),
-        ('pork', 'raw pork chops'),
+        'pork, roast': 'https://images.pexels.com/photos/18015004/pexels-photo-18015004.jpeg',
+        'pork, chops': 'https://images.pexels.com/photos/2676932/pexels-photo-2676932.jpeg',
+        'pork, ground': 'https://images.pexels.com/photos/7225724/pexels-photo-7225724.jpeg',
 
         # Poultry varieties
-        ('chicken, ground', 'raw ground chicken'),
-        ('chicken', 'raw chicken breast meat'),
-        ('turkey, ground', 'raw ground turkey'),
-        ('turkey', 'raw turkey breast'),
+        'chicken, ground': 'https://media.istockphoto.com/id/498579651/photo/serving-of-ground-chicken.jpg?s=2048x2048&w=is&k=20&c=2AAP2VANjHg16UHOfhakxqkGM8X-BQk-MkexRyv0U-U=',
+        'chicken': 'https://images.pexels.com/photos/616354/pexels-photo-616354.jpeg',
+        'turkey': 'https://images.pexels.com/photos/5847614/pexels-photo-5847614.jpeg',
 
         # Other proteins
-        ('fish', 'raw salmon fillet'),
+        'fish': 'https://images.pexels.com/photos/30648983/pexels-photo-30648983.jpeg',
 
         # Produce
-        ('vegetables', 'frozen vegetables bag'),
-        ('fruits', 'frozen mixed berries'),
+        'vegetables': 'https://images.pexels.com/photos/5870328/pexels-photo-5870328.jpeg',
+        'fruits': 'https://images.pexels.com/photos/14854040/pexels-photo-14854040.jpeg',
 
         # Prepared foods
-        ('ice cream', 'vanilla ice cream scoop'),
-        ('appetizers', 'frozen appetizers'),
-        ('entrees', 'frozen tv dinner'),
-        ('leftovers', 'casserole dish'),
-        ('prepared meals', 'casserole dish'),  # Legacy support
-        ('staples', 'butter stick'),
-    ]
+        'ice cream': 'https://images.pexels.com/photos/749102/pexels-photo-749102.jpeg',
+        'appetizers': 'https://images.pexels.com/photos/9568318/pexels-photo-9568318.jpeg',
+        'entrees': 'https://images.pexels.com/photos/5419303/pexels-photo-5419303.jpeg',
+        'leftovers': 'https://images.pexels.com/photos/90893/pexels-photo-90893.jpeg',
+        'prepared meals': 'https://images.pexels.com/photos/90893/pexels-photo-90893.jpeg',  # Legacy support
+        'staples': 'https://images.pexels.com/photos/7965898/pexels-photo-7965898.jpeg',
+    }
 
     # Find matching pattern (most specific match wins)
-    search_term = None
-    for pattern, term in category_patterns:
+    for pattern, image_url in stock_images.items():
         if pattern in category_lower:
-            search_term = term
-            break
+            return image_url
 
-    # If no specific mapping, use the category name itself
-    if not search_term:
-        search_term = f"{category_name} food"
-
-    # Use fetch_product_image to get the stock image
-    return fetch_product_image(search_term, category_name=None)
+    # No specific mapping found
+    return None
 
 
 def fetch_product_image(product_name, category_name=None):
