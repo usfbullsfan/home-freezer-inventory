@@ -1,7 +1,7 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from models import db, User, Category
+from models import db, User, Category, Setting
 from dotenv import load_dotenv
 import os
 
