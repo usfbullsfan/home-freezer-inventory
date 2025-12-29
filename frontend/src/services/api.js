@@ -74,6 +74,9 @@ export const itemsAPI = {
 
   getQRImage: (qrCode) =>
     `/api/items/qr/${qrCode}/image`,
+
+  lookupUPC: (upc) =>
+    api.get(`/items/lookup-upc/${upc}`),
 };
 
 // Categories API

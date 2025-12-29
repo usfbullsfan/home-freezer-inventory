@@ -9,6 +9,7 @@ A web-based application for tracking freezer inventory with alphanumeric code la
 
 - 📦 **Item Management**: Add, edit, and track individual freezer items
 - 🏷️ **Simple Alphanumeric Codes**: Generate unique codes (e.g., ABC123) for each item for easy identification
+- 📱 **UPC/Barcode Support**: Scan or enter UPC codes to auto-fill product details from database (optional)
 - 🔍 **Smart Search & Filter**: Search by name, source, category, and date ranges
 - 📊 **Expiration Tracking**: Automatic expiration date calculation based on category defaults
 - 📅 **Sort Options**: Sort by date added, expiration date, or name
@@ -89,7 +90,44 @@ The backend will start on `http://localhost:5001`
 - Password: `admin123`
 - ⚠️ **Change these in production!**
 
-### 3. Frontend Setup
+### 3. UPC/Barcode Lookup Setup (Optional)
+
+The app supports automatic product lookup via UPC/barcode scanning. This feature is **optional** but highly recommended for quickly adding packaged items.
+
+**To enable UPC lookup:**
+
+1. Get a free API key from [UPCDatabase.org](https://upcdatabase.org/api)
+   - Free tier includes 100 lookups/month, 25 searches/month
+   - Sign up and get your API key from the dashboard
+
+2. Create a `.env` file in the project root:
+   ```bash
+   # Copy the example file
+   cp .env.example .env
+   ```
+
+3. Edit `.env` and add your API key:
+   ```bash
+   UPC_API_KEY=your_api_key_here
+   ```
+
+4. Restart the backend server for changes to take effect
+
+**How it works:**
+- When adding an item, enter or scan the UPC code
+- Click "Lookup" to search for the product
+- The app first checks your local inventory for existing items with that UPC
+- If not found locally, it queries the UPCDatabase API
+- Product name, brand, and category are auto-filled
+- You can edit any auto-filled information before saving
+- Items without UPCs can still be added manually
+
+**Without API key:**
+- UPC field is still available for storing barcodes
+- Manual entry of product details is required
+- Local UPC search still works for items you've already added
+
+### 4. Frontend Setup
 
 Open a new terminal window:
 

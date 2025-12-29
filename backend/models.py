@@ -63,6 +63,7 @@ class Item(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     qr_code = db.Column(db.String(255), unique=True, nullable=False)
+    upc = db.Column(db.String(50))  # Universal Product Code (barcode)
     name = db.Column(db.String(200), nullable=False)
     source = db.Column(db.String(200))  # e.g., "Costco"
     weight = db.Column(db.Float)
@@ -86,6 +87,7 @@ class Item(db.Model):
         return {
             'id': self.id,
             'qr_code': self.qr_code,
+            'upc': self.upc,
             'name': self.name,
             'source': self.source,
             'weight': self.weight,

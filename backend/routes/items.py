@@ -4,6 +4,8 @@ from models import db, Item, Category, User, Setting, generate_qr_code
 from datetime import datetime, timedelta
 import qrcode
 import io
+import requests
+import os
 
 items_bp = Blueprint('items', __name__)
 
@@ -297,3 +299,101 @@ def get_oldest_items():
         .all()
 
     return jsonify([item.to_dict() for item in items]), 200
+
+
+@items_bp.route('/lookup-upc/<upc>', methods=['GET'])
+@jwt_required()
+def lookup_upc(upc):
+    """Lookup product information by UPC code
+
+    First checks local database, then queries upcdatabase.org API if not found locally.
+    Returns product information to auto-fill the add item form.
+    """
+    # First check if we have this UPC in our local database
+    local_item = Item.query.filter_by(upc=upc).first()
+
+    if local_item:
+        return jsonify({
+            'found': True,
+            'source': 'local',
+            'data': {
+                'name': local_item.name,
+                'brand': local_item.source,
+                'category': local_item.category.name if local_item.category else None,
+                'category_id': local_item.category_id,
+                'notes': local_item.notes,
+                'upc': local_item.upc
+            },
+            'message': f'You already have "{local_item.name}" in your inventory!'
+        }), 200
+
+    # Not found locally, try external API
+    api_key = os.environ.get('UPC_API_KEY')
+
+    if not api_key:
+        return jsonify({
+            'found': False,
+            'source': 'none',
+            'message': 'UPC API key not configured. Please enter item details manually.',
+            'data': {'upc': upc}
+        }), 200
+
+    try:
+        # Call upcdatabase.org API
+        response = requests.get(
+            f'https://api.upcdatabase.org/product/{upc}',
+            headers={'Authorization': f'Bearer {api_key}'},
+            timeout=5
+        )
+
+        if response.status_code == 200:
+            api_data = response.json()
+
+            # Extract relevant fields from API response
+            product_name = api_data.get('title') or api_data.get('description', '')
+            brand = api_data.get('brand', '')
+            category = api_data.get('category', '')
+
+            # Build notes with additional product info
+            notes_parts = []
+            if brand:
+                notes_parts.append(f'Brand: {brand}')
+            if category:
+                notes_parts.append(f'Category: {category}')
+
+            notes = ' | '.join(notes_parts) if notes_parts else ''
+
+            return jsonify({
+                'found': True,
+                'source': 'api',
+                'data': {
+                    'name': product_name,
+                    'brand': brand,
+                    'category': category,
+                    'notes': notes,
+                    'upc': upc
+                },
+                'message': f'Found product: {product_name}'
+            }), 200
+        elif response.status_code == 404:
+            return jsonify({
+                'found': False,
+                'source': 'api',
+                'message': 'UPC not found in database. Please enter item details manually.',
+                'data': {'upc': upc}
+            }), 200
+        else:
+            return jsonify({
+                'found': False,
+                'source': 'api',
+                'message': f'UPC lookup failed. Please enter item details manually.',
+                'data': {'upc': upc}
+            }), 200
+
+    except requests.RequestException as e:
+        return jsonify({
+            'found': False,
+            'source': 'error',
+            'message': 'UPC lookup service unavailable. Please enter item details manually.',
+            'data': {'upc': upc}
+        }), 200
