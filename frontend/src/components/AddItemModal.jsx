@@ -59,7 +59,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
     return upcRegex.test(upc);
   };
 
-  const handleCategoryChange = (e) => {
+  const handleCategoryChange = async (e) => {
     const categoryId = e.target.value;
 
     // Check if user selected "Create New Category" option
@@ -81,6 +81,24 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
           ...prev,
           expiration_date: expirationDate.toISOString().split('T')[0],
         }));
+      }
+    }
+
+    // Update image to category stock image when category changes
+    if (categoryId) {
+      try {
+        const response = await categoriesAPI.getCategoryStockImage(parseInt(categoryId));
+        const stockImageUrl = response.data.stock_image_url;
+
+        if (stockImageUrl) {
+          setFormData((prev) => ({
+            ...prev,
+            image_url: stockImageUrl,
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch category stock image:', err);
+        // Don't show error to user, just continue without updating image
       }
     }
   };

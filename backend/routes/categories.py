@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from models import db, Category
+from routes.items import get_category_stock_image
 
 categories_bp = Blueprint('categories', __name__)
 
@@ -110,3 +111,21 @@ def delete_category(category_id):
     db.session.commit()
 
     return jsonify({'message': 'Category deleted successfully'}), 200
+
+
+@categories_bp.route('/<int:category_id>/stock-image', methods=['GET'])
+@jwt_required()
+def get_category_stock_image_url(category_id):
+    """Get the stock image URL for a category"""
+    category = Category.query.get(category_id)
+
+    if not category:
+        return jsonify({'error': 'Category not found'}), 404
+
+    image_url = get_category_stock_image(category.name)
+
+    return jsonify({
+        'category_id': category_id,
+        'category_name': category.name,
+        'stock_image_url': image_url
+    }), 200

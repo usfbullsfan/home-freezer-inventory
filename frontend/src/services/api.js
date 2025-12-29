@@ -90,6 +90,9 @@ export const categoriesAPI = {
   getCategory: (id) =>
     api.get(`/categories/${id}`),
 
+  getCategoryStockImage: (id) =>
+    api.get(`/categories/${id}/stock-image`),
+
   createCategory: (data) =>
     api.post('/categories/', data),
 
