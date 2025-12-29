@@ -50,5 +50,11 @@ logs/
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Uploads
+backend/uploads/category_images/*
+!backend/uploads/category_images/.gitkeep
+
+# Backups
 backend/*.db.backup_*
 frontend/package-lock*.json

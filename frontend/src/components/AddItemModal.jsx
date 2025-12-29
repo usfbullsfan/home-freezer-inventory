@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { itemsAPI } from '../services/api';
+import { itemsAPI, categoriesAPI, uploadsAPI } from '../services/api';
 
-function AddItemModal({ item, categories, onClose, onSave }) {
+function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) {
   const [formData, setFormData] = useState({
     qr_code: '',
     upc: '',
@@ -19,6 +19,15 @@ function AddItemModal({ item, categories, onClose, onSave }) {
   const [loading, setLoading] = useState(false);
   const [upcLookupLoading, setUpcLookupLoading] = useState(false);
   const [upcMessage, setUpcMessage] = useState('');
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
+  const [newCategoryData, setNewCategoryData] = useState({
+    name: '',
+    default_expiration_days: 180,
+    image_url: '',
+  });
+  const [categoryError, setCategoryError] = useState('');
+  const [selectedCategoryFile, setSelectedCategoryFile] = useState(null);
+  const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
 
   useEffect(() => {
     if (item) {
@@ -53,8 +62,16 @@ function AddItemModal({ item, categories, onClose, onSave }) {
     return upcRegex.test(upc);
   };
 
-  const handleCategoryChange = (e) => {
+  const handleCategoryChange = async (e) => {
     const categoryId = e.target.value;
+
+    // Check if user selected "Create New Category" option
+    if (categoryId === 'CREATE_NEW') {
+      setShowCreateCategory(true);
+      setFormData((prev) => ({ ...prev, category_id: '' }));
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, category_id: categoryId }));
 
     // Auto-calculate expiration date based on category default
@@ -69,6 +86,135 @@ function AddItemModal({ item, categories, onClose, onSave }) {
         }));
       }
     }
+
+    // Update image to category stock image when category changes
+    if (categoryId) {
+      try {
+        const response = await categoriesAPI.getCategoryStockImage(parseInt(categoryId));
+        const stockImageUrl = response.data.stock_image_url;
+
+        if (stockImageUrl) {
+          setFormData((prev) => ({
+            ...prev,
+            image_url: stockImageUrl,
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch category stock image:', err);
+        // Don't show error to user, just continue without updating image
+      }
+    }
+  };
+
+  const handleCategoryFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        setCategoryError('Invalid file type. Please select an image (PNG, JPEG, GIF, or WebP).');
+        e.target.value = '';
+        return;
+      }
+
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setCategoryError('File too large. Maximum size is 5MB.');
+        e.target.value = '';
+        return;
+      }
+
+      setSelectedCategoryFile(file);
+      setCategoryError('');
+
+      // Create a preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setNewCategoryData(prev => ({ ...prev, image_url: e.target.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryData.name.trim()) {
+      setCategoryError('Category name is required');
+      return;
+    }
+
+    let imageUrl = newCategoryData.image_url;
+
+    // Upload file if one is selected
+    if (selectedCategoryFile) {
+      setUploadingCategoryImage(true);
+      try {
+        const response = await uploadsAPI.uploadCategoryImage(selectedCategoryFile);
+        imageUrl = response.data.image_url;
+      } catch (err) {
+        setCategoryError(err.response?.data?.error || 'Failed to upload image');
+        setUploadingCategoryImage(false);
+        return;
+      }
+      setUploadingCategoryImage(false);
+    }
+
+    try {
+      const submitData = {
+        ...newCategoryData,
+        image_url: imageUrl || newCategoryData.image_url || null,
+      };
+      const response = await categoriesAPI.createCategory(submitData);
+      const createdCategory = response.data;
+
+      // Close the create form
+      setShowCreateCategory(false);
+      setCategoryError('');
+      setNewCategoryData({ name: '', default_expiration_days: 180, image_url: '' });
+      setSelectedCategoryFile(null);
+
+      // Notify parent to refresh categories
+      if (onCategoryCreated) {
+        await onCategoryCreated();
+      }
+
+      // Auto-select the newly created category
+      setFormData((prev) => ({ ...prev, category_id: createdCategory.id }));
+
+      // Auto-calculate expiration date based on new category's default
+      if (createdCategory.default_expiration_days && !formData.expiration_date) {
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + createdCategory.default_expiration_days);
+        setFormData((prev) => ({
+          ...prev,
+          expiration_date: expirationDate.toISOString().split('T')[0],
+        }));
+      }
+
+      // Fetch and apply the category's image
+      try {
+        const imageResponse = await categoriesAPI.getCategoryStockImage(createdCategory.id);
+        const stockImageUrl = imageResponse.data.stock_image_url;
+
+        if (stockImageUrl) {
+          setFormData((prev) => ({
+            ...prev,
+            image_url: stockImageUrl,
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch category image:', err);
+        // Don't show error to user, just continue without updating image
+      }
+    } catch (err) {
+      setCategoryError(err.response?.data?.error || 'Failed to create category');
+    }
+  };
+
+  const handleCancelCreateCategory = () => {
+    setShowCreateCategory(false);
+    setCategoryError('');
+    setNewCategoryData({ name: '', default_expiration_days: 180, image_url: '' });
+    setSelectedCategoryFile(null);
   };
 
   const handleLookupUPC = async () => {
@@ -306,13 +452,116 @@ function AddItemModal({ item, categories, onClose, onSave }) {
                     {cat.name}
                   </option>
                 ))}
+                <option value="CREATE_NEW" style={{ fontWeight: 'bold', color: '#3498db' }}>
+                  + Create New Category
+                </option>
               </select>
             </div>
           </div>
 
+          {/* Inline category creation form */}
+          {showCreateCategory && (
+            <div style={{
+              background: '#f0f8ff',
+              padding: '1rem',
+              borderRadius: '6px',
+              marginBottom: '1rem',
+              border: '2px solid #3498db'
+            }}>
+              <h4 style={{ margin: '0 0 0.75rem 0', color: '#2c3e50' }}>Create New Category</h4>
+              {categoryError && (
+                <div className="error-message" style={{ marginBottom: '0.75rem' }}>
+                  {categoryError}
+                </div>
+              )}
+              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                <label htmlFor="new_category_name">Category Name *</label>
+                <input
+                  type="text"
+                  id="new_category_name"
+                  value={newCategoryData.name}
+                  onChange={(e) => setNewCategoryData({ ...newCategoryData, name: e.target.value })}
+                  placeholder="e.g., Lamb, Sausages"
+                  autoFocus
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                <label htmlFor="new_category_expiration">Default Expiration Days</label>
+                <input
+                  type="number"
+                  id="new_category_expiration"
+                  value={newCategoryData.default_expiration_days}
+                  onChange={(e) => setNewCategoryData({ ...newCategoryData, default_expiration_days: parseInt(e.target.value) })}
+                  min="1"
+                />
+                <small style={{ color: '#7f8c8d', display: 'block', marginTop: '0.25rem' }}>
+                  Default: 180 days (6 months)
+                </small>
+              </div>
+              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                <label>Default Image (optional)</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => document.getElementById('category-file-upload').click()}
+                    style={{ flex: 1, fontSize: '0.85rem', padding: '0.5rem' }}
+                    disabled={uploadingCategoryImage}
+                  >
+                    {selectedCategoryFile ? '✓ File' : '📁 Upload'}
+                  </button>
+                  <span style={{ color: '#95a5a6', fontSize: '0.85rem' }}>or</span>
+                  <input
+                    type="url"
+                    value={selectedCategoryFile ? '' : newCategoryData.image_url}
+                    onChange={(e) => {
+                      setSelectedCategoryFile(null);
+                      setNewCategoryData({ ...newCategoryData, image_url: e.target.value });
+                    }}
+                    placeholder="Enter URL"
+                    style={{ flex: 2, fontSize: '0.85rem', padding: '0.5rem' }}
+                    disabled={selectedCategoryFile || uploadingCategoryImage}
+                  />
+                </div>
+                <input
+                  type="file"
+                  id="category-file-upload"
+                  accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                  onChange={handleCategoryFileSelect}
+                  style={{ display: 'none' }}
+                />
+                <small style={{ color: '#7f8c8d', display: 'block', marginTop: '0.25rem', fontSize: '0.8rem' }}>
+                  {selectedCategoryFile
+                    ? `Selected: ${selectedCategoryFile.name}`
+                    : 'Upload image or enter URL. Leave blank for default.'}
+                </small>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleCreateCategory}
+                  style={{ flex: 1 }}
+                  disabled={uploadingCategoryImage}
+                >
+                  {uploadingCategoryImage ? 'Uploading...' : 'Create Category'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleCancelCreateCategory}
+                  style={{ flex: 1 }}
+                  disabled={uploadingCategoryImage}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="form-row form-row-3">
             <div className="form-group">
-              <label htmlFor="weight">Weight</label>
+              <label htmlFor="weight">Size</label>
               <input
                 type="number"
                 id="weight"
@@ -336,6 +585,7 @@ function AddItemModal({ item, categories, onClose, onSave }) {
                 <option value="oz">oz</option>
                 <option value="kg">kg</option>
                 <option value="g">g</option>
+                <option value="units">units</option>
               </select>
             </div>
           </div>

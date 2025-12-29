@@ -90,6 +90,17 @@ The backend will start on `http://localhost:5001`
 - Password: `admin123`
 - ⚠️ **Change these in production!**
 
+**Database Migrations:**
+
+If you're updating from an earlier version, run the migration script to add support for custom category images:
+
+```bash
+cd backend
+python3 migrate_add_category_images.py
+```
+
+The migration script will automatically find your database in either `backend/` or `backend/instance/` and add the required column.
+
 ### 3. UPC/Barcode Lookup Setup (Optional)
 
 The app supports automatic product lookup via UPC/barcode scanning. This feature is **optional** but highly recommended for quickly adding packaged items.

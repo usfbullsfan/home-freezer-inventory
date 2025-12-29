@@ -90,6 +90,9 @@ export const categoriesAPI = {
   getCategory: (id) =>
     api.get(`/categories/${id}`),
 
+  getCategoryStockImage: (id) =>
+    api.get(`/categories/${id}/stock-image`),
+
   createCategory: (data) =>
     api.post('/categories/', data),
 
@@ -98,6 +101,25 @@ export const categoriesAPI = {
 
   deleteCategory: (id) =>
     api.delete(`/categories/${id}`),
+};
+
+// Uploads API
+export const uploadsAPI = {
+  uploadCategoryImage: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/uploads/category-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  deleteCategoryImage: (filename) =>
+    api.delete(`/uploads/category-images/${filename}`),
+
+  getCategoryImageUrl: (filename) =>
+    `/api/uploads/category-images/${filename}`,
 };
 
 // Settings API

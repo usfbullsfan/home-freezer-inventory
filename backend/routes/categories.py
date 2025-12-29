@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from models import db, Category
+from routes.items import get_category_stock_image
 
 categories_bp = Blueprint('categories', __name__)
 
@@ -42,6 +43,7 @@ def create_category():
     category = Category(
         name=data['name'],
         default_expiration_days=data.get('default_expiration_days', 180),
+        image_url=data.get('image_url'),
         created_by_user_id=current_user_id
     )
 
@@ -80,6 +82,9 @@ def update_category(category_id):
     if 'default_expiration_days' in data:
         category.default_expiration_days = data['default_expiration_days']
 
+    if 'image_url' in data:
+        category.image_url = data['image_url']
+
     db.session.commit()
 
     return jsonify(category.to_dict()), 200
@@ -110,3 +115,22 @@ def delete_category(category_id):
     db.session.commit()
 
     return jsonify({'message': 'Category deleted successfully'}), 200
+
+
+@categories_bp.route('/<int:category_id>/stock-image', methods=['GET'])
+@jwt_required()
+def get_category_stock_image_url(category_id):
+    """Get the stock image URL for a category"""
+    category = Category.query.get(category_id)
+
+    if not category:
+        return jsonify({'error': 'Category not found'}), 404
+
+    # Prioritize custom category image, then fall back to hardcoded stock image
+    image_url = category.image_url if category.image_url else get_category_stock_image(category.name)
+
+    return jsonify({
+        'category_id': category_id,
+        'category_name': category.name,
+        'stock_image_url': image_url
+    }), 200
