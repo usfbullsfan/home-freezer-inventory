@@ -272,7 +272,7 @@ The frontend will start on `http://localhost:3000`
 - Ice Cream (60 days / 1-2 months)
 - Appetizers (90 days / 3-4 months)
 - Entrees (90 days / 3-4 months)
-- Prepared Meals (90 days / 3-4 months)
+- Leftovers (90 days / 3-4 months)
 - Staples (90 days / 3-4 months)
 
 **Sources:**

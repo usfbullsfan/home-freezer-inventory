@@ -58,7 +58,7 @@ def migrate_database():
             'Ice Cream': ('Ice Cream', 60),  # Ice cream: 1-2 months
             'Appetizers': ('Appetizers', 90),  # Frozen dinners: 3-4 months
             'Entrees': ('Entrees', 90),  # Frozen dinners: 3-4 months
-            'Prepared Meals': ('Prepared Meals', 90),  # Already correct
+            'Prepared Meals': ('Leftovers', 90),  # Rename to Leftovers
             'Staples': ('Staples', 90),  # Frozen dinners: 3-4 months
             # Chicken stays at 270, Fish stays at 180
         }

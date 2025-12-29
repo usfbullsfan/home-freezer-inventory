@@ -92,7 +92,7 @@ def create_app(test_config=None):
                     {'name': 'Ice Cream', 'days': 60, 'system': True},
                     {'name': 'Appetizers', 'days': 90, 'system': True},
                     {'name': 'Entrees', 'days': 90, 'system': True},
-                    {'name': 'Prepared Meals', 'days': 90, 'system': True},
+                    {'name': 'Leftovers', 'days': 90, 'system': True},
                     {'name': 'Staples', 'days': 90, 'system': True},
                 ]
 

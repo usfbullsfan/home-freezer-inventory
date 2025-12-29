@@ -19,33 +19,54 @@ def get_category_stock_image(category_name):
     Returns:
         str: URL to a category-appropriate stock image, or None
     """
-    # Mapping of category patterns to search terms for stock images
-    # These will be used to fetch Pexels images
-    category_image_map = {
-        'beef': 'raw beef steak',
-        'pork': 'raw pork meat',
-        'chicken': 'raw chicken breast',
-        'turkey': 'raw turkey meat',
-        'fish': 'raw fish fillet',
-        'vegetables': 'frozen vegetables',
-        'fruits': 'frozen berries fruit',
-        'ice cream': 'ice cream scoop',
-        'appetizers': 'frozen appetizers snacks',
-        'entrees': 'frozen dinner meal',
-        'prepared meals': 'frozen meal',
-        'staples': 'frozen food packages',
-    }
-
     if not category_name:
         return None
 
-    # Find matching category pattern (case-insensitive, partial match)
+    # Normalize category name for matching
     category_lower = category_name.lower()
-    search_term = None
 
-    for key, value in category_image_map.items():
-        if key in category_lower:
-            search_term = value
+    # Mapping of specific category patterns to search terms
+    # Order matters: more specific patterns first
+    category_patterns = [
+        # Beef varieties (most specific first)
+        ('beef, steak', 'raw ribeye steak'),
+        ('beef, roast', 'raw beef roast'),
+        ('beef, ground', 'raw ground beef'),
+        ('beef', 'raw beef steak'),
+
+        # Pork varieties
+        ('pork, roast', 'raw pork roast'),
+        ('pork, chops', 'raw pork chops'),
+        ('pork, ground', 'raw ground pork'),
+        ('pork', 'raw pork chops'),
+
+        # Poultry varieties
+        ('chicken, ground', 'raw ground chicken'),
+        ('chicken', 'raw chicken breast meat'),
+        ('turkey, ground', 'raw ground turkey'),
+        ('turkey', 'raw turkey breast'),
+
+        # Other proteins
+        ('fish', 'raw salmon fillet'),
+
+        # Produce
+        ('vegetables', 'frozen vegetables bag'),
+        ('fruits', 'frozen mixed berries'),
+
+        # Prepared foods
+        ('ice cream', 'vanilla ice cream scoop'),
+        ('appetizers', 'frozen appetizers'),
+        ('entrees', 'frozen tv dinner'),
+        ('leftovers', 'casserole dish'),
+        ('prepared meals', 'casserole dish'),  # Legacy support
+        ('staples', 'butter stick'),
+    ]
+
+    # Find matching pattern (most specific match wins)
+    search_term = None
+    for pattern, term in category_patterns:
+        if pattern in category_lower:
+            search_term = term
             break
 
     # If no specific mapping, use the category name itself
