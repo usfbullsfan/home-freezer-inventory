@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { settingsAPI, authAPI } from '../services/api';
 import UserManagement from '../components/UserManagement';
+import ImportExport from '../components/ImportExport';
 
 function Settings({ user }) {
   const [settings, setSettings] = useState({
@@ -433,6 +434,10 @@ function Settings({ user }) {
           </div>
         </div>
       )}
+
+      <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
+        <ImportExport />
+      </div>
 
       <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
         <h3 style={{ marginBottom: '1rem' }}>About</h3>

@@ -7,6 +7,8 @@ import io
 import requests
 import os
 import base64
+import csv
+import json as json_lib
 
 items_bp = Blueprint('items', __name__)
 
@@ -844,3 +846,361 @@ def print_labels():
 
     html = render_template_string(html_template, labels=labels_data)
     return html, 200, {'Content-Type': 'text/html'}
+
+
+@items_bp.route('/export/csv', methods=['GET'])
+@jwt_required()
+def export_csv():
+    """Export all items to CSV format.
+
+    Query parameters:
+    - status: Filter by status (in_freezer, consumed, thrown_out, all)
+    """
+    current_user_id = int(get_jwt_identity())
+    status = request.args.get('status', 'in_freezer')
+
+    # Build query
+    query = Item.query
+
+    if status != 'all':
+        query = query.filter_by(status=status)
+
+    items = query.all()
+
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Write header
+    writer.writerow([
+        'QR Code', 'UPC', 'Name', 'Category', 'Source', 'Weight',
+        'Weight Unit', 'Added Date', 'Expiration Date', 'Status',
+        'Removed Date', 'Notes'
+    ])
+
+    # Write data
+    for item in items:
+        writer.writerow([
+            item.qr_code,
+            item.upc or '',
+            item.name,
+            item.category.name if item.category else '',
+            item.source or '',
+            item.weight or '',
+            item.weight_unit or '',
+            item.added_date.isoformat() if item.added_date else '',
+            item.expiration_date.isoformat() if item.expiration_date else '',
+            item.status,
+            item.removed_date.isoformat() if item.removed_date else '',
+            item.notes or ''
+        ])
+
+    # Prepare response
+    output.seek(0)
+    return send_file(
+        io.BytesIO(output.getvalue().encode('utf-8')),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name=f'freezer_inventory_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.csv'
+    )
+
+
+@items_bp.route('/export/json', methods=['GET'])
+@jwt_required()
+def export_json():
+    """Export all items to JSON format.
+
+    Query parameters:
+    - status: Filter by status (in_freezer, consumed, thrown_out, all)
+    """
+    current_user_id = int(get_jwt_identity())
+    status = request.args.get('status', 'in_freezer')
+
+    # Build query
+    query = Item.query
+
+    if status != 'all':
+        query = query.filter_by(status=status)
+
+    items = query.all()
+
+    # Convert to JSON-serializable format
+    items_data = []
+    for item in items:
+        item_dict = {
+            'qr_code': item.qr_code,
+            'upc': item.upc,
+            'image_url': item.image_url,
+            'name': item.name,
+            'category': item.category.name if item.category else None,
+            'source': item.source,
+            'weight': item.weight,
+            'weight_unit': item.weight_unit,
+            'added_date': item.added_date.isoformat() if item.added_date else None,
+            'expiration_date': item.expiration_date.isoformat() if item.expiration_date else None,
+            'status': item.status,
+            'removed_date': item.removed_date.isoformat() if item.removed_date else None,
+            'notes': item.notes
+        }
+        items_data.append(item_dict)
+
+    # Create JSON response
+    json_data = json_lib.dumps({
+        'exported_at': datetime.utcnow().isoformat(),
+        'total_items': len(items_data),
+        'items': items_data
+    }, indent=2)
+
+    return send_file(
+        io.BytesIO(json_data.encode('utf-8')),
+        mimetype='application/json',
+        as_attachment=True,
+        download_name=f'freezer_inventory_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.json'
+    )
+
+
+@items_bp.route('/import/csv', methods=['POST'])
+@jwt_required()
+def import_csv():
+    """Import items from CSV file.
+
+    Expects a CSV file with columns:
+    QR Code, UPC, Name, Category, Source, Weight, Weight Unit,
+    Added Date, Expiration Date, Status, Removed Date, Notes
+
+    Returns summary of imported items.
+    """
+    current_user_id = int(get_jwt_identity())
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    if not file.filename.endswith('.csv'):
+        return jsonify({'error': 'File must be a CSV'}), 400
+
+    try:
+        # Read CSV file
+        stream = io.StringIO(file.stream.read().decode('utf-8'), newline=None)
+        csv_reader = csv.DictReader(stream)
+
+        imported = 0
+        skipped = 0
+        errors = []
+
+        for row_num, row in enumerate(csv_reader, start=2):
+            try:
+                # Get or create category
+                category = None
+                if row.get('Category'):
+                    category = Category.query.filter_by(name=row['Category']).first()
+                    if not category:
+                        # Create category if it doesn't exist
+                        category = Category(
+                            name=row['Category'],
+                            default_expiration_days=180,
+                            created_by_user_id=current_user_id
+                        )
+                        db.session.add(category)
+                        db.session.flush()  # Get the ID
+
+                # Generate or use provided QR code
+                qr_code = row.get('QR Code') or generate_qr_code()
+
+                # Check if item already exists
+                if Item.query.filter_by(qr_code=qr_code).first():
+                    skipped += 1
+                    errors.append(f"Row {row_num}: QR code '{qr_code}' already exists")
+                    continue
+
+                # Parse dates
+                added_date = None
+                if row.get('Added Date'):
+                    try:
+                        added_date = datetime.fromisoformat(row['Added Date'].replace('Z', '+00:00'))
+                    except ValueError:
+                        pass
+
+                expiration_date = None
+                if row.get('Expiration Date'):
+                    try:
+                        expiration_date = datetime.fromisoformat(row['Expiration Date'].replace('Z', '+00:00'))
+                    except ValueError:
+                        pass
+
+                removed_date = None
+                if row.get('Removed Date'):
+                    try:
+                        removed_date = datetime.fromisoformat(row['Removed Date'].replace('Z', '+00:00'))
+                    except ValueError:
+                        pass
+
+                # Create item
+                item = Item(
+                    qr_code=qr_code,
+                    upc=row.get('UPC') or None,
+                    name=row.get('Name') or 'Unnamed Item',
+                    source=row.get('Source') or None,
+                    weight=float(row['Weight']) if row.get('Weight') else None,
+                    weight_unit=row.get('Weight Unit') or 'lb',
+                    category_id=category.id if category else None,
+                    added_date=added_date,
+                    expiration_date=expiration_date,
+                    status=row.get('Status') or 'in_freezer',
+                    removed_date=removed_date,
+                    notes=row.get('Notes') or None,
+                    added_by_user_id=current_user_id
+                )
+
+                db.session.add(item)
+                imported += 1
+
+            except Exception as e:
+                skipped += 1
+                errors.append(f"Row {row_num}: {str(e)}")
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'imported': imported,
+            'skipped': skipped,
+            'errors': errors[:10]  # Limit to first 10 errors
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Failed to import CSV: {str(e)}'}), 500
+
+
+@items_bp.route('/import/json', methods=['POST'])
+@jwt_required()
+def import_json():
+    """Import items from JSON file.
+
+    Expects a JSON file with structure:
+    {
+      "items": [
+        {
+          "qr_code": "ABC123",
+          "name": "Item name",
+          "category": "Category name",
+          ...
+        }
+      ]
+    }
+
+    Returns summary of imported items.
+    """
+    current_user_id = int(get_jwt_identity())
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    if not file.filename.endswith('.json'):
+        return jsonify({'error': 'File must be a JSON'}), 400
+
+    try:
+        # Read JSON file
+        data = json_lib.load(file.stream)
+
+        if 'items' not in data or not isinstance(data['items'], list):
+            return jsonify({'error': 'Invalid JSON format. Expected {"items": [...]}'}), 400
+
+        imported = 0
+        skipped = 0
+        errors = []
+
+        for idx, item_data in enumerate(data['items'], start=1):
+            try:
+                # Get or create category
+                category = None
+                if item_data.get('category'):
+                    category = Category.query.filter_by(name=item_data['category']).first()
+                    if not category:
+                        # Create category if it doesn't exist
+                        category = Category(
+                            name=item_data['category'],
+                            default_expiration_days=180,
+                            created_by_user_id=current_user_id
+                        )
+                        db.session.add(category)
+                        db.session.flush()
+
+                # Generate or use provided QR code
+                qr_code = item_data.get('qr_code') or generate_qr_code()
+
+                # Check if item already exists
+                if Item.query.filter_by(qr_code=qr_code).first():
+                    skipped += 1
+                    errors.append(f"Item {idx}: QR code '{qr_code}' already exists")
+                    continue
+
+                # Parse dates
+                added_date = None
+                if item_data.get('added_date'):
+                    try:
+                        added_date = datetime.fromisoformat(item_data['added_date'].replace('Z', '+00:00'))
+                    except ValueError:
+                        pass
+
+                expiration_date = None
+                if item_data.get('expiration_date'):
+                    try:
+                        expiration_date = datetime.fromisoformat(item_data['expiration_date'].replace('Z', '+00:00'))
+                    except ValueError:
+                        pass
+
+                removed_date = None
+                if item_data.get('removed_date'):
+                    try:
+                        removed_date = datetime.fromisoformat(item_data['removed_date'].replace('Z', '+00:00'))
+                    except ValueError:
+                        pass
+
+                # Create item
+                item = Item(
+                    qr_code=qr_code,
+                    upc=item_data.get('upc'),
+                    image_url=item_data.get('image_url'),
+                    name=item_data.get('name') or 'Unnamed Item',
+                    source=item_data.get('source'),
+                    weight=item_data.get('weight'),
+                    weight_unit=item_data.get('weight_unit') or 'lb',
+                    category_id=category.id if category else None,
+                    added_date=added_date,
+                    expiration_date=expiration_date,
+                    status=item_data.get('status') or 'in_freezer',
+                    removed_date=removed_date,
+                    notes=item_data.get('notes'),
+                    added_by_user_id=current_user_id
+                )
+
+                db.session.add(item)
+                imported += 1
+
+            except Exception as e:
+                skipped += 1
+                errors.append(f"Item {idx}: {str(e)}")
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'imported': imported,
+            'skipped': skipped,
+            'errors': errors[:10]  # Limit to first 10 errors
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Failed to import JSON: {str(e)}'}), 500
