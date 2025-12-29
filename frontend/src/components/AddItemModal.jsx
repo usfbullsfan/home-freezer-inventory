@@ -136,6 +136,22 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
           expiration_date: expirationDate.toISOString().split('T')[0],
         }));
       }
+
+      // Fetch and apply the category's image
+      try {
+        const imageResponse = await categoriesAPI.getCategoryStockImage(createdCategory.id);
+        const stockImageUrl = imageResponse.data.stock_image_url;
+
+        if (stockImageUrl) {
+          setFormData((prev) => ({
+            ...prev,
+            image_url: stockImageUrl,
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch category image:', err);
+        // Don't show error to user, just continue without updating image
+      }
     } catch (err) {
       setCategoryError(err.response?.data?.error || 'Failed to create category');
     }
