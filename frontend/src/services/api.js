@@ -77,6 +77,9 @@ export const itemsAPI = {
 
   lookupUPC: (upc) =>
     api.get(`/items/lookup-upc/${upc}`),
+
+  searchImage: (productName, categoryName) =>
+    api.post('/items/search-image', { product_name: productName, category_name: categoryName }),
 };
 
 // Categories API

@@ -5,6 +5,7 @@ function AddItemModal({ item, categories, onClose, onSave }) {
   const [formData, setFormData] = useState({
     qr_code: '',
     upc: '',
+    image_url: '',
     name: '',
     source: '',
     weight: '',
@@ -24,6 +25,7 @@ function AddItemModal({ item, categories, onClose, onSave }) {
       setFormData({
         qr_code: item.qr_code || '',
         upc: item.upc || '',
+        image_url: item.image_url || '',
         name: item.name || '',
         source: item.source || '',
         weight: item.weight || '',
@@ -104,6 +106,7 @@ function AddItemModal({ item, categories, onClose, onSave }) {
           name: result.data.name || prev.name,
           notes: result.data.notes || prev.notes,
           category_id: result.data.category_id || prev.category_id,
+          image_url: result.data.image_url || prev.image_url,
         }));
       }
     } catch (err) {
@@ -149,6 +152,7 @@ function AddItemModal({ item, categories, onClose, onSave }) {
         setFormData({
           qr_code: '',
           upc: '',
+          image_url: '',
           name: '',
           source: '',
           weight: '',
@@ -233,6 +237,34 @@ function AddItemModal({ item, categories, onClose, onSave }) {
               Scan or enter the barcode to auto-fill product details
             </small>
           </div>
+
+          {/* Product Image Section */}
+          {formData.image_url && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              padding: '1rem',
+              marginBottom: '1rem',
+              background: '#f8f9fa',
+              borderRadius: '6px',
+              border: '1px solid #e0e0e0'
+            }}>
+              <img
+                src={formData.image_url}
+                alt={formData.name || 'Product image'}
+                style={{
+                  maxWidth: '200px',
+                  maxHeight: '200px',
+                  objectFit: 'contain',
+                  borderRadius: '4px'
+                }}
+                onError={(e) => {
+                  // Hide image if it fails to load
+                  e.target.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="name">Item Name *</label>
