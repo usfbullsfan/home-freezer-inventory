@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { itemsAPI, categoriesAPI } from '../services/api';
+import { itemsAPI, categoriesAPI, uploadsAPI } from '../services/api';
 
 function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) {
   const [formData, setFormData] = useState({
@@ -26,6 +26,8 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
     image_url: '',
   });
   const [categoryError, setCategoryError] = useState('');
+  const [selectedCategoryFile, setSelectedCategoryFile] = useState(null);
+  const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
 
   useEffect(() => {
     if (item) {
@@ -104,20 +106,71 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
     }
   };
 
+  const handleCategoryFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        setCategoryError('Invalid file type. Please select an image (PNG, JPEG, GIF, or WebP).');
+        e.target.value = '';
+        return;
+      }
+
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setCategoryError('File too large. Maximum size is 5MB.');
+        e.target.value = '';
+        return;
+      }
+
+      setSelectedCategoryFile(file);
+      setCategoryError('');
+
+      // Create a preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setNewCategoryData(prev => ({ ...prev, image_url: e.target.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleCreateCategory = async () => {
     if (!newCategoryData.name.trim()) {
       setCategoryError('Category name is required');
       return;
     }
 
+    let imageUrl = newCategoryData.image_url;
+
+    // Upload file if one is selected
+    if (selectedCategoryFile) {
+      setUploadingCategoryImage(true);
+      try {
+        const response = await uploadsAPI.uploadCategoryImage(selectedCategoryFile);
+        imageUrl = response.data.image_url;
+      } catch (err) {
+        setCategoryError(err.response?.data?.error || 'Failed to upload image');
+        setUploadingCategoryImage(false);
+        return;
+      }
+      setUploadingCategoryImage(false);
+    }
+
     try {
-      const response = await categoriesAPI.createCategory(newCategoryData);
+      const submitData = {
+        ...newCategoryData,
+        image_url: imageUrl || newCategoryData.image_url || null,
+      };
+      const response = await categoriesAPI.createCategory(submitData);
       const createdCategory = response.data;
 
       // Close the create form
       setShowCreateCategory(false);
       setCategoryError('');
       setNewCategoryData({ name: '', default_expiration_days: 180, image_url: '' });
+      setSelectedCategoryFile(null);
 
       // Notify parent to refresh categories
       if (onCategoryCreated) {
@@ -161,6 +214,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
     setShowCreateCategory(false);
     setCategoryError('');
     setNewCategoryData({ name: '', default_expiration_days: 180, image_url: '' });
+    setSelectedCategoryFile(null);
   };
 
   const handleLookupUPC = async () => {
@@ -445,16 +499,41 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
                 </small>
               </div>
               <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                <label htmlFor="new_category_image">Default Image URL (optional)</label>
+                <label>Default Image (optional)</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => document.getElementById('category-file-upload').click()}
+                    style={{ flex: 1, fontSize: '0.85rem', padding: '0.5rem' }}
+                    disabled={uploadingCategoryImage}
+                  >
+                    {selectedCategoryFile ? '✓ File' : '📁 Upload'}
+                  </button>
+                  <span style={{ color: '#95a5a6', fontSize: '0.85rem' }}>or</span>
+                  <input
+                    type="url"
+                    value={selectedCategoryFile ? '' : newCategoryData.image_url}
+                    onChange={(e) => {
+                      setSelectedCategoryFile(null);
+                      setNewCategoryData({ ...newCategoryData, image_url: e.target.value });
+                    }}
+                    placeholder="Enter URL"
+                    style={{ flex: 2, fontSize: '0.85rem', padding: '0.5rem' }}
+                    disabled={selectedCategoryFile || uploadingCategoryImage}
+                  />
+                </div>
                 <input
-                  type="url"
-                  id="new_category_image"
-                  value={newCategoryData.image_url}
-                  onChange={(e) => setNewCategoryData({ ...newCategoryData, image_url: e.target.value })}
-                  placeholder="https://example.com/image.jpg"
+                  type="file"
+                  id="category-file-upload"
+                  accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                  onChange={handleCategoryFileSelect}
+                  style={{ display: 'none' }}
                 />
-                <small style={{ color: '#7f8c8d', display: 'block', marginTop: '0.25rem' }}>
-                  Leave blank to use default stock images
+                <small style={{ color: '#7f8c8d', display: 'block', marginTop: '0.25rem', fontSize: '0.8rem' }}>
+                  {selectedCategoryFile
+                    ? `Selected: ${selectedCategoryFile.name}`
+                    : 'Upload image or enter URL. Leave blank for default.'}
                 </small>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -463,14 +542,16 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
                   className="btn btn-primary"
                   onClick={handleCreateCategory}
                   style={{ flex: 1 }}
+                  disabled={uploadingCategoryImage}
                 >
-                  Create Category
+                  {uploadingCategoryImage ? 'Uploading...' : 'Create Category'}
                 </button>
                 <button
                   type="button"
                   className="btn btn-secondary"
                   onClick={handleCancelCreateCategory}
                   style={{ flex: 1 }}
+                  disabled={uploadingCategoryImage}
                 >
                   Cancel
                 </button>

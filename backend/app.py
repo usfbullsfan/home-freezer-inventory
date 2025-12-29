@@ -17,6 +17,7 @@ def create_app(test_config=None):
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///freezer_inventory.db'
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'dev-secret-key-change-in-production')
+        app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max file size
     else:
         # Test configuration
         app.config.update(test_config)
@@ -31,11 +32,13 @@ def create_app(test_config=None):
     from routes.items import items_bp
     from routes.categories import categories_bp
     from routes.settings import settings_bp
+    from routes.uploads import uploads_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(items_bp, url_prefix='/api/items')
     app.register_blueprint(categories_bp, url_prefix='/api/categories')
     app.register_blueprint(settings_bp, url_prefix='/api/settings')
+    app.register_blueprint(uploads_bp, url_prefix='/api/uploads')
 
     # Health check endpoint
     @app.route('/api/health', methods=['GET'])

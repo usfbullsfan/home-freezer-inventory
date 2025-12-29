@@ -103,6 +103,25 @@ export const categoriesAPI = {
     api.delete(`/categories/${id}`),
 };
 
+// Uploads API
+export const uploadsAPI = {
+  uploadCategoryImage: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/uploads/category-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  deleteCategoryImage: (filename) =>
+    api.delete(`/uploads/category-images/${filename}`),
+
+  getCategoryImageUrl: (filename) =>
+    `/api/uploads/category-images/${filename}`,
+};
+
 // Settings API
 export const settingsAPI = {
   getSettings: () =>

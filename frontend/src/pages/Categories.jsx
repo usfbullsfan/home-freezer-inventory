@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { categoriesAPI } from '../services/api';
+import { categoriesAPI, uploadsAPI } from '../services/api';
 
 function Categories() {
   const [categories, setCategories] = useState([]);
@@ -14,6 +14,8 @@ function Categories() {
     default_expiration_days: 180,
     image_url: '',
   });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     loadCategories();
@@ -36,6 +38,7 @@ function Categories() {
   const handleAdd = () => {
     setEditingCategory(null);
     setFormData({ name: '', default_expiration_days: 180, image_url: '' });
+    setSelectedFile(null);
     setShowForm(true);
   };
 
@@ -46,7 +49,38 @@ function Categories() {
       default_expiration_days: category.default_expiration_days,
       image_url: category.image_url || '',
     });
+    setSelectedFile(null);
     setShowForm(true);
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        setError('Invalid file type. Please select an image (PNG, JPEG, GIF, or WebP).');
+        e.target.value = '';
+        return;
+      }
+
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('File too large. Maximum size is 5MB.');
+        e.target.value = '';
+        return;
+      }
+
+      setSelectedFile(file);
+      setError('');
+
+      // Create a preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setFormData(prev => ({ ...prev, image_url: e.target.result }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -54,16 +88,38 @@ function Categories() {
     setError('');
     setSuccess('');
 
+    let imageUrl = formData.image_url;
+
+    // Upload file if one is selected
+    if (selectedFile) {
+      setUploadingImage(true);
+      try {
+        const response = await uploadsAPI.uploadCategoryImage(selectedFile);
+        imageUrl = response.data.image_url;
+      } catch (err) {
+        setError(err.response?.data?.error || 'Failed to upload image');
+        setUploadingImage(false);
+        return;
+      }
+      setUploadingImage(false);
+    }
+
     try {
+      const submitData = {
+        ...formData,
+        image_url: imageUrl || formData.image_url || null,
+      };
+
       if (editingCategory) {
-        await categoriesAPI.updateCategory(editingCategory.id, formData);
+        await categoriesAPI.updateCategory(editingCategory.id, submitData);
         setSuccess('Category updated successfully');
       } else {
-        await categoriesAPI.createCategory(formData);
+        await categoriesAPI.createCategory(submitData);
         setSuccess('Category created successfully');
       }
 
       setShowForm(false);
+      setSelectedFile(null);
       loadCategories();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save category');
@@ -188,16 +244,41 @@ function Categories() {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="image_url">Default Image URL (optional)</label>
+                  <label>Default Image (optional)</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => document.getElementById('file-upload').click()}
+                      style={{ flex: 1 }}
+                      disabled={uploadingImage}
+                    >
+                      {selectedFile ? '✓ File Selected' : '📁 Upload Image'}
+                    </button>
+                    <span style={{ color: '#95a5a6' }}>or</span>
+                    <input
+                      type="url"
+                      value={selectedFile ? '' : formData.image_url}
+                      onChange={(e) => {
+                        setSelectedFile(null);
+                        setFormData({ ...formData, image_url: e.target.value });
+                      }}
+                      placeholder="Enter URL"
+                      style={{ flex: 2 }}
+                      disabled={selectedFile || uploadingImage}
+                    />
+                  </div>
                   <input
-                    type="url"
-                    id="image_url"
-                    value={formData.image_url}
-                    onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                    placeholder="https://example.com/image.jpg"
+                    type="file"
+                    id="file-upload"
+                    accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                    onChange={handleFileSelect}
+                    style={{ display: 'none' }}
                   />
-                  <small style={{ color: '#7f8c8d' }}>
-                    Custom image to display for items in this category. Leave blank to use default stock images.
+                  <small style={{ color: '#7f8c8d', display: 'block' }}>
+                    {selectedFile
+                      ? `Selected: ${selectedFile.name} (${(selectedFile.size / 1024).toFixed(1)} KB)`
+                      : 'Upload an image or enter a URL. Leave blank to use default stock images.'}
                   </small>
                 </div>
 
