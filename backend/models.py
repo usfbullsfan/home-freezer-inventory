@@ -53,7 +53,7 @@ class Category(db.Model):
             'name': self.name,
             'default_expiration_days': self.default_expiration_days,
             'created_by_user_id': self.created_by_user_id,
-            'created_at': self.created_at.isoformat(),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
             'is_system': self.is_system
         }
 
