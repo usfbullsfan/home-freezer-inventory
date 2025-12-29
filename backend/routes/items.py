@@ -10,6 +10,52 @@ import os
 items_bp = Blueprint('items', __name__)
 
 
+def get_category_stock_image(category_name):
+    """Get a stock image URL for a given category.
+
+    Args:
+        category_name: Name of the category
+
+    Returns:
+        str: URL to a category-appropriate stock image, or None
+    """
+    # Mapping of category patterns to search terms for stock images
+    # These will be used to fetch Pexels images
+    category_image_map = {
+        'beef': 'raw beef steak',
+        'pork': 'raw pork meat',
+        'chicken': 'raw chicken breast',
+        'turkey': 'raw turkey meat',
+        'fish': 'raw fish fillet',
+        'vegetables': 'frozen vegetables',
+        'fruits': 'frozen berries fruit',
+        'ice cream': 'ice cream scoop',
+        'appetizers': 'frozen appetizers snacks',
+        'entrees': 'frozen dinner meal',
+        'prepared meals': 'frozen meal',
+        'staples': 'frozen food packages',
+    }
+
+    if not category_name:
+        return None
+
+    # Find matching category pattern (case-insensitive, partial match)
+    category_lower = category_name.lower()
+    search_term = None
+
+    for key, value in category_image_map.items():
+        if key in category_lower:
+            search_term = value
+            break
+
+    # If no specific mapping, use the category name itself
+    if not search_term:
+        search_term = f"{category_name} food"
+
+    # Use fetch_product_image to get the stock image
+    return fetch_product_image(search_term, category_name=None)
+
+
 def fetch_product_image(product_name, category_name=None):
     """Fetch product image from Pexels API.
 
@@ -193,6 +239,7 @@ def create_item():
 
     # Calculate expiration date if not provided
     expiration_date = None
+    category = None
     if data.get('expiration_date'):
         expiration_date = datetime.fromisoformat(data['expiration_date'])
     elif data.get('category_id'):
@@ -202,10 +249,19 @@ def create_item():
             base_date = added_date or datetime.utcnow()
             expiration_date = base_date + timedelta(days=category.default_expiration_days)
 
+    # Get image URL - priority: provided URL > category stock image
+    image_url = data.get('image_url')
+    if not image_url and not data.get('upc'):
+        # No image URL and no UPC - use category-based stock image
+        if not category and data.get('category_id'):
+            category = Category.query.get(data['category_id'])
+        if category:
+            image_url = get_category_stock_image(category.name)
+
     item = Item(
         qr_code=qr_code,
         upc=data.get('upc'),
-        image_url=data.get('image_url'),
+        image_url=image_url,
         name=data['name'],
         source=data.get('source'),
         weight=data.get('weight'),
