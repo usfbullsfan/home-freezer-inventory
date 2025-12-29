@@ -147,6 +147,8 @@ def download_backup():
     # Get the database file path
     db_uri = current_app.config['SQLALCHEMY_DATABASE_URI']
     db_path = db_uri.replace('sqlite:///', '')
+    # Ensure we have an absolute path
+    db_path = os.path.abspath(db_path)
 
     if not os.path.exists(db_path):
         return jsonify({'error': 'Database file not found'}), 404
@@ -190,6 +192,8 @@ def restore_backup():
         # Get the database file path
         db_uri = current_app.config['SQLALCHEMY_DATABASE_URI']
         db_path = db_uri.replace('sqlite:///', '')
+        # Ensure we have an absolute path
+        db_path = os.path.abspath(db_path)
 
         # Create a backup of current database before restoring
         if os.path.exists(db_path):
@@ -231,6 +235,8 @@ def backup_info():
         # Get the database file path
         db_uri = current_app.config['SQLALCHEMY_DATABASE_URI']
         db_path = db_uri.replace('sqlite:///', '')
+        # Ensure we have an absolute path
+        db_path = os.path.abspath(db_path)
 
         if not os.path.exists(db_path):
             return jsonify({'error': 'Database file not found'}), 404
