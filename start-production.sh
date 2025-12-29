@@ -50,6 +50,9 @@ fi
 source venv/bin/activate
 pip install -r requirements.txt > /dev/null 2>&1
 
+# Create logs directory if it doesn't exist
+mkdir -p logs
+
 # Start Gunicorn
 # --workers: Number of worker processes (recommend 2-4 workers for small deployments)
 # --bind: Address and port to bind to
@@ -65,5 +68,5 @@ gunicorn \
     --timeout 120 \
     --access-logfile logs/access.log \
     --error-logfile logs/error.log \
-    app:app
+    "app:create_app()"
 
