@@ -440,7 +440,7 @@ function Settings({ user }) {
           <strong>Freezer Inventory Tracker</strong> - MVP Version
         </p>
         <p style={{ color: '#7f8c8d', marginTop: '0.5rem' }}>
-          Track your freezer inventory with ease. Add items, scan QR codes, and never lose track of what's in your freezer.
+          Track your freezer inventory with ease. Add items with simple codes and never lose track of what's in your freezer.
         </p>
       </div>
     </div>

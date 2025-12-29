@@ -365,7 +365,7 @@ function AddItemModal({ item, categories, onClose, onSave }) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="qr_code">QR Code (optional)</label>
+            <label htmlFor="qr_code">Item Code (optional)</label>
             <input
               type="text"
               id="qr_code"
