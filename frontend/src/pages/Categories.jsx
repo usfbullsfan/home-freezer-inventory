@@ -12,6 +12,7 @@ function Categories() {
   const [formData, setFormData] = useState({
     name: '',
     default_expiration_days: 180,
+    image_url: '',
   });
 
   useEffect(() => {
@@ -34,7 +35,7 @@ function Categories() {
 
   const handleAdd = () => {
     setEditingCategory(null);
-    setFormData({ name: '', default_expiration_days: 180 });
+    setFormData({ name: '', default_expiration_days: 180, image_url: '' });
     setShowForm(true);
   };
 
@@ -43,6 +44,7 @@ function Categories() {
     setFormData({
       name: category.name,
       default_expiration_days: category.default_expiration_days,
+      image_url: category.image_url || '',
     });
     setShowForm(true);
   };
@@ -184,6 +186,45 @@ function Categories() {
                     Items in this category will default to this expiration period
                   </small>
                 </div>
+
+                <div className="form-group">
+                  <label htmlFor="image_url">Default Image URL (optional)</label>
+                  <input
+                    type="url"
+                    id="image_url"
+                    value={formData.image_url}
+                    onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                    placeholder="https://example.com/image.jpg"
+                  />
+                  <small style={{ color: '#7f8c8d' }}>
+                    Custom image to display for items in this category. Leave blank to use default stock images.
+                  </small>
+                </div>
+
+                {formData.image_url && (
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    padding: '1rem',
+                    background: '#f8f9fa',
+                    borderRadius: '6px',
+                    marginTop: '0.5rem'
+                  }}>
+                    <img
+                      src={formData.image_url}
+                      alt="Category preview"
+                      style={{
+                        maxWidth: '200px',
+                        maxHeight: '200px',
+                        objectFit: 'contain',
+                        borderRadius: '4px'
+                      }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
               </form>
             </div>
 

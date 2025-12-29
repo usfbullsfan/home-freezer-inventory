@@ -40,6 +40,7 @@ class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     default_expiration_days = db.Column(db.Integer, default=180)  # 6 months default
+    image_url = db.Column(db.String(500))  # Optional custom image URL for category
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_system = db.Column(db.Boolean, default=False)  # System categories can't be deleted
@@ -52,6 +53,7 @@ class Category(db.Model):
             'id': self.id,
             'name': self.name,
             'default_expiration_days': self.default_expiration_days,
+            'image_url': self.image_url,
             'created_by_user_id': self.created_by_user_id,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'is_system': self.is_system

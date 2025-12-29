@@ -23,6 +23,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
   const [newCategoryData, setNewCategoryData] = useState({
     name: '',
     default_expiration_days: 180,
+    image_url: '',
   });
   const [categoryError, setCategoryError] = useState('');
 
@@ -116,7 +117,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
       // Close the create form
       setShowCreateCategory(false);
       setCategoryError('');
-      setNewCategoryData({ name: '', default_expiration_days: 180 });
+      setNewCategoryData({ name: '', default_expiration_days: 180, image_url: '' });
 
       // Notify parent to refresh categories
       if (onCategoryCreated) {
@@ -143,7 +144,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
   const handleCancelCreateCategory = () => {
     setShowCreateCategory(false);
     setCategoryError('');
-    setNewCategoryData({ name: '', default_expiration_days: 180 });
+    setNewCategoryData({ name: '', default_expiration_days: 180, image_url: '' });
   };
 
   const handleLookupUPC = async () => {
@@ -425,6 +426,19 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
                 />
                 <small style={{ color: '#7f8c8d', display: 'block', marginTop: '0.25rem' }}>
                   Default: 180 days (6 months)
+                </small>
+              </div>
+              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                <label htmlFor="new_category_image">Default Image URL (optional)</label>
+                <input
+                  type="url"
+                  id="new_category_image"
+                  value={newCategoryData.image_url}
+                  onChange={(e) => setNewCategoryData({ ...newCategoryData, image_url: e.target.value })}
+                  placeholder="https://example.com/image.jpg"
+                />
+                <small style={{ color: '#7f8c8d', display: 'block', marginTop: '0.25rem' }}>
+                  Leave blank to use default stock images
                 </small>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
