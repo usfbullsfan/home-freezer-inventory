@@ -496,6 +496,38 @@ Test coverage includes:
 - [ ] Item location tracking (shelf, drawer, etc.)
 - [ ] Printable labels with codes
 
+## Deployment
+
+### Production Deployment Guides
+
+We provide comprehensive deployment guides for different platforms:
+
+- **[Raspberry Pi Deployment](docs/deployment/raspberry-pi.md)** - Complete guide for deploying to a Raspberry Pi for local network access, including:
+  - System setup and dependencies
+  - Systemd service configuration
+  - Nginx reverse proxy
+  - Automatic backups
+  - Performance tuning for Pi 3/4
+  - Security hardening
+
+- **[Cloud Deployment (AWS & GCP Free Tier)](docs/deployment/cloud-free-tier.md)** - Deploy to cloud providers using free tier offerings, including:
+  - AWS EC2 and GCP Compute Engine setup
+  - SSL/HTTPS configuration with Let's Encrypt
+  - Cloud storage for backups (S3/Cloud Storage)
+  - Optional managed database setup (RDS/Cloud SQL)
+  - Cost optimization tips
+  - Monitoring and maintenance
+
+### Quick Production Tips
+
+- Use `gunicorn` instead of the Flask development server
+- Set a strong `JWT_SECRET_KEY` in your `.env` file
+- Run behind Nginx as a reverse proxy
+- Enable HTTPS with Let's Encrypt
+- Set up regular database backups
+- Monitor logs and resource usage
+- Keep the system and dependencies updated
+
 ## Troubleshooting
 
 **Backend won't start:**
