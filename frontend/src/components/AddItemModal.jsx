@@ -45,6 +45,12 @@ function AddItemModal({ item, categories, onClose, onSave }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const validateUPC = (upc) => {
+    // UPC must be exactly 12 digits
+    const upcRegex = /^\d{12}$/;
+    return upcRegex.test(upc);
+  };
+
   const handleCategoryChange = (e) => {
     const categoryId = e.target.value;
     setFormData((prev) => ({ ...prev, category_id: categoryId }));
@@ -69,15 +75,26 @@ function AddItemModal({ item, categories, onClose, onSave }) {
       return;
     }
 
+    const upcValue = formData.upc.trim();
+
+    // Validate UPC format (12 digits)
+    if (!validateUPC(upcValue)) {
+      setUpcMessage('Invalid UPC format. UPC must be exactly 12 digits.');
+      return;
+    }
+
     setUpcLookupLoading(true);
     setUpcMessage('');
     setError('');
 
     try {
-      const response = await itemsAPI.lookupUPC(formData.upc.trim());
+      const response = await itemsAPI.lookupUPC(upcValue);
       const result = response.data;
 
-      setUpcMessage(result.message);
+      // Only show message if not found locally or if there's an error
+      if (result.source !== 'local') {
+        setUpcMessage(result.message);
+      }
 
       if (result.found && result.data) {
         // Auto-fill form fields with UPC lookup data
@@ -99,6 +116,13 @@ function AddItemModal({ item, categories, onClose, onSave }) {
   const handleSubmit = async (e, keepOpen = false) => {
     e.preventDefault();
     setError('');
+
+    // Validate UPC if provided
+    if (formData.upc && formData.upc.trim() && !validateUPC(formData.upc.trim())) {
+      setError('Invalid UPC format. UPC must be exactly 12 digits.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -106,7 +130,7 @@ function AddItemModal({ item, categories, onClose, onSave }) {
         ...formData,
         weight: formData.weight ? parseFloat(formData.weight) : null,
         category_id: formData.category_id ? parseInt(formData.category_id) : null,
-        upc: formData.upc || null,
+        upc: formData.upc && formData.upc.trim() ? formData.upc.trim() : null,
       };
 
       if (item && item.id) {

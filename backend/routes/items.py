@@ -118,6 +118,12 @@ def create_item():
     if not data or not data.get('name'):
         return jsonify({'error': 'Item name is required'}), 400
 
+    # Validate UPC format if provided (must be 12 digits)
+    if data.get('upc'):
+        import re
+        if not re.match(r'^\d{12}$', data['upc']):
+            return jsonify({'error': 'Invalid UPC format. UPC must be exactly 12 digits.'}), 400
+
     # Generate or use provided QR code
     qr_code = data.get('qr_code') or generate_qr_code()
 
@@ -174,6 +180,12 @@ def update_item(item_id):
         return jsonify({'error': 'Item not found'}), 404
 
     data = request.get_json()
+
+    # Validate UPC format if provided (must be 12 digits)
+    if 'upc' in data and data['upc']:
+        import re
+        if not re.match(r'^\d{12}$', data['upc']):
+            return jsonify({'error': 'Invalid UPC format. UPC must be exactly 12 digits.'}), 400
 
     # Update fields if provided
     if 'name' in data:
