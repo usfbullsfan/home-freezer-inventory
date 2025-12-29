@@ -349,10 +349,20 @@ def lookup_upc(upc):
         if response.status_code == 200:
             api_data = response.json()
 
+            # Log the response for debugging
+            import logging
+            logging.info(f"UPC API Response: {api_data}")
+
             # Extract relevant fields from API response
-            product_name = api_data.get('title') or api_data.get('description', '')
-            brand = api_data.get('brand', '')
-            category = api_data.get('category', '')
+            # Handle both direct fields and nested 'items' array structure
+            if 'items' in api_data and len(api_data['items']) > 0:
+                product_data = api_data['items'][0]
+            else:
+                product_data = api_data
+
+            product_name = product_data.get('title') or product_data.get('description', '') or product_data.get('brand', '') + ' ' + product_data.get('category', '')
+            brand = product_data.get('brand', '')
+            category = product_data.get('category', '')
 
             # Build notes with additional product info
             notes_parts = []
@@ -360,6 +370,12 @@ def lookup_upc(upc):
                 notes_parts.append(f'Brand: {brand}')
             if category:
                 notes_parts.append(f'Category: {category}')
+
+            # Add other useful info if available
+            if product_data.get('size'):
+                notes_parts.append(f'Size: {product_data.get("size")}')
+            if product_data.get('model'):
+                notes_parts.append(f'Model: {product_data.get("model")}')
 
             notes = ' | '.join(notes_parts) if notes_parts else ''
 
