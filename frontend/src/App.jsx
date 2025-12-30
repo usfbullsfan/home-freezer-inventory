@@ -5,6 +5,7 @@ import './App.css';
 import Login from './pages/Login';
 import Inventory from './pages/Inventory';
 import Categories from './pages/Categories';
+import PrintLabels from './pages/PrintLabels';
 import Settings from './pages/Settings';
 
 function App() {
@@ -44,6 +45,7 @@ function App() {
             <nav>
               <Link to="/">Inventory</Link>
               <Link to="/categories">Categories</Link>
+              <Link to="/print-labels">Print Labels</Link>
               <Link to="/settings">Settings</Link>
             </nav>
             <div className="user-info">
@@ -57,6 +59,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Inventory />} />
             <Route path="/categories" element={<Categories />} />
+            <Route path="/print-labels" element={<PrintLabels />} />
             <Route path="/settings" element={<Settings user={user} />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

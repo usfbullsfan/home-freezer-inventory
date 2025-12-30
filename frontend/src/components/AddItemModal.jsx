@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { itemsAPI, categoriesAPI, uploadsAPI } from '../services/api';
+import { addItemToSession } from '../utils/sessionTracking';
 
 function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) {
   const [formData, setFormData] = useState({
@@ -282,12 +283,19 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
         upc: formData.upc && formData.upc.trim() ? formData.upc.trim() : null,
       };
 
+      let createdItem = null;
       if (item && item.id) {
         // Update existing item
         await itemsAPI.updateItem(item.id, submitData);
       } else {
         // Create new item
-        await itemsAPI.createItem(submitData);
+        const response = await itemsAPI.createItem(submitData);
+        createdItem = response.data;
+
+        // Add to session for print prompt
+        if (createdItem && createdItem.id) {
+          addItemToSession(createdItem.id);
+        }
       }
 
       if (keepOpen) {
