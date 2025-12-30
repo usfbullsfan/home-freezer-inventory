@@ -9,6 +9,7 @@ import os
 import base64
 import csv
 import json as json_lib
+import logging
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas as pdf_canvas
@@ -1005,8 +1006,10 @@ def import_csv():
                 imported += 1
 
             except Exception as e:
+                # Log detailed error including stack trace, but do not expose it to the client
+                logging.exception("Error importing row %s in CSV import", row_num)
                 skipped += 1
-                errors.append(f"Row {row_num}: {str(e)}")
+                errors.append(f"Row {row_num}: Failed to import row")
 
         db.session.commit()
 
@@ -1019,7 +1022,9 @@ def import_csv():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to import CSV: {str(e)}'}), 500
+        # Log detailed error including stack trace, but return a generic message to the client
+        logging.exception("Failed to import CSV")
+        return jsonify({'error': 'Failed to import CSV'}), 500
 
 
 @items_bp.route('/import/json', methods=['POST'])
@@ -1134,8 +1139,10 @@ def import_json():
                 imported += 1
 
             except Exception as e:
+                # Log detailed error including stack trace, but do not expose it to the client
+                logging.exception("Error importing item %s in JSON import", idx)
                 skipped += 1
-                errors.append(f"Item {idx}: {str(e)}")
+                errors.append(f"Item {idx}: Failed to import item")
 
         db.session.commit()
 
@@ -1148,4 +1155,6 @@ def import_json():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to import JSON: {str(e)}'}), 500
+        # Log detailed error including stack trace, but return a generic message to the client
+        logging.exception("Failed to import JSON")
+        return jsonify({'error': 'Failed to import JSON'}), 500
