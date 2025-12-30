@@ -3,6 +3,7 @@ import { itemsAPI, categoriesAPI } from '../services/api';
 import ItemCard from '../components/ItemCard';
 import AddItemModal from '../components/AddItemModal';
 import QRInputModal from '../components/QRInputModal';
+import QRScanner from '../components/QRScanner';
 import SessionBanner from '../components/SessionBanner';
 
 function Inventory() {
@@ -21,6 +22,7 @@ function Inventory() {
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
   // Session tracking - force re-render when session changes
@@ -178,9 +180,12 @@ function Inventory() {
             </p>
           )}
         </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <button className="btn btn-secondary" onClick={() => setShowQRModal(true)}>
             🔍 Locate Item by Code
+          </button>
+          <button className="btn btn-secondary" onClick={() => setShowQRScanner(true)}>
+            📷 Scan QR Code
           </button>
           <button className="btn btn-success" onClick={handleAddItem}>
             ➕ Add Item
@@ -285,6 +290,17 @@ function Inventory() {
         <QRInputModal
           onClose={() => setShowQRModal(false)}
           onSubmit={handleQRSubmit}
+        />
+      )}
+
+      {showQRScanner && (
+        <QRScanner
+          onClose={() => setShowQRScanner(false)}
+          onScan={(item) => {
+            setShowQRScanner(false);
+            setEditingItem(item);
+            setShowAddModal(true);
+          }}
         />
       )}
     </div>

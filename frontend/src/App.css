@@ -477,25 +477,238 @@ body {
   background: white;
 }
 
+/* Mobile Navigation */
+.navbar {
+  flex-wrap: wrap;
+}
+
+.navbar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.mobile-menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+.navbar-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.navbar-links {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
+  /* Mobile Navigation */
+  .mobile-menu-toggle {
+    display: block;
+  }
+
+  .navbar {
+    padding: 1rem;
+  }
+
+  .navbar h1 {
+    font-size: 1.2rem;
+  }
+
+  .navbar-content {
+    display: none;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+    width: 100%;
+  }
+
+  .navbar-content.mobile-open {
+    display: flex;
+  }
+
+  .navbar-links {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .navbar-links a {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    text-align: center;
+  }
+
+  .user-info {
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .user-info span {
+    text-align: center;
+  }
+
+  .user-info button {
+    width: 100%;
+  }
+
+  /* Container */
+  .container {
+    padding: 1rem;
+  }
+
+  /* Search and Filters */
   .search-row,
   .filter-row {
     grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
 
+  /* Items Grid */
   .items-grid {
     grid-template-columns: 1fr;
   }
 
-  .navbar {
-    flex-direction: column;
-    gap: 1rem;
+  /* Forms */
+  .form-row {
+    grid-template-columns: 1fr !important;
   }
 
-  .navbar nav {
+  .form-row-2,
+  .form-row-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Buttons */
+  .btn {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+  }
+
+  /* Tables - Convert to cards on mobile */
+  .items-table table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .items-table thead {
+    display: none;
+  }
+
+  .items-table tbody {
+    display: block;
+  }
+
+  .items-table tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 0.75rem;
+    background: white;
+  }
+
+  .items-table td {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border: none;
+  }
+
+  .items-table td:before {
+    content: attr(data-label);
+    font-weight: bold;
+    margin-right: 1rem;
+  }
+
+  /* Cards */
+  .card {
+    padding: 1rem;
+  }
+
+  /* Modals */
+  .modal {
+    width: 95%;
+    max-width: 95%;
+    max-height: 90vh;
+    margin: 1rem;
+  }
+
+  .modal-content {
+    max-height: calc(90vh - 120px);
+  }
+
+  .modal-actions {
     flex-direction: column;
     gap: 0.5rem;
+  }
+
+  .modal-actions button {
+    width: 100%;
+  }
+
+  /* Page Header */
+  .page-header {
+    padding: 1rem 0;
+  }
+
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
+
+  /* Item Cards */
+  .item-card {
+    padding: 1rem;
+  }
+
+  /* Stats */
+  .stats {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  /* Settings sections */
+  .import-export-section > div {
+    padding: 1rem;
+  }
+}
+
+/* Touch-friendly improvements for tablets */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .btn,
+  button {
+    min-height: 44px;
+    padding: 0.65rem 1.25rem;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  input[type="password"],
+  input[type="email"],
+  input[type="url"],
+  select,
+  textarea {
+    min-height: 44px;
+    font-size: 16px;
   }
 }
 
