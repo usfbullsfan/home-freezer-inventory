@@ -99,8 +99,16 @@ export const itemsAPI = {
       throw new Error('Failed to generate labels');
     }
 
-    const html = await response.text();
-    return html;
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const filename = response.headers.get('Content-Disposition')?.match(/filename="?(.+)"?/)?.[1] || 'freezer_labels.pdf';
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   },
 
   exportCSV: async (status = 'in_freezer') => {

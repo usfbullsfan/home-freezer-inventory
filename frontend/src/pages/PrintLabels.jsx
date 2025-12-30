@@ -66,17 +66,13 @@ function PrintLabels() {
 
     try {
       setError('');
-      const html = await itemsAPI.printLabels(selectedItems, {
+      await itemsAPI.printLabels(selectedItems, {
         show_name: showName,
         show_expiration: showExpiration,
         show_category: showCategory,
         show_weight: showWeight,
       });
-
-      // Open in new window
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(html);
-      printWindow.document.close();
+      // PDF will download automatically
     } catch (err) {
       setError('Failed to generate labels: ' + (err.message || 'Unknown error'));
     }
@@ -272,7 +268,8 @@ function PrintLabels() {
           <li>Each sheet fits 4 columns of labels across a letter-sized page</li>
           <li>Use the checkboxes above to customize what information appears on each label</li>
           <li>The QR code and alphanumeric code always appear on every label</li>
-          <li>After generating labels, use your browser's print dialog to select paper size and printer</li>
+          <li>A PDF will download automatically - open and print it when ready</li>
+          <li>No need to adjust browser print settings - PDFs print perfectly every time</li>
         </ul>
       </div>
     </div>

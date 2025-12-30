@@ -9,6 +9,7 @@ import os
 import base64
 import csv
 import json as json_lib
+from weasyprint import HTML
 
 items_bp = Blueprint('items', __name__)
 
@@ -709,7 +710,7 @@ def print_labels():
 
         labels_data.append(label_info)
 
-    # Generate HTML template for printing
+    # Generate HTML template for PDF
     html_template = '''
 <!DOCTYPE html>
 <html>
@@ -718,7 +719,7 @@ def print_labels():
     <title>Freezer Inventory Labels</title>
     <style>
         @page {
-            size: auto;
+            size: letter;
             margin: 0.5in;
         }
 
@@ -730,8 +731,6 @@ def print_labels():
 
         body {
             font-family: Arial, sans-serif;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
         }
 
         .label-container {
@@ -743,11 +742,8 @@ def print_labels():
         }
 
         .label {
-            min-width: 1.5in;
+            width: 1.5in;
             min-height: 1.5in;
-            width: fit-content;
-            height: fit-content;
-            max-width: 3in;
             border: 1px solid #000;
             padding: 0.1in;
             display: flex;
@@ -759,25 +755,14 @@ def print_labels():
             background: white;
         }
 
-        /* Labels with minimal content stay 1.5x1.5 */
-        .label.minimal {
-            width: 1.5in;
-            height: 1.5in;
-            justify-content: center;
-        }
-
-        /* Labels with extra info grow vertically */
-        .label.has-info {
-            width: 1.5in;
-            min-height: 1.8in;
-            padding: 0.08in;
-        }
-
         .label img {
             width: 0.8in;
             height: 0.8in;
             margin-bottom: 0.04in;
-            flex-shrink: 0;
+        }
+
+        .label.minimal {
+            justify-content: center;
         }
 
         .label.minimal img {
@@ -791,7 +776,6 @@ def print_labels():
             font-weight: bold;
             margin-bottom: 0.03in;
             font-family: 'Courier New', monospace;
-            flex-shrink: 0;
         }
 
         .label.minimal .qr-code-text {
@@ -802,11 +786,9 @@ def print_labels():
             font-size: 7pt;
             line-height: 1.2;
             width: 100%;
-            flex-grow: 1;
             display: flex;
             flex-direction: column;
             gap: 0.02in;
-            justify-content: flex-start;
         }
 
         .label .info-line {
@@ -815,88 +797,12 @@ def print_labels():
             text-overflow: ellipsis;
             width: 100%;
         }
-
-        @media print {
-            @page {
-                margin: 0.5in;
-            }
-
-            html, body {
-                margin: 0;
-                padding: 0;
-            }
-
-            .no-print {
-                display: none !important;
-            }
-
-            /* Prevent headers and footers */
-            header, footer {
-                display: none !important;
-            }
-        }
-
-        .print-button {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 12px 24px;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            z-index: 1000;
-        }
-
-        .print-button:hover {
-            background: #2980b9;
-        }
-
-        /* Instructions for printing */
-        .print-instructions {
-            position: fixed;
-            top: 70px;
-            right: 20px;
-            padding: 10px;
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            border-radius: 4px;
-            font-size: 12px;
-            max-width: 250px;
-            z-index: 1000;
-        }
     </style>
-    <script>
-        // Auto-classify labels based on content
-        window.addEventListener('DOMContentLoaded', function() {
-            const labels = document.querySelectorAll('.label');
-            labels.forEach(label => {
-                const hasInfo = label.querySelector('.info');
-                if (!hasInfo || hasInfo.children.length === 0) {
-                    label.classList.add('minimal');
-                } else {
-                    label.classList.add('has-info');
-                }
-            });
-        });
-    </script>
 </head>
 <body>
-    <button class="print-button no-print" onclick="window.print()">🖨️ Print Labels</button>
-
-    <div class="print-instructions no-print">
-        <strong>Print Settings:</strong><br>
-        • Turn OFF headers and footers<br>
-        • Set margins to default<br>
-        • Landscape or Portrait works
-    </div>
-
     <div class="label-container">
         {% for label in labels %}
-        <div class="label">
+        <div class="label {% if not (label.name or label.expiration or label.category or label.weight) %}minimal{% endif %}">
             <img src="{{ label.qr_image }}" alt="QR Code">
             <div class="qr-code-text">{{ label.qr_code }}</div>
             {% if label.name or label.expiration or label.category or label.weight %}
@@ -922,8 +828,21 @@ def print_labels():
 </html>
     '''
 
+    # Render HTML
     html = render_template_string(html_template, labels=labels_data)
-    return html, 200, {'Content-Type': 'text/html'}
+
+    # Generate PDF from HTML
+    pdf_file = io.BytesIO()
+    HTML(string=html).write_pdf(pdf_file)
+    pdf_file.seek(0)
+
+    # Return PDF as downloadable file
+    return send_file(
+        pdf_file,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'freezer_labels_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.pdf'
+    )
 
 
 @items_bp.route('/export/csv', methods=['GET'])
