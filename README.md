@@ -496,6 +496,109 @@ Test coverage includes:
 - [ ] Item location tracking (shelf, drawer, etc.)
 - [ ] Printable labels with codes
 
+## Deployment
+
+### Automated AWS EC2 Deployment (Recommended) ⭐
+
+This project includes **fully automated AWS deployment** with production and development environments:
+
+**✨ Features:**
+- 🚀 **Automated CI/CD**: Push to `main` or `dev` branch to auto-deploy
+- 🔄 **Dual Environments**: Separate production and development servers
+- 💾 **Automatic Backups**: Database backed up before every deployment
+- 🔙 **One-Click Rollback**: Restore dev from production with a button click
+- 🔒 **Security Hardened**: UFW firewall, fail2ban, automatic security updates
+- 💰 **Cost Optimized**: Uses AWS Free Tier eligible resources
+
+**📖 Complete Setup Guide:**
+
+See **[AWS EC2 Deployment Guide](docs/deployment/aws-ec2-setup.md)** for step-by-step instructions including:
+- EC2 instance setup (production + development)
+- GitHub Actions configuration
+- Security group and firewall setup
+- Automated deployment workflows
+- Database backup and restore
+- Monitoring and troubleshooting
+- Cost management and optimization
+
+**Quick Start:**
+```bash
+# 1. Set up EC2 instances (see guide)
+# 2. Run server setup script on each instance
+./scripts/server-setup.sh prod    # On production server
+./scripts/server-setup.sh dev     # On dev server
+
+# 3. Configure GitHub Secrets:
+#    - SSH_PRIVATE_KEY (your EC2 key pair)
+#    - PROD_HOST (production server IP)
+#    - DEV_HOST (dev server IP)
+
+# 4. Push to deploy!
+git push origin main    # Deploys to production
+git push origin dev     # Deploys to development
+```
+
+**GitHub Actions Workflows:**
+- `.github/workflows/deploy-prod.yml` - Auto-deploy production on push to `main`
+- `.github/workflows/deploy-dev.yml` - Auto-deploy development on push to `dev`
+- `.github/workflows/restore-dev.yml` - Manually restore dev from production
+
+---
+
+### Other Deployment Options
+
+We also provide deployment guides for alternative platforms:
+
+- **[Raspberry Pi Deployment](docs/deployment/raspberry-pi.md)** - Complete guide for deploying to a Raspberry Pi for local network access, including:
+  - System setup and dependencies
+  - Systemd service configuration
+  - Nginx reverse proxy
+  - Automatic backups
+  - Performance tuning for Pi 3/4
+  - Security hardening
+
+- **[Cloud Deployment (AWS & GCP Free Tier)](docs/deployment/cloud-free-tier.md)** - Deploy to cloud providers using free tier offerings, including:
+  - AWS EC2 and GCP Compute Engine setup
+  - SSL/HTTPS configuration with Let's Encrypt
+  - Cloud storage for backups (S3/Cloud Storage)
+  - Optional managed database setup (RDS/Cloud SQL)
+  - Cost optimization tips
+  - Monitoring and maintenance
+
+### Manual Deployment
+
+If you prefer manual deployment without GitHub Actions:
+
+```bash
+# SSH to your server
+ssh -i your-key.pem ubuntu@your-server-ip
+
+# Navigate to app directory
+cd /home/ubuntu/freezer-inventory
+
+# Run deployment script
+./scripts/deploy.sh
+```
+
+The deployment script automatically:
+- Creates database backup
+- Pulls latest code
+- Updates dependencies
+- Builds frontend
+- Restarts services
+- Runs health checks
+- Rolls back on failure
+
+### Quick Production Tips
+
+- Use `gunicorn` instead of the Flask development server
+- Set a strong `JWT_SECRET_KEY` in your `.env` file
+- Run behind Nginx as a reverse proxy (optional)
+- Enable HTTPS with Let's Encrypt (requires domain name)
+- Set up regular database backups (automated in AWS deployment)
+- Monitor logs: `sudo journalctl -u freezer-backend -f`
+- Keep the system and dependencies updated (automatic with AWS setup)
+
 ## Troubleshooting
 
 **Backend won't start:**
