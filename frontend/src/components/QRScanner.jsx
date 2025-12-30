@@ -23,6 +23,12 @@ function QRScanner({ onScan, onClose }) {
   }, []);
 
   const getCameras = async () => {
+    // Check if mediaDevices API is available
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+      setError('Camera access requires HTTPS. Please use manual entry below or access via https://');
+      return;
+    }
+
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(device => device.kind === 'videoinput');
@@ -35,7 +41,7 @@ function QRScanner({ onScan, onClose }) {
       );
       setSelectedCamera(rearCamera?.deviceId || videoDevices[0]?.deviceId || '');
     } catch (err) {
-      setError('Failed to access camera devices: ' + err.message);
+      setError('Camera not available. Please use manual entry below.');
     }
   };
 
@@ -143,7 +149,18 @@ function QRScanner({ onScan, onClose }) {
           </div>
 
           <div className="modal-content">
-            {error && <div className="error-message">{error}</div>}
+            {error && (
+              <div className="error-message" style={{
+                background: '#fff3cd',
+                color: '#856404',
+                padding: '1rem',
+                borderRadius: '4px',
+                marginBottom: '1rem',
+                border: '1px solid #ffeaa7'
+              }}>
+                ⚠️ {error}
+              </div>
+            )}
 
             {cameras.length > 0 && !scanning && (
               <div style={{ marginBottom: '1rem' }}>
@@ -165,45 +182,57 @@ function QRScanner({ onScan, onClose }) {
               </div>
             )}
 
-            <div className="scanner-area">
-              <video
-                ref={videoRef}
-                style={{
-                  width: '100%',
-                  maxHeight: '400px',
-                  backgroundColor: '#000',
-                  borderRadius: '4px',
-                  display: scanning ? 'block' : 'none'
-                }}
-              />
-              <canvas
-                ref={canvasRef}
-                style={{ display: 'none' }}
-              />
+            {cameras.length > 0 && (
+              <>
+                <div className="scanner-area">
+                  <video
+                    ref={videoRef}
+                    style={{
+                      width: '100%',
+                      maxHeight: '400px',
+                      backgroundColor: '#000',
+                      borderRadius: '4px',
+                      display: scanning ? 'block' : 'none'
+                    }}
+                  />
+                  <canvas
+                    ref={canvasRef}
+                    style={{ display: 'none' }}
+                  />
 
-              {!scanning && !item && (
-                <div style={{ textAlign: 'center', padding: '2rem', background: '#f8f9fa', borderRadius: '4px' }}>
-                  <p style={{ marginBottom: '1rem', color: '#666' }}>
-                    Click "Start Scanning" to use your device camera, or enter the QR code manually below.
-                  </p>
+                  {!scanning && !item && (
+                    <div style={{ textAlign: 'center', padding: '2rem', background: '#f8f9fa', borderRadius: '4px' }}>
+                      <p style={{ marginBottom: '1rem', color: '#666' }}>
+                        Click "Start Scanning" to use your device camera, or enter the QR code manually below.
+                      </p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <div style={{ marginTop: '1rem' }}>
-              <button
-                onClick={scanning ? stopScanning : startScanning}
-                className={`btn ${scanning ? 'btn-secondary' : 'btn-primary'}`}
-                style={{ width: '100%' }}
-              >
-                {scanning ? '⏹ Stop Scanning' : '▶️ Start Scanning'}
-              </button>
-            </div>
+                <div style={{ marginTop: '1rem' }}>
+                  <button
+                    onClick={scanning ? stopScanning : startScanning}
+                    className={`btn ${scanning ? 'btn-secondary' : 'btn-primary'}`}
+                    style={{ width: '100%' }}
+                  >
+                    {scanning ? '⏹ Stop Scanning' : '▶️ Start Scanning'}
+                  </button>
+                </div>
+              </>
+            )}
 
-            <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #ddd' }}>
-              <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>Manual Entry</h3>
+            <div style={{
+              marginTop: cameras.length === 0 ? '0' : '1.5rem',
+              paddingTop: cameras.length === 0 ? '0' : '1.5rem',
+              borderTop: cameras.length === 0 ? 'none' : '1px solid #ddd'
+            }}>
+              <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>
+                {cameras.length === 0 ? '🔍 Enter QR Code' : 'Manual Entry'}
+              </h3>
               <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
-                Enter the code manually if camera scanning isn't working:
+                {cameras.length === 0
+                  ? 'Enter the QR code from your item label:'
+                  : 'Or enter the code manually if camera scanning isn\'t working:'}
               </p>
               <form onSubmit={(e) => {
                 e.preventDefault();
@@ -244,15 +273,25 @@ function QRScanner({ onScan, onClose }) {
               </div>
             )}
 
-            <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#fff3e0', borderRadius: '4px' }}>
-              <h4 style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>💡 Tips:</h4>
-              <ul style={{ marginLeft: '1.5rem', fontSize: '0.85rem', lineHeight: '1.6', color: '#666' }}>
-                <li>Make sure the QR code is well-lit and in focus</li>
-                <li>Hold your device steady while scanning</li>
-                <li>Try using the rear camera for better results</li>
-                <li>If scanning doesn't work, use manual entry below</li>
-              </ul>
-            </div>
+            {cameras.length === 0 ? (
+              <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#e3f2fd', borderRadius: '4px' }}>
+                <h4 style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>ℹ️ Camera Not Available</h4>
+                <p style={{ fontSize: '0.85rem', lineHeight: '1.6', color: '#666', margin: 0 }}>
+                  Camera access requires HTTPS (secure connection). You can still use this feature by entering QR codes manually above,
+                  or access this site via <code>https://</code> to enable camera scanning.
+                </p>
+              </div>
+            ) : (
+              <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#fff3e0', borderRadius: '4px' }}>
+                <h4 style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>💡 Tips:</h4>
+                <ul style={{ marginLeft: '1.5rem', fontSize: '0.85rem', lineHeight: '1.6', color: '#666' }}>
+                  <li>Make sure the QR code is well-lit and in focus</li>
+                  <li>Hold your device steady while scanning</li>
+                  <li>Try using the rear camera for better results</li>
+                  <li>If scanning doesn't work, use manual entry above</li>
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       </div>
