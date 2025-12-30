@@ -80,6 +80,106 @@ export const itemsAPI = {
 
   searchImage: (productName, categoryName) =>
     api.post('/items/search-image', { product_name: productName, category_name: categoryName }),
+
+  printLabels: async (itemIds, options = {}) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch('/api/items/print-labels', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        item_ids: itemIds,
+        ...options,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to generate labels');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const filename = response.headers.get('Content-Disposition')?.match(/filename="?(.+)"?/)?.[1] || 'freezer_labels.pdf';
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
+
+  exportCSV: async (status = 'in_freezer') => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`/api/items/export/csv?status=${status}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to export CSV');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const filename = response.headers.get('Content-Disposition')?.match(/filename="?(.+)"?/)?.[1] || 'inventory.csv';
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
+
+  exportJSON: async (status = 'in_freezer') => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`/api/items/export/json?status=${status}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to export JSON');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const filename = response.headers.get('Content-Disposition')?.match(/filename="?(.+)"?/)?.[1] || 'inventory.json';
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
+
+  importCSV: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/items/import/csv', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  importJSON: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/items/import/json', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
 };
 
 // Categories API

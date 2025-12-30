@@ -71,6 +71,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Inventory />} />
             <Route path="/categories" element={<Categories />} />
+            <Route path="/print-labels" element={<PrintLabels />} />
             <Route path="/settings" element={<Settings user={user} />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
