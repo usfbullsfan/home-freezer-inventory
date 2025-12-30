@@ -718,7 +718,7 @@ def print_labels():
     <title>Freezer Inventory Labels</title>
     <style>
         @page {
-            size: letter;
+            size: auto;
             margin: 0.5in;
         }
 
@@ -736,61 +736,103 @@ def print_labels():
 
         .label-container {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(1.5in, 1fr));
             gap: 0.25in;
             padding: 0;
+            justify-content: start;
         }
 
         .label {
-            width: 1.5in;
-            height: 1.5in;
+            min-width: 1.5in;
+            min-height: 1.5in;
+            width: fit-content;
+            height: fit-content;
+            max-width: 3in;
             border: 1px solid #000;
             padding: 0.1in;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             text-align: center;
             page-break-inside: avoid;
             background: white;
         }
 
+        /* Labels with minimal content stay 1.5x1.5 */
+        .label.minimal {
+            width: 1.5in;
+            height: 1.5in;
+            justify-content: center;
+        }
+
+        /* Labels with extra info grow vertically */
+        .label.has-info {
+            width: 1.5in;
+            min-height: 1.8in;
+            padding: 0.08in;
+        }
+
         .label img {
+            width: 0.8in;
+            height: 0.8in;
+            margin-bottom: 0.04in;
+            flex-shrink: 0;
+        }
+
+        .label.minimal img {
             width: 0.9in;
             height: 0.9in;
             margin-bottom: 0.05in;
         }
 
         .label .qr-code-text {
-            font-size: 11pt;
+            font-size: 10pt;
             font-weight: bold;
             margin-bottom: 0.03in;
             font-family: 'Courier New', monospace;
+            flex-shrink: 0;
+        }
+
+        .label.minimal .qr-code-text {
+            font-size: 11pt;
         }
 
         .label .info {
             font-size: 7pt;
-            line-height: 1.1;
-            max-width: 100%;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            line-height: 1.2;
+            width: 100%;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.02in;
+            justify-content: flex-start;
         }
 
         .label .info-line {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 1.3in;
+            width: 100%;
         }
 
         @media print {
+            @page {
+                margin: 0.5in;
+            }
+
+            html, body {
+                margin: 0;
+                padding: 0;
+            }
+
             .no-print {
                 display: none !important;
             }
 
-            body {
-                margin: 0;
-                padding: 0;
+            /* Prevent headers and footers */
+            header, footer {
+                display: none !important;
             }
         }
 
@@ -806,15 +848,51 @@ def print_labels():
             font-size: 16px;
             cursor: pointer;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 1000;
         }
 
         .print-button:hover {
             background: #2980b9;
         }
+
+        /* Instructions for printing */
+        .print-instructions {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            padding: 10px;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            font-size: 12px;
+            max-width: 250px;
+            z-index: 1000;
+        }
     </style>
+    <script>
+        // Auto-classify labels based on content
+        window.addEventListener('DOMContentLoaded', function() {
+            const labels = document.querySelectorAll('.label');
+            labels.forEach(label => {
+                const hasInfo = label.querySelector('.info');
+                if (!hasInfo || hasInfo.children.length === 0) {
+                    label.classList.add('minimal');
+                } else {
+                    label.classList.add('has-info');
+                }
+            });
+        });
+    </script>
 </head>
 <body>
     <button class="print-button no-print" onclick="window.print()">🖨️ Print Labels</button>
+
+    <div class="print-instructions no-print">
+        <strong>Print Settings:</strong><br>
+        • Turn OFF headers and footers<br>
+        • Set margins to default<br>
+        • Landscape or Portrait works
+    </div>
 
     <div class="label-container">
         {% for label in labels %}
