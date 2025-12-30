@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { itemsAPI, categoriesAPI } from '../services/api';
 
 function PrintLabels() {
+  const location = useLocation();
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
@@ -20,6 +22,15 @@ function PrintLabels() {
     fetchItems();
     fetchCategories();
   }, []);
+
+  // Handle pre-selected items from navigation state
+  useEffect(() => {
+    if (location.state?.preSelectedItems && items.length > 0) {
+      setSelectedItems(location.state.preSelectedItems);
+      // Clear the state so it doesn't persist on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, items]);
 
   const fetchItems = async () => {
     try {
