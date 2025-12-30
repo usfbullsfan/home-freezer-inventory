@@ -75,19 +75,58 @@ npm run dev &
 FRONTEND_PID=$!
 echo "Frontend started (PID: $FRONTEND_PID)"
 
+cd ..
+
+# Detect local IP address
+echo ""
+echo "Detecting network configuration..."
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS
+    LOCAL_IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "unknown")
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    # Linux
+    LOCAL_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "unknown")
+else
+    LOCAL_IP="unknown"
+fi
+
 echo ""
 echo "================================"
 echo "Application started successfully!"
 echo "================================"
 echo ""
-echo "Backend:  http://localhost:5001"
-echo "Frontend: http://localhost:3000"
+echo "📍 Access URLs:"
 echo ""
-echo "Network access:"
-echo "  The app is accessible from other devices on your local network"
-echo "  Check the Vite output above for the Network URL"
-echo ""
-echo "Default login credentials:"
+echo "  Local:   http://localhost:3000"
+if [ "$LOCAL_IP" != "unknown" ]; then
+    echo "  Network: http://$LOCAL_IP:3000"
+    echo ""
+    echo "📱 Mobile Access:"
+    echo "  1. Make sure your phone is on the same WiFi network"
+    echo "  2. Open browser and go to: http://$LOCAL_IP:3000"
+    echo ""
+
+    # Check for macOS firewall
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 2>/dev/null | grep -q "enabled"; then
+            echo "⚠️  macOS Firewall is enabled"
+            echo "   If you can't connect from your phone:"
+            echo "   1. System Settings → Network → Firewall"
+            echo "   2. Click 'Options' and allow incoming connections for 'node'"
+            echo "   Or temporarily: System Settings → Network → Firewall → Turn Off"
+            echo ""
+        fi
+    fi
+else
+    echo "  Network: Could not detect local IP"
+    echo ""
+    echo "📱 To find your IP address:"
+    echo "  macOS: System Settings → Network → Wi-Fi → Details → IP Address"
+    echo "  Linux: Run 'hostname -I' or 'ip addr'"
+    echo ""
+fi
+
+echo "🔐 Default credentials:"
 echo "  Username: admin"
 echo "  Password: admin123"
 echo ""
