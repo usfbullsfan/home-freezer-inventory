@@ -9,7 +9,10 @@ import os
 import base64
 import csv
 import json as json_lib
-from weasyprint import HTML
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
+from reportlab.pdfgen import canvas as pdf_canvas
+from reportlab.lib.utils import ImageReader
 
 items_bp = Blueprint('items', __name__)
 
@@ -671,8 +674,27 @@ def print_labels():
     if not items:
         return jsonify({'error': 'No items found'}), 404
 
-    # Generate QR code images as base64
-    labels_data = []
+    # Create PDF in memory
+    pdf_file = io.BytesIO()
+    c = pdf_canvas.Canvas(pdf_file, pagesize=letter)
+    page_width, page_height = letter
+
+    # Label dimensions
+    label_size = 1.5 * inch
+    label_gap = 0.25 * inch
+    margin = 0.5 * inch
+
+    # Calculate how many labels fit per row
+    available_width = page_width - (2 * margin)
+    labels_per_row = int(available_width / (label_size + label_gap))
+
+    # Starting positions
+    x_start = margin
+    y_start = page_height - margin - label_size
+
+    col = 0
+    row = 0
+
     for item in items:
         # Generate QR code
         qr = qrcode.QRCode(
@@ -684,156 +706,82 @@ def print_labels():
         qr_data = f"freezer-item:{item.qr_code}"
         qr.add_data(qr_data)
         qr.make(fit=True)
-
         img = qr.make_image(fill_color="black", back_color="white")
 
-        # Convert to base64
+        # Convert QR code to ImageReader
         img_io = io.BytesIO()
         img.save(img_io, 'PNG')
         img_io.seek(0)
-        img_base64 = base64.b64encode(img_io.getvalue()).decode()
+        qr_img = ImageReader(img_io)
 
-        # Build label data
-        label_info = {
-            'qr_code': item.qr_code,
-            'qr_image': f"data:image/png;base64,{img_base64}",
-        }
+        # Check if additional info is present
+        has_info = (show_name and item.name) or \
+                   (show_expiration and item.expiration_date) or \
+                   (show_category and item.category) or \
+                   (show_weight and item.weight)
 
-        if show_name:
-            label_info['name'] = item.name
-        if show_expiration and item.expiration_date:
-            label_info['expiration'] = item.expiration_date.strftime('%m/%d/%Y')
-        if show_category and item.category:
-            label_info['category'] = item.category.name
-        if show_weight and item.weight:
-            label_info['weight'] = f"{item.weight} {item.weight_unit}"
+        # Calculate position for this label
+        x = x_start + col * (label_size + label_gap)
+        y = y_start - row * (label_size + label_gap)
 
-        labels_data.append(label_info)
+        # Check if we need a new page
+        if y < margin:
+            c.showPage()
+            row = 0
+            col = 0
+            x = x_start
+            y = y_start
 
-    # Generate HTML template for PDF
-    html_template = '''
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Freezer Inventory Labels</title>
-    <style>
-        @page {
-            size: letter;
-            margin: 0.5in;
-        }
+        # Draw label border
+        c.rect(x, y, label_size, label_size)
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        # QR code size
+        qr_size = 0.9 * inch if not has_info else 0.8 * inch
 
-        body {
-            font-family: Arial, sans-serif;
-        }
+        # Draw QR code (centered horizontally)
+        qr_x = x + (label_size - qr_size) / 2
+        qr_y = y + label_size - qr_size - 0.1 * inch
+        c.drawImage(qr_img, qr_x, qr_y, width=qr_size, height=qr_size)
 
-        .label-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(1.5in, 1fr));
-            gap: 0.25in;
-            padding: 0;
-            justify-content: start;
-        }
+        # Draw QR code text
+        c.setFont("Courier-Bold", 10 if has_info else 11)
+        text_y = qr_y - 0.15 * inch
+        c.drawCentredString(x + label_size / 2, text_y, item.qr_code)
 
-        .label {
-            width: 1.5in;
-            min-height: 1.5in;
-            border: 1px solid #000;
-            padding: 0.1in;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            text-align: center;
-            page-break-inside: avoid;
-            background: white;
-        }
+        # Draw additional info if present
+        if has_info:
+            c.setFont("Helvetica", 7)
+            info_y = text_y - 0.12 * inch
 
-        .label img {
-            width: 0.8in;
-            height: 0.8in;
-            margin-bottom: 0.04in;
-        }
+            if show_name and item.name:
+                c.setFont("Helvetica-Bold", 7)
+                # Truncate if too long
+                name = item.name[:20] + '...' if len(item.name) > 20 else item.name
+                c.drawCentredString(x + label_size / 2, info_y, name)
+                info_y -= 0.1 * inch
+                c.setFont("Helvetica", 7)
 
-        .label.minimal {
-            justify-content: center;
-        }
+            if show_category and item.category:
+                c.drawCentredString(x + label_size / 2, info_y, item.category.name[:25])
+                info_y -= 0.1 * inch
 
-        .label.minimal img {
-            width: 0.9in;
-            height: 0.9in;
-            margin-bottom: 0.05in;
-        }
+            if show_weight and item.weight:
+                weight_text = f"{item.weight} {item.weight_unit}"
+                c.drawCentredString(x + label_size / 2, info_y, weight_text)
+                info_y -= 0.1 * inch
 
-        .label .qr-code-text {
-            font-size: 10pt;
-            font-weight: bold;
-            margin-bottom: 0.03in;
-            font-family: 'Courier New', monospace;
-        }
+            if show_expiration and item.expiration_date:
+                exp_text = f"Exp: {item.expiration_date.strftime('%m/%d/%Y')}"
+                c.drawCentredString(x + label_size / 2, info_y, exp_text)
 
-        .label.minimal .qr-code-text {
-            font-size: 11pt;
-        }
+        # Move to next position
+        col += 1
+        if col >= labels_per_row:
+            col = 0
+            row += 1
 
-        .label .info {
-            font-size: 7pt;
-            line-height: 1.2;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 0.02in;
-        }
-
-        .label .info-line {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            width: 100%;
-        }
-    </style>
-</head>
-<body>
-    <div class="label-container">
-        {% for label in labels %}
-        <div class="label {% if not (label.name or label.expiration or label.category or label.weight) %}minimal{% endif %}">
-            <img src="{{ label.qr_image }}" alt="QR Code">
-            <div class="qr-code-text">{{ label.qr_code }}</div>
-            {% if label.name or label.expiration or label.category or label.weight %}
-            <div class="info">
-                {% if label.name %}
-                <div class="info-line"><strong>{{ label.name }}</strong></div>
-                {% endif %}
-                {% if label.category %}
-                <div class="info-line">{{ label.category }}</div>
-                {% endif %}
-                {% if label.weight %}
-                <div class="info-line">{{ label.weight }}</div>
-                {% endif %}
-                {% if label.expiration %}
-                <div class="info-line">Exp: {{ label.expiration }}</div>
-                {% endif %}
-            </div>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-</body>
-</html>
-    '''
-
-    # Render HTML
-    html = render_template_string(html_template, labels=labels_data)
-
-    # Generate PDF from HTML
-    pdf_file = io.BytesIO()
-    HTML(string=html).write_pdf(pdf_file)
+    # Save PDF
+    c.save()
     pdf_file.seek(0)
 
     # Return PDF as downloadable file
