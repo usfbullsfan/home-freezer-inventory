@@ -5,6 +5,7 @@ import os
 import shutil
 from datetime import datetime
 from werkzeug.utils import secure_filename
+import logging
 
 settings_bp = Blueprint('settings', __name__)
 
@@ -209,17 +210,23 @@ def restore_backup():
         try:
             User.query.first()
         except Exception as e:
+            # SECURITY: Log detailed error for debugging but return generic message
+            logging.exception("Uploaded database file is invalid")
+
             # If database is invalid, restore from backup
             if os.path.exists(backup_path):
                 shutil.copy2(backup_path, db_path)
-            return jsonify({'error': f'Invalid database file: {str(e)}'}), 400
+
+            return jsonify({'error': 'Invalid database file. Please ensure you are uploading a valid backup.'}), 400
 
         return jsonify({
             'message': 'Database restored successfully. Please refresh the page.'
         }), 200
 
     except Exception as e:
-        return jsonify({'error': f'Failed to restore database: {str(e)}'}), 500
+        # SECURITY: Log detailed error for debugging but return generic message
+        logging.exception("Failed to restore database from backup")
+        return jsonify({'error': 'Failed to restore database. Please try again or contact support.'}), 500
 
 
 @settings_bp.route('/backup/info', methods=['GET'])
@@ -271,4 +278,6 @@ def backup_info():
         }), 200
 
     except Exception as e:
-        return jsonify({'error': f'Failed to get backup info: {str(e)}'}), 500
+        # SECURITY: Log detailed error for debugging but return generic message
+        logging.exception("Failed to get database backup info")
+        return jsonify({'error': 'Failed to get backup information'}), 500
