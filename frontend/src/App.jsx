@@ -5,11 +5,13 @@ import './App.css';
 import Login from './pages/Login';
 import Inventory from './pages/Inventory';
 import Categories from './pages/Categories';
+import PrintLabels from './pages/PrintLabels';
 import Settings from './pages/Settings';
 
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in
@@ -40,23 +42,36 @@ function App() {
       ) : (
         <div className="app">
           <nav className="navbar">
-            <h1>🧊 Freezer Inventory</h1>
-            <nav>
-              <Link to="/">Inventory</Link>
-              <Link to="/categories">Categories</Link>
-              <Link to="/settings">Settings</Link>
-            </nav>
-            <div className="user-info">
-              <span>
-                {user.username} {user.role === 'admin' && '(Admin)'}
-              </span>
-              <button onClick={handleLogout}>Logout</button>
+            <div className="navbar-header">
+              <h1>🧊 Freezer Inventory</h1>
+              <button
+                className="mobile-menu-toggle"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Toggle menu"
+              >
+                {mobileMenuOpen ? '✕' : '☰'}
+              </button>
+            </div>
+            <div className={`navbar-content ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+              <nav className="navbar-links">
+                <Link to="/" onClick={() => setMobileMenuOpen(false)}>Inventory</Link>
+                <Link to="/categories" onClick={() => setMobileMenuOpen(false)}>Categories</Link>
+                <Link to="/print-labels" onClick={() => setMobileMenuOpen(false)}>Print Labels</Link>
+                <Link to="/settings" onClick={() => setMobileMenuOpen(false)}>Settings</Link>
+              </nav>
+              <div className="user-info">
+                <span>
+                  {user.username} {user.role === 'admin' && '(Admin)'}
+                </span>
+                <button onClick={handleLogout}>Logout</button>
+              </div>
             </div>
           </nav>
 
           <Routes>
             <Route path="/" element={<Inventory />} />
             <Route path="/categories" element={<Categories />} />
+            <Route path="/print-labels" element={<PrintLabels />} />
             <Route path="/settings" element={<Settings user={user} />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
