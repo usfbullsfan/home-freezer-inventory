@@ -80,7 +80,7 @@ jobs:
             echo "Restarting services..."
             sudo systemctl restart freezer-backend-dev
             sudo systemctl restart freezer-frontend-dev
-            sleep 5
+            sleep 15
             echo "✓ Services restarted"
 
             # Health check
