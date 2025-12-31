@@ -12,10 +12,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Deploy to GCP Compute Engine
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.2.4
         env:
           UPC_API_KEY: ${{ secrets.UPC_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
@@ -110,7 +110,7 @@ jobs:
 
       - name: Notify on failure
         if: failure()
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.2.4
         with:
           host: ${{ secrets.GCP_PROD_HOST }}
           username: ${{ secrets.GCP_USERNAME }}
