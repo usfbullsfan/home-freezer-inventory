@@ -12,10 +12,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Deploy to GCP Compute Engine
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.2.4
         env:
           UPC_API_KEY: ${{ secrets.UPC_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
@@ -80,7 +80,7 @@ jobs:
             echo "Restarting services..."
             sudo systemctl restart freezer-backend
             sudo systemctl restart freezer-frontend
-            sleep 5
+            sleep 15
             echo "✓ Services restarted"
 
             # Health check
@@ -110,7 +110,7 @@ jobs:
 
       - name: Notify on failure
         if: failure()
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.2.4
         with:
           host: ${{ secrets.GCP_PROD_HOST }}
           username: ${{ secrets.GCP_USERNAME }}

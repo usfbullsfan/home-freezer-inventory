@@ -22,7 +22,7 @@ jobs:
           fi
 
       - name: Backup current dev database
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.2.4
         with:
           host: ${{ secrets.GCP_DEV_HOST }}
           username: ${{ secrets.GCP_USERNAME }}
@@ -39,7 +39,7 @@ jobs:
             fi
 
       - name: Copy production database to dev
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.2.4
         with:
           host: ${{ secrets.GCP_PROD_HOST }}
           username: ${{ secrets.GCP_USERNAME }}
@@ -60,7 +60,7 @@ jobs:
             fi
 
       - name: Transfer database from prod to dev
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.GCP_DEV_HOST }}
           username: ${{ secrets.GCP_USERNAME }}
@@ -69,7 +69,7 @@ jobs:
           target: "/home/${{ secrets.GCP_USERNAME }}/freezer-inventory-dev/backend/instance/freezer_inventory.db"
 
       - name: Restore dev environment
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.2.4
         env:
           UPC_API_KEY: ${{ secrets.UPC_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
@@ -126,7 +126,7 @@ jobs:
             echo "Restarting services..."
             sudo systemctl restart freezer-backend-dev
             sudo systemctl restart freezer-frontend-dev
-            sleep 5
+            sleep 15
             echo "✓ Services restarted"
 
             # Health check
@@ -159,7 +159,7 @@ jobs:
 
       - name: Cleanup temp files
         if: always()
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.2.4
         with:
           host: ${{ secrets.GCP_PROD_HOST }}
           username: ${{ secrets.GCP_USERNAME }}
