@@ -69,7 +69,7 @@ def login():
 def get_current_user():
     """Get current user info from JWT token"""
     current_user_id = int(get_jwt_identity())
-    user = User.query.get(current_user_id)
+    user = db.session.get(User, current_user_id)
 
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -96,7 +96,7 @@ def get_users():
 def change_password():
     """Change current user's password"""
     current_user_id = int(get_jwt_identity())
-    user = User.query.get(current_user_id)
+    user = db.session.get(User, current_user_id)
 
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -131,7 +131,7 @@ def update_user(user_id):
     if claims.get('role') != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
 
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
@@ -173,7 +173,7 @@ def delete_user(user_id):
     if user_id == current_user_id:
         return jsonify({'error': 'Cannot delete your own account'}), 400
 
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
@@ -193,7 +193,7 @@ def reset_user_password(user_id):
     if claims.get('role') != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
 
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
