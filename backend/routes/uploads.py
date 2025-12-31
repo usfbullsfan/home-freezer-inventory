@@ -28,6 +28,31 @@ def get_upload_folder():
     return upload_folder
 
 
+def safe_join_path(directory, filename):
+    """
+    Safely join directory and filename, preventing path traversal attacks.
+
+    Args:
+        directory: The base directory path
+        filename: The filename to join
+
+    Returns:
+        The safe absolute path
+
+    Raises:
+        ValueError: If the resolved path is outside the base directory
+    """
+    # Get absolute paths
+    base_dir = os.path.abspath(directory)
+    full_path = os.path.abspath(os.path.join(base_dir, filename))
+
+    # Verify the resolved path is within the base directory
+    if not full_path.startswith(base_dir + os.sep) and full_path != base_dir:
+        raise ValueError("Path traversal detected")
+
+    return full_path
+
+
 def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and \
@@ -95,7 +120,12 @@ def upload_category_image():
 
     # Get upload folder
     upload_folder = get_upload_folder()
-    file_path = os.path.join(upload_folder, unique_filename)
+
+    try:
+        # Safely construct file path (prevents path traversal)
+        file_path = safe_join_path(upload_folder, unique_filename)
+    except ValueError:
+        return jsonify({'error': 'Invalid filename'}), 400
 
     try:
         # Save file temporarily
@@ -167,7 +197,12 @@ def delete_category_image(filename):
         return jsonify({'error': 'Invalid filename'}), 400
 
     upload_folder = get_upload_folder()
-    file_path = os.path.join(upload_folder, filename)
+
+    try:
+        # Safely construct file path (prevents path traversal)
+        file_path = safe_join_path(upload_folder, filename)
+    except ValueError:
+        return jsonify({'error': 'Path traversal detected'}), 400
 
     try:
         if os.path.exists(file_path):
