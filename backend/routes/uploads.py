@@ -5,6 +5,7 @@ from PIL import Image
 import os
 import uuid
 import mimetypes
+import logging
 
 uploads_bp = Blueprint('uploads', __name__)
 
@@ -150,10 +151,15 @@ def upload_category_image():
         }), 201
 
     except Exception as e:
+        # SECURITY: Log detailed error for debugging but return generic message to user
+        # This prevents information exposure about internal paths, database details, etc.
+        logging.exception("Failed to process uploaded image")
+
         # Clean up on error
         if os.path.exists(file_path):
             os.remove(file_path)
-        return jsonify({'error': f'Failed to process image: {str(e)}'}), 500
+
+        return jsonify({'error': 'Failed to process image. Please ensure the file is a valid image.'}), 500
 
 
 @uploads_bp.route('/category-images/<filename>', methods=['GET'])
@@ -222,4 +228,6 @@ def delete_category_image(filename):
         else:
             return jsonify({'error': 'Image not found'}), 404
     except Exception as e:
-        return jsonify({'error': f'Failed to delete image: {str(e)}'}), 500
+        # SECURITY: Log detailed error for debugging but return generic message to user
+        logging.exception("Failed to delete category image")
+        return jsonify({'error': 'Failed to delete image'}), 500
