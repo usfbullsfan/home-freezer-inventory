@@ -498,28 +498,59 @@ Test coverage includes:
 
 ## Deployment
 
-### Automated AWS EC2 Deployment (Recommended) ⭐
+### Cloud Deployment (Automated CI/CD) ⭐
 
-This project includes **fully automated AWS deployment** with production and development environments:
+This project includes **fully automated cloud deployment** with production and development environments for both **AWS** and **Google Cloud Platform (GCP)**.
 
 **✨ Features:**
 - 🚀 **Automated CI/CD**: Push to `main` or `dev` branch to auto-deploy
-- 🔄 **Dual Environments**: Separate production and development servers
+- 🔄 **Dual Environments**: Separate production and development servers (or both on one instance)
 - 💾 **Automatic Backups**: Database backed up before every deployment
 - 🔙 **One-Click Rollback**: Restore dev from production with a button click
 - 🔒 **Security Hardened**: UFW firewall, fail2ban, automatic security updates
-- 💰 **Cost Optimized**: Uses AWS Free Tier eligible resources
+- 💰 **Cost Optimized**: Supports free tier resources
 
-**📖 Complete Setup Guide:**
+### Choose Your Cloud Provider
 
-See **[AWS EC2 Deployment Guide](docs/deployment/aws-ec2-setup.md)** for step-by-step instructions including:
-- EC2 instance setup (production + development)
-- GitHub Actions configuration
-- Security group and firewall setup
-- Automated deployment workflows
-- Database backup and restore
-- Monitoring and troubleshooting
-- Cost management and optimization
+#### Option A: GCP Always Free (Recommended for Long-Term) 💰
+
+**Cost:** **$0/month FOREVER** (1 instance) or **~$6-7/month** (2 instances)
+- **Always Free tier** (not just 12 months!)
+- 1x e2-micro instance free forever
+- Perfect if you're past AWS's 12-month free tier
+
+**📖 Complete Setup Guide:** **[GCP Always Free Deployment Guide](docs/deployment/gcp-always-free.md)**
+
+**Quick Start:**
+```bash
+# 1. Set up GCP Compute Engine instances (see guide)
+# 2. Run server setup script on each instance
+./scripts/server-setup-gcp.sh prod    # On production server
+./scripts/server-setup-gcp.sh dev     # On dev server (or same server for $0/month)
+
+# 3. Configure GitHub Secrets:
+#    - GCP_SSH_PRIVATE_KEY (your GCP SSH key)
+#    - GCP_USERNAME (your GCP username)
+#    - GCP_PROD_HOST (production server IP)
+#    - GCP_DEV_HOST (dev server IP)
+
+# 4. Push to deploy!
+git push origin main    # Deploys to production (GCP)
+git push origin dev     # Deploys to development (GCP)
+```
+
+**GitHub Actions Workflows:**
+- `.github/workflows/deploy-prod-gcp.yml` - Auto-deploy GCP production on push to `main`
+- `.github/workflows/deploy-dev-gcp.yml` - Auto-deploy GCP development on push to `dev`
+- `.github/workflows/restore-dev-gcp.yml` - Manually restore dev from production
+
+#### Option B: AWS EC2 (Good for First Year)
+
+**Cost:** **$0/month** (first 12 months), then **~$17-18/month**
+- 2x t3.micro instances
+- Free tier valid for 12 months only
+
+**📖 Complete Setup Guide:** **[AWS EC2 Deployment Guide](docs/deployment/aws-ec2-setup.md)**
 
 **Quick Start:**
 ```bash
@@ -534,14 +565,24 @@ See **[AWS EC2 Deployment Guide](docs/deployment/aws-ec2-setup.md)** for step-by
 #    - DEV_HOST (dev server IP)
 
 # 4. Push to deploy!
-git push origin main    # Deploys to production
-git push origin dev     # Deploys to development
+git push origin main    # Deploys to production (AWS)
+git push origin dev     # Deploys to development (AWS)
 ```
 
 **GitHub Actions Workflows:**
-- `.github/workflows/deploy-prod.yml` - Auto-deploy production on push to `main`
-- `.github/workflows/deploy-dev.yml` - Auto-deploy development on push to `dev`
+- `.github/workflows/deploy-prod.yml` - Auto-deploy AWS production on push to `main`
+- `.github/workflows/deploy-dev.yml` - Auto-deploy AWS development on push to `dev`
 - `.github/workflows/restore-dev.yml` - Manually restore dev from production
+
+### Cost Comparison
+
+| Provider | First Year | After First Year | Notes |
+|----------|-----------|------------------|-------|
+| **GCP** (1 instance) | **$0/month** | **$0/month** | Always Free forever! |
+| **GCP** (2 instances) | **~$6-7/month** | **~$6-7/month** | 1 free + 1 paid |
+| **AWS** (2 instances) | **$0/month** | **~$17-18/month** | Free tier ends after 12 months |
+
+**💡 Recommendation:** Use GCP if you're past the AWS free tier period or want long-term $0 hosting!
 
 ---
 
@@ -569,25 +610,38 @@ We also provide deployment guides for alternative platforms:
 
 If you prefer manual deployment without GitHub Actions:
 
+**For AWS:**
 ```bash
-# SSH to your server
+# SSH to your AWS server
 ssh -i your-key.pem ubuntu@your-server-ip
 
 # Navigate to app directory
 cd /home/ubuntu/freezer-inventory
 
-# Run deployment script
+# Run AWS deployment script
 ./scripts/deploy.sh
 ```
 
-The deployment script automatically:
-- Creates database backup
-- Pulls latest code
-- Updates dependencies
-- Builds frontend
-- Restarts services
-- Runs health checks
-- Rolls back on failure
+**For GCP:**
+```bash
+# SSH to your GCP server
+gcloud compute ssh your-instance-name --zone=your-zone
+
+# Navigate to app directory
+cd /home/your-username/freezer-inventory
+
+# Run GCP deployment script
+./scripts/deploy-gcp.sh
+```
+
+Both deployment scripts automatically:
+- Create database backup
+- Pull latest code
+- Update dependencies
+- Build frontend
+- Restart services
+- Run health checks
+- Roll back on failure
 
 ### Quick Production Tips
 
@@ -595,9 +649,9 @@ The deployment script automatically:
 - Set a strong `JWT_SECRET_KEY` in your `.env` file
 - Run behind Nginx as a reverse proxy (optional)
 - Enable HTTPS with Let's Encrypt (requires domain name)
-- Set up regular database backups (automated in AWS deployment)
+- Set up regular database backups (automated in AWS/GCP deployments)
 - Monitor logs: `sudo journalctl -u freezer-backend -f`
-- Keep the system and dependencies updated (automatic with AWS setup)
+- Keep the system and dependencies updated (automatic with AWS/GCP setup)
 
 ## Troubleshooting
 
