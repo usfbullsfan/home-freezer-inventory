@@ -1,0 +1,156 @@
+name: Restore Dev from Production (GCP)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "restore" to confirm restoring dev from production'
+        required: true
+        default: ''
+
+jobs:
+  restore:
+    name: Restore GCP Development from Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "restore" ]; then
+            echo "❌ Confirmation failed. You must type 'restore' to proceed."
+            exit 1
+          fi
+
+      - name: Backup current dev database
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.GCP_DEV_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          script: |
+            echo "======================================"
+            echo "Backing up current dev database..."
+            echo "======================================"
+            cd /home/$USER/freezer-inventory-dev
+            mkdir -p backups/pre-restore
+            if [ -f backend/instance/freezer_inventory.db ]; then
+              cp backend/instance/freezer_inventory.db backups/pre-restore/freezer_inventory_$(date +%Y%m%d_%H%M%S).db
+              echo "✓ Dev database backed up"
+            fi
+
+      - name: Copy production database to dev
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.GCP_PROD_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          script: |
+            echo "======================================"
+            echo "Copying production database..."
+            echo "======================================"
+
+            # Get the production database
+            if [ -f /home/$USER/freezer-inventory/backend/instance/freezer_inventory.db ]; then
+              # Copy to a temp location accessible via SCP
+              cp /home/$USER/freezer-inventory/backend/instance/freezer_inventory.db /tmp/prod_freezer_inventory.db
+              echo "✓ Production database copied to temp location"
+            else
+              echo "❌ Production database not found!"
+              exit 1
+            fi
+
+      - name: Transfer database from prod to dev
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.GCP_DEV_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          source: "${{ secrets.GCP_USERNAME }}@${{ secrets.GCP_PROD_HOST }}:/tmp/prod_freezer_inventory.db"
+          target: "/home/${{ secrets.GCP_USERNAME }}/freezer-inventory-dev/backend/instance/freezer_inventory.db"
+
+      - name: Restore dev environment
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.GCP_DEV_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+
+            echo "======================================"
+            echo "Restoring GCP Development Environment"
+            echo "======================================"
+
+            cd /home/$USER/freezer-inventory-dev
+
+            # Pull latest code from main branch (prod code)
+            echo "Syncing code with production (main branch)..."
+            git fetch origin
+            git checkout main
+            git reset --hard origin/main
+            echo "✓ Code synced with production"
+
+            # Update backend dependencies
+            echo "Updating backend dependencies..."
+            cd backend
+            source venv/bin/activate
+            pip install -r requirements.txt --quiet
+            cd ..
+            echo "✓ Backend dependencies updated"
+
+            # Update frontend dependencies
+            echo "Updating frontend dependencies..."
+            cd frontend
+            npm ci --quiet
+            echo "✓ Frontend dependencies updated"
+
+            # Build frontend
+            echo "Building frontend..."
+            npm run build
+            cd ..
+            echo "✓ Frontend built"
+
+            # Restart services
+            echo "Restarting services..."
+            sudo systemctl restart freezer-backend-dev
+            sudo systemctl restart freezer-frontend-dev
+            sleep 5
+            echo "✓ Services restarted"
+
+            # Health check
+            echo "Running health check..."
+            if curl -f http://localhost:5002/api/health > /dev/null 2>&1; then
+              echo "✓ Backend health check passed"
+            else
+              echo "❌ Backend health check failed!"
+              exit 1
+            fi
+
+            if curl -f http://localhost:3001 > /dev/null 2>&1; then
+              echo "✓ Frontend health check passed"
+            else
+              echo "❌ Frontend health check failed!"
+              exit 1
+            fi
+
+            echo "======================================"
+            echo "✓ GCP Development Restored from Production!"
+            echo "======================================"
+            echo ""
+            echo "Dev environment now matches production:"
+            echo "  - Database: Copied from prod"
+            echo "  - Code: Synced to main branch"
+            echo "  - Dependencies: Updated"
+            echo ""
+            echo "Note: Switch back to 'dev' branch when ready to resume dev work:"
+            echo "  cd /home/$USER/freezer-inventory-dev && git checkout dev"
+
+      - name: Cleanup temp files
+        if: always()
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.GCP_PROD_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          script: |
+            rm -f /tmp/prod_freezer_inventory.db

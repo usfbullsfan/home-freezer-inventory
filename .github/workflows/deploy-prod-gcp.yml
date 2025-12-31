@@ -1,0 +1,117 @@
+name: Deploy to Production (GCP)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to GCP Production Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to GCP Compute Engine
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.GCP_PROD_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+
+            echo "======================================"
+            echo "Starting GCP Production Deployment"
+            echo "======================================"
+
+            # Navigate to app directory
+            cd /home/$USER/freezer-inventory
+
+            # Create backup before deployment
+            echo "Creating backup..."
+            mkdir -p backups
+            if [ -f backend/instance/freezer_inventory.db ]; then
+              cp backend/instance/freezer_inventory.db backups/freezer_inventory_$(date +%Y%m%d_%H%M%S).db
+              echo "✓ Backup created"
+            fi
+
+            # Pull latest code
+            echo "Pulling latest code from main..."
+            git fetch origin
+            git reset --hard origin/main
+            echo "✓ Code updated"
+
+            # Update backend dependencies
+            echo "Updating backend dependencies..."
+            cd backend
+            source venv/bin/activate
+            pip install -r requirements.txt --quiet
+            cd ..
+            echo "✓ Backend dependencies updated"
+
+            # Update frontend dependencies
+            echo "Updating frontend dependencies..."
+            cd frontend
+            npm ci --quiet
+            echo "✓ Frontend dependencies updated"
+
+            # Build frontend
+            echo "Building frontend..."
+            npm run build
+            cd ..
+            echo "✓ Frontend built"
+
+            # Restart services
+            echo "Restarting services..."
+            sudo systemctl restart freezer-backend
+            sudo systemctl restart freezer-frontend
+            sleep 5
+            echo "✓ Services restarted"
+
+            # Health check
+            echo "Running health check..."
+            if curl -f http://localhost:5001/api/health > /dev/null 2>&1; then
+              echo "✓ Backend health check passed"
+            else
+              echo "✗ Backend health check failed!"
+              exit 1
+            fi
+
+            if curl -f http://localhost:3000 > /dev/null 2>&1; then
+              echo "✓ Frontend health check passed"
+            else
+              echo "✗ Frontend health check failed!"
+              exit 1
+            fi
+
+            # Keep only last 10 backups
+            cd backups
+            ls -t freezer_inventory_*.db 2>/dev/null | tail -n +11 | xargs -r rm
+            cd ..
+
+            echo "======================================"
+            echo "✓ GCP Production Deployment Complete!"
+            echo "======================================"
+
+      - name: Notify on failure
+        if: failure()
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.GCP_PROD_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          script: |
+            echo "======================================"
+            echo "✗ GCP Production Deployment Failed!"
+            echo "======================================"
+            echo "Rolling back to last backup..."
+            cd /home/$USER/freezer-inventory
+            LATEST_BACKUP=$(ls -t backups/freezer_inventory_*.db 2>/dev/null | head -1)
+            if [ -n "$LATEST_BACKUP" ]; then
+              cp "$LATEST_BACKUP" backend/instance/freezer_inventory.db
+              sudo systemctl restart freezer-backend
+              echo "✓ Rolled back to: $LATEST_BACKUP"
+            fi
