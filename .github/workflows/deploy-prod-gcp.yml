@@ -16,10 +16,14 @@ jobs:
 
       - name: Deploy to GCP Compute Engine
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          UPC_API_KEY: ${{ secrets.UPC_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
         with:
           host: ${{ secrets.GCP_PROD_HOST }}
           username: ${{ secrets.GCP_USERNAME }}
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          envs: UPC_API_KEY,PEXELS_API_KEY
           script: |
             set -e
 
@@ -29,6 +33,14 @@ jobs:
 
             # Navigate to app directory
             cd /home/$USER/freezer-inventory
+
+            # Create .env file with API keys
+            echo "Creating .env file..."
+            cat > backend/.env << EOF
+            UPC_API_KEY=${UPC_API_KEY}
+            PEXELS_API_KEY=${PEXELS_API_KEY}
+            EOF
+            echo "✓ Environment variables configured"
 
             # Create backup before deployment
             echo "Creating backup..."
