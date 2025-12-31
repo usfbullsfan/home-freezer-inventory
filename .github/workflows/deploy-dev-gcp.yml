@@ -32,7 +32,7 @@ jobs:
             echo "======================================"
 
             # Navigate to app directory
-            cd /home/$USER/freezer-inventory-dev
+            cd /home/michaelt452/freezer-inventory-dev
 
             # Create .env file with API keys
             echo "Creating .env file..."
@@ -120,7 +120,7 @@ jobs:
             echo "✗ GCP Development Deployment Failed!"
             echo "======================================"
             echo "Rolling back to last backup..."
-            cd /home/$USER/freezer-inventory-dev
+            cd /home/michaelt452/freezer-inventory-dev
             LATEST_BACKUP=$(ls -t backups/freezer_inventory_*.db 2>/dev/null | head -1)
             if [ -n "$LATEST_BACKUP" ]; then
               cp "$LATEST_BACKUP" backend/instance/freezer_inventory.db

@@ -31,7 +31,7 @@ jobs:
             echo "======================================"
             echo "Backing up current dev database..."
             echo "======================================"
-            cd /home/$USER/freezer-inventory-dev
+            cd /home/michaelt452/freezer-inventory-dev
             mkdir -p backups/pre-restore
             if [ -f backend/instance/freezer_inventory.db ]; then
               cp backend/instance/freezer_inventory.db backups/pre-restore/freezer_inventory_$(date +%Y%m%d_%H%M%S).db
@@ -50,9 +50,9 @@ jobs:
             echo "======================================"
 
             # Get the production database
-            if [ -f /home/$USER/freezer-inventory/backend/instance/freezer_inventory.db ]; then
+            if [ -f /home/michaelt452/freezer-inventory/backend/instance/freezer_inventory.db ]; then
               # Copy to a temp location accessible via SCP
-              cp /home/$USER/freezer-inventory/backend/instance/freezer_inventory.db /tmp/prod_freezer_inventory.db
+              cp /home/michaelt452/freezer-inventory/backend/instance/freezer_inventory.db /tmp/prod_freezer_inventory.db
               echo "✓ Production database copied to temp location"
             else
               echo "❌ Production database not found!"
@@ -85,7 +85,7 @@ jobs:
             echo "Restoring GCP Development Environment"
             echo "======================================"
 
-            cd /home/$USER/freezer-inventory-dev
+            cd /home/michaelt452/freezer-inventory-dev
 
             # Create .env file with API keys
             echo "Creating .env file..."
@@ -155,7 +155,7 @@ jobs:
             echo "  - Dependencies: Updated"
             echo ""
             echo "Note: Switch back to 'dev' branch when ready to resume dev work:"
-            echo "  cd /home/$USER/freezer-inventory-dev && git checkout dev"
+            echo "  cd /home/michaelt452/freezer-inventory-dev && git checkout dev"
 
       - name: Cleanup temp files
         if: always()
