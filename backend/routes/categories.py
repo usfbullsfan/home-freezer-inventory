@@ -18,7 +18,7 @@ def get_categories():
 @jwt_required()
 def get_category(category_id):
     """Get a specific category"""
-    category = Category.query.get(category_id)
+    category = db.session.get(Category, category_id)
 
     if not category:
         return jsonify({'error': 'Category not found'}), 404
@@ -57,7 +57,7 @@ def create_category():
 @jwt_required()
 def update_category(category_id):
     """Update an existing category"""
-    category = Category.query.get(category_id)
+    category = db.session.get(Category, category_id)
 
     if not category:
         return jsonify({'error': 'Category not found'}), 404
@@ -99,7 +99,7 @@ def delete_category(category_id):
     if claims.get('role') != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
 
-    category = Category.query.get(category_id)
+    category = db.session.get(Category, category_id)
 
     if not category:
         return jsonify({'error': 'Category not found'}), 404
@@ -121,7 +121,7 @@ def delete_category(category_id):
 @jwt_required()
 def get_category_stock_image_url(category_id):
     """Get the stock image URL for a category"""
-    category = Category.query.get(category_id)
+    category = db.session.get(Category, category_id)
 
     if not category:
         return jsonify({'error': 'Category not found'}), 404
