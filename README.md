@@ -5,7 +5,7 @@ A web-based application for tracking freezer inventory with alphanumeric code la
 > **⚠️ IMPORTANT DISCLAIMER**
 > This application was developed with the assistance of Claude AI (Anthropic). While functional, this code should be thoroughly tested and reviewed before deploying to a production environment. Use at your own risk and ensure proper security measures are in place, especially if exposing to the internet.
 
-<!-- Testing automated GCP deployment -->
+<!-- Testing automated GCP deployment with gh-deploy user -->
 
 ## Features
 
