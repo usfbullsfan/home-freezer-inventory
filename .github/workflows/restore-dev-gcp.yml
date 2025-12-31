@@ -8,6 +8,10 @@ on:
         required: true
         default: ''
 
+# SECURITY: Explicitly limit GITHUB_TOKEN permissions (principle of least privilege)
+# This workflow doesn't interact with GitHub resources, so no permissions needed
+permissions: {}
+
 jobs:
   restore:
     name: Restore GCP Development from Production

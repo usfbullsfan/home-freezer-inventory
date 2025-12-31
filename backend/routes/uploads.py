@@ -5,6 +5,7 @@ from PIL import Image
 import os
 import uuid
 import mimetypes
+import logging
 
 uploads_bp = Blueprint('uploads', __name__)
 
@@ -91,11 +92,34 @@ def upload_category_image():
 
     # Generate secure filename with UUID to prevent conflicts and directory traversal
     original_extension = file.filename.rsplit('.', 1)[1].lower()
+
+    # SECURITY: Validate extension contains only alphanumeric characters
+    # This prevents path traversal attempts via extension (e.g., ".png/../../../etc/passwd")
+    if not original_extension.isalnum():
+        return jsonify({'error': 'Invalid file extension format'}), 400
+
+    # Generate filename using UUID (secure random) + validated extension
     unique_filename = f"{uuid.uuid4()}.{original_extension}"
+
+    # SECURITY: Use secure_filename to sanitize (defense in depth)
+    unique_filename = secure_filename(unique_filename)
 
     # Get upload folder
     upload_folder = get_upload_folder()
+
+    # Construct file path
     file_path = os.path.join(upload_folder, unique_filename)
+
+    # SECURITY: Verify the resolved path is within the upload folder
+    # This prevents path traversal even if validation above is bypassed
+    try:
+        real_upload_folder = os.path.realpath(upload_folder)
+        real_file_path = os.path.realpath(file_path)
+
+        if not real_file_path.startswith(real_upload_folder + os.sep):
+            return jsonify({'error': 'Invalid file path'}), 400
+    except (ValueError, OSError):
+        return jsonify({'error': 'Invalid file path'}), 400
 
     try:
         # Save file temporarily
@@ -127,10 +151,15 @@ def upload_category_image():
         }), 201
 
     except Exception as e:
+        # SECURITY: Log detailed error for debugging but return generic message to user
+        # This prevents information exposure about internal paths, database details, etc.
+        logging.exception("Failed to process uploaded image")
+
         # Clean up on error
         if os.path.exists(file_path):
             os.remove(file_path)
-        return jsonify({'error': f'Failed to process image: {str(e)}'}), 500
+
+        return jsonify({'error': 'Failed to process image. Please ensure the file is a valid image.'}), 500
 
 
 @uploads_bp.route('/category-images/<filename>', methods=['GET'])
@@ -166,8 +195,31 @@ def delete_category_image(filename):
     if not filename or '/' in filename or '\\' in filename or '..' in filename:
         return jsonify({'error': 'Invalid filename'}), 400
 
+    # SECURITY: Validate file extension
+    if not allowed_file(filename):
+        return jsonify({'error': 'Invalid file type'}), 400
+
+    # SECURITY: Use secure_filename to sanitize
+    safe_filename = secure_filename(filename)
+
+    # SECURITY: Use basename to strip any directory components
+    safe_filename = os.path.basename(safe_filename)
+
     upload_folder = get_upload_folder()
-    file_path = os.path.join(upload_folder, filename)
+
+    # Construct file path
+    file_path = os.path.join(upload_folder, safe_filename)
+
+    # SECURITY: Verify the resolved path is within the upload folder
+    # This prevents path traversal even if validation above is bypassed
+    try:
+        real_upload_folder = os.path.realpath(upload_folder)
+        real_file_path = os.path.realpath(file_path)
+
+        if not real_file_path.startswith(real_upload_folder + os.sep):
+            return jsonify({'error': 'Path traversal detected'}), 400
+    except (ValueError, OSError):
+        return jsonify({'error': 'Invalid file path'}), 400
 
     try:
         if os.path.exists(file_path):
@@ -176,4 +228,6 @@ def delete_category_image(filename):
         else:
             return jsonify({'error': 'Image not found'}), 404
     except Exception as e:
-        return jsonify({'error': f'Failed to delete image: {str(e)}'}), 500
+        # SECURITY: Log detailed error for debugging but return generic message to user
+        logging.exception("Failed to delete category image")
+        return jsonify({'error': 'Failed to delete image'}), 500
