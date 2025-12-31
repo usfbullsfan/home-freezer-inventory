@@ -5,7 +5,7 @@ This guide walks you through setting up production and development environments 
 ## 📋 Overview
 
 - **Region**: us-east-1 (N. Virginia)
-- **Instance Type**: t2.micro (Free Tier eligible)
+- **Instance Type**: t3.micro (Free Tier eligible)
 - **OS**: Ubuntu 22.04 LTS
 - **Cost**: $0 within Free Tier (12 months)
 - **Environments**: 2 separate EC2 instances (Production + Development)
@@ -30,7 +30,7 @@ This guide walks you through setting up production and development environments 
 2. **Configure Instance Settings**
    - **Name**: `freezer-inventory-prod`
    - **Application and OS Images (AMI)**: Ubuntu Server 22.04 LTS (Free tier eligible)
-   - **Instance type**: t2.micro (Free tier eligible)
+   - **Instance type**: t3.micro (Free tier eligible)
    - **Key pair**:
      - Click "Create new key pair"
      - Name: `freezer-inventory-key`
@@ -305,15 +305,15 @@ cd /home/ubuntu/freezer-inventory
 ## 💰 Cost Monitoring
 
 ### Free Tier Limits (12 months)
-- **EC2**: 750 hours/month of t2.micro (2 instances = 1,440 hours, exceeds limit)
+- **EC2**: 750 hours/month of t3.micro (2 instances = 1,440 hours, exceeds limit)
 - **EBS**: 30 GB storage (you're using 16 GB ✓)
 - **Data Transfer**: 15 GB outbound (should be sufficient)
 
 ### Expected Costs After Free Tier
-- **2x t2.micro instances**: ~$16.80/month
+- **2x t3.micro instances**: ~$15.20/month
 - **16 GB EBS storage**: ~$1.60/month
 - **Data transfer**: Usually < $1/month
-- **Total**: ~$18-20/month
+- **Total**: ~$17-18/month
 
 ### Cost Optimization Tips
 1. Stop dev instance when not in use:
