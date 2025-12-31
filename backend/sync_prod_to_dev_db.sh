@@ -4,26 +4,25 @@
 
 set -e  # Exit on error
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INSTANCE_DIR="$SCRIPT_DIR/instance"
+# Production and dev are in separate directories
+PROD_DIR="/home/michaelt452/freezer-inventory/backend/instance"
+DEV_DIR="/home/michaelt452/freezer-inventory-dev/backend/instance"
 
-PROD_DB="$INSTANCE_DIR/freezer_inventory.db"
-DEV_DB="$INSTANCE_DIR/freezer_inventory_dev.db"
-BACKUP_DIR="$INSTANCE_DIR/backups"
+PROD_DB="$PROD_DIR/freezer_inventory.db"
+DEV_DB="$DEV_DIR/freezer_inventory_dev.db"
+BACKUP_DIR="$DEV_DIR/backups"
 
 echo "=========================================="
 echo "Database Sync: Production → Dev"
 echo "=========================================="
 echo ""
 
-# Create instance and backup directories if they don't exist
-mkdir -p "$INSTANCE_DIR"
+# Create backup directory if it doesn't exist
 mkdir -p "$BACKUP_DIR"
 
 # Check if production database exists
 if [ ! -f "$PROD_DB" ]; then
     echo "❌ Error: Production database not found at: $PROD_DB"
-    echo "   Please ensure the production backend has been initialized."
     exit 1
 fi
 
@@ -55,30 +54,7 @@ echo "Database sizes:"
 echo "  Production: $PROD_SIZE"
 echo "  Dev:        $DEV_SIZE"
 echo ""
-
-# Count records in dev database
-echo "Dev database contents:"
-sqlite3 "$DEV_DB" << 'EOF'
-.mode column
-.headers on
-SELECT
-    'Users' as table_name,
-    COUNT(*) as record_count
-FROM users
-UNION ALL
-SELECT
-    'Categories',
-    COUNT(*)
-FROM categories
-UNION ALL
-SELECT
-    'Items',
-    COUNT(*)
-FROM items;
-EOF
-
-echo ""
 echo "=========================================="
 echo "✅ Dev database is now a copy of production"
-echo "   You can safely test in dev without affecting prod"
+echo "   Restart dev backend: sudo systemctl restart freezer-backend-dev"
 echo "=========================================="
