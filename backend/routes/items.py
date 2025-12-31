@@ -209,7 +209,7 @@ def get_items():
 @jwt_required()
 def get_item(item_id):
     """Get a specific item by ID"""
-    item = Item.query.get(item_id)
+    item = db.session.get(Item, item_id)
 
     if not item:
         return jsonify({'error': 'Item not found'}), 404
@@ -263,7 +263,7 @@ def create_item():
     if data.get('expiration_date'):
         expiration_date = datetime.fromisoformat(data['expiration_date'])
     elif data.get('category_id'):
-        category = Category.query.get(data['category_id'])
+        category = db.session.get(Category, data['category_id'])
         if category and category.default_expiration_days:
             # Use custom added_date if provided, otherwise use current time
             base_date = added_date or datetime.utcnow()
@@ -274,7 +274,7 @@ def create_item():
     if not image_url and not data.get('upc'):
         # No image URL and no UPC - use category-based stock image
         if not category and data.get('category_id'):
-            category = Category.query.get(data['category_id'])
+            category = db.session.get(Category, data['category_id'])
         if category:
             image_url = get_category_stock_image(category.name)
 
@@ -306,7 +306,7 @@ def create_item():
 @jwt_required()
 def update_item(item_id):
     """Update an existing item"""
-    item = Item.query.get(item_id)
+    item = db.session.get(Item, item_id)
 
     if not item:
         return jsonify({'error': 'Item not found'}), 404
@@ -350,7 +350,7 @@ def update_item(item_id):
 @jwt_required()
 def update_item_status(item_id):
     """Update item status (consume, throw out, return to freezer)"""
-    item = Item.query.get(item_id)
+    item = db.session.get(Item, item_id)
 
     if not item:
         return jsonify({'error': 'Item not found'}), 404
@@ -384,7 +384,7 @@ def delete_item(item_id):
     if claims.get('role') != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
 
-    item = Item.query.get(item_id)
+    item = db.session.get(Item, item_id)
 
     if not item:
         return jsonify({'error': 'Item not found'}), 404

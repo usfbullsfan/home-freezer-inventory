@@ -20,11 +20,14 @@ def register():
     if not data or not data.get('username') or not data.get('password'):
         return jsonify({'error': 'Username and password required'}), 400
 
-    if User.query.filter_by(username=data['username']).first():
+    # Normalize username to lowercase for case-insensitive matching
+    username_lower = data['username'].lower()
+
+    if User.query.filter_by(username=username_lower).first():
         return jsonify({'error': 'Username already exists'}), 400
 
     user = User(
-        username=data['username'],
+        username=username_lower,
         role=data.get('role', 'user')  # Default to 'user' role
     )
     user.set_password(data['password'])
@@ -46,7 +49,10 @@ def login():
     if not data or not data.get('username') or not data.get('password'):
         return jsonify({'error': 'Username and password required'}), 400
 
-    user = User.query.filter_by(username=data['username']).first()
+    # Normalize username to lowercase for case-insensitive matching
+    username_lower = data['username'].lower()
+
+    user = User.query.filter_by(username=username_lower).first()
 
     if not user or not user.check_password(data['password']):
         return jsonify({'error': 'Invalid username or password'}), 401
@@ -69,7 +75,7 @@ def login():
 def get_current_user():
     """Get current user info from JWT token"""
     current_user_id = int(get_jwt_identity())
-    user = User.query.get(current_user_id)
+    user = db.session.get(User, current_user_id)
 
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -96,7 +102,7 @@ def get_users():
 def change_password():
     """Change current user's password"""
     current_user_id = int(get_jwt_identity())
-    user = User.query.get(current_user_id)
+    user = db.session.get(User, current_user_id)
 
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -131,17 +137,21 @@ def update_user(user_id):
     if claims.get('role') != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
 
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
     data = request.get_json()
 
     # Update username if provided
-    if 'username' in data and data['username'] != user.username:
-        if User.query.filter_by(username=data['username']).first():
-            return jsonify({'error': 'Username already exists'}), 400
-        user.username = data['username']
+    if 'username' in data:
+        # Normalize username to lowercase for case-insensitive matching
+        new_username_lower = data['username'].lower()
+
+        if new_username_lower != user.username:
+            if User.query.filter_by(username=new_username_lower).first():
+                return jsonify({'error': 'Username already exists'}), 400
+            user.username = new_username_lower
 
     # Update role if provided
     if 'role' in data:
@@ -173,7 +183,7 @@ def delete_user(user_id):
     if user_id == current_user_id:
         return jsonify({'error': 'Cannot delete your own account'}), 400
 
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
@@ -193,7 +203,7 @@ def reset_user_password(user_id):
     if claims.get('role') != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
 
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
