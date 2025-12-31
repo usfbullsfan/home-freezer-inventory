@@ -143,4 +143,9 @@ if __name__ == '__main__':
     print("  Password: admin123")
     print("  ⚠️  CHANGE THESE IN PRODUCTION!")
     print("="*50 + "\n")
-    app.run(debug=True, host='0.0.0.0', port=5001)
+
+    # SECURITY: Only enable debug mode in development
+    # Never run with debug=True in production as it enables the Werkzeug debugger
+    # which can be exploited for remote code execution
+    debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(debug=debug_mode, host='0.0.0.0', port=5001)
