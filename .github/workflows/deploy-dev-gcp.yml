@@ -5,6 +5,11 @@ on:
     branches:
       - dev
 
+# SECURITY: Explicitly limit GITHUB_TOKEN permissions (principle of least privilege)
+# This workflow only needs to read repository contents for checkout
+permissions:
+  contents: read
+
 jobs:
   deploy:
     name: Deploy to GCP Development Server
