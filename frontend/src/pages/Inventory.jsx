@@ -12,6 +12,9 @@ function Inventory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Detect if running in development mode
+  const isDev = import.meta.env.DEV;
+
   // Search and filter state
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -148,6 +151,42 @@ function Inventory() {
     }
   };
 
+  const handlePurgeAllItems = async () => {
+    // Double confirmation for safety
+    const firstConfirm = window.confirm(
+      '⚠️ WARNING: This will permanently delete ALL items from the database!\n\n' +
+      'This includes:\n' +
+      '• Items in freezer\n' +
+      '• Consumed items\n' +
+      '• Thrown out items\n\n' +
+      'This action CANNOT be undone!\n\n' +
+      'Are you sure you want to continue?'
+    );
+
+    if (!firstConfirm) return;
+
+    // Second confirmation
+    const secondConfirm = window.confirm(
+      '⚠️ FINAL WARNING ⚠️\n\n' +
+      'You are about to delete ALL items permanently.\n\n' +
+      'Click OK to proceed with deletion, or Cancel to abort.'
+    );
+
+    if (!secondConfirm) return;
+
+    try {
+      setLoading(true);
+      const response = await itemsAPI.purgeAllItems();
+      alert(response.data.message || 'All items purged successfully');
+      loadItems();
+    } catch (err) {
+      console.error('Failed to purge items:', err);
+      const errorMsg = err.response?.data?.error || 'Failed to purge items';
+      alert(`Error: ${errorMsg}`);
+      setLoading(false);
+    }
+  };
+
   // Analyze items for warnings
   const expiringSoonCount = items.filter(item => {
     if (item.status !== 'in_freezer' || !item.expiration_date) return false;
@@ -190,6 +229,15 @@ function Inventory() {
           <button className="btn btn-success" onClick={handleAddItem}>
             ➕ Add Item
           </button>
+          {isDev && (
+            <button
+              className="btn btn-danger"
+              onClick={handlePurgeAllItems}
+              style={{ marginLeft: 'auto' }}
+            >
+              🗑️ Purge All Items
+            </button>
+          )}
         </div>
       </div>
 

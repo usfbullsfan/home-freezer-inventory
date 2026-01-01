@@ -66,6 +66,9 @@ export const itemsAPI = {
   deleteItem: (id) =>
     api.delete(`/items/${id}`),
 
+  purgeAllItems: () =>
+    api.delete('/items/purge-all'),
+
   getExpiringSoon: (days = 30) =>
     api.get('/items/expiring-soon', { params: { days } }),
 
