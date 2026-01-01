@@ -12,12 +12,30 @@ export default defineConfig(({ mode }) => {
     server: {
       host: '0.0.0.0', // Explicitly bind to all network interfaces
       port: 3000,
+      allowedHosts: [
+        'localhost',
+        '127.0.0.1',
+        'thefreezer.xyz',
+        'dev.thefreezer.xyz',
+        '.thefreezer.xyz'  // Allow all subdomains
+      ],
       proxy: {
         '/api': {
           target: `http://localhost:${backendPort}`,
           changeOrigin: true,
         }
       }
+    },
+    preview: {
+      host: '0.0.0.0',
+      port: 3000,
+      allowedHosts: [
+        'localhost',
+        '127.0.0.1',
+        'thefreezer.xyz',
+        'dev.thefreezer.xyz',
+        '.thefreezer.xyz'  // Allow all subdomains
+      ]
     }
   }
 })
