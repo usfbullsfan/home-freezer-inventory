@@ -4,15 +4,18 @@
 
 /**
  * Parse a date string as a local date (not UTC)
- * @param {string} dateString - Date string in YYYY-MM-DD format
+ * @param {string} dateString - Date string in YYYY-MM-DD or ISO format
  * @returns {Date} Date object in local timezone
  */
 export function parseLocalDate(dateString) {
   if (!dateString) return null;
 
+  // Extract just the date part (YYYY-MM-DD) from ISO strings
+  const datePart = dateString.split('T')[0];
+
   // Parse as local date by splitting components
   // This prevents JavaScript from treating "YYYY-MM-DD" as UTC
-  const [year, month, day] = dateString.split('-').map(Number);
+  const [year, month, day] = datePart.split('-').map(Number);
   return new Date(year, month - 1, day); // month is 0-indexed
 }
 
