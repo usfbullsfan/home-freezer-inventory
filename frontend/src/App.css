@@ -125,6 +125,12 @@ body {
   max-width: 400px;
 }
 
+/* Dev mode login card - orange theme */
+.login-card-dev {
+  border: 3px solid #f39c12;
+  box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+}
+
 .login-card h2 {
   margin-bottom: 1.5rem;
   color: #2c3e50;

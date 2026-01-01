@@ -9,6 +9,9 @@ function Login({ setUser }) {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Detect if running in development mode
+  const isDev = import.meta.env.DEV;
+
   // Quick login state
   const [quickLoginEnabled, setQuickLoginEnabled] = useState(false);
   const [quickLoginUsers, setQuickLoginUsers] = useState([]);
@@ -78,8 +81,25 @@ function Login({ setUser }) {
 
   return (
     <div className="login-page">
-      <div className="login-card">
+      {isDev && (
+        <div className="dev-banner">
+          ⚠️ DEVELOPMENT ENVIRONMENT
+        </div>
+      )}
+      <div className={`login-card ${isDev ? 'login-card-dev' : ''}`}>
         <h2>🧊 Freezer Inventory Tracker</h2>
+        {isDev && (
+          <div style={{
+            color: '#e67e22',
+            fontSize: '0.875rem',
+            fontWeight: 'bold',
+            marginTop: '-0.5rem',
+            marginBottom: '1rem',
+            textAlign: 'center'
+          }}>
+            Development Mode
+          </div>
+        )}
 
         {error && <div className="error-message">{error}</div>}
 
