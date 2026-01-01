@@ -79,6 +79,9 @@ export const itemsAPI = {
   purgeAllItems: () =>
     api.delete('/items/purge-all'),
 
+  copyProdDb: () =>
+    api.post('/items/copy-prod-db'),
+
   getExpiringSoon: (days = 30) =>
     api.get('/items/expiring-soon', { params: { days } }),
 

@@ -187,6 +187,34 @@ function Inventory() {
     }
   };
 
+  const handleCopyProdDb = async () => {
+    // Confirmation for database copy
+    const confirm = window.confirm(
+      '📋 Copy Production Database to Dev?\n\n' +
+      'This will:\n' +
+      '• Replace the current dev database with production data\n' +
+      '• Create a backup of the current dev database\n' +
+      '• Reload all items from production\n\n' +
+      'Are you sure you want to continue?'
+    );
+
+    if (!confirm) return;
+
+    try {
+      setLoading(true);
+      const response = await itemsAPI.copyProdDb();
+      const msg = response.data.message || 'Production database copied successfully';
+      const count = response.data.items_count || 0;
+      alert(`${msg}\n\nItems loaded: ${count}`);
+      loadItems();
+    } catch (err) {
+      console.error('Failed to copy prod database:', err);
+      const errorMsg = err.response?.data?.error || 'Failed to copy production database';
+      alert(`Error: ${errorMsg}`);
+      setLoading(false);
+    }
+  };
+
   // Analyze items for warnings
   const expiringSoonCount = items.filter(item => {
     if (item.status !== 'in_freezer' || !item.expiration_date) return false;
@@ -230,13 +258,21 @@ function Inventory() {
             ➕ Add Item
           </button>
           {isDev && (
-            <button
-              className="btn btn-danger"
-              onClick={handlePurgeAllItems}
-              style={{ marginLeft: 'auto' }}
-            >
-              🗑️ Purge All Items
-            </button>
+            <>
+              <button
+                className="btn btn-primary"
+                onClick={handleCopyProdDb}
+                style={{ marginLeft: 'auto' }}
+              >
+                📋 Copy Prod DB
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={handlePurgeAllItems}
+              >
+                🗑️ Purge All Items
+              </button>
+            </>
           )}
         </div>
       </div>
