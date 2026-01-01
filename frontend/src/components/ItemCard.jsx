@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { itemsAPI } from '../services/api';
+import { formatLocalDate, daysBetween } from '../utils/dateUtils';
 
 function ItemCard({ item, onEdit, onStatusChange }) {
   const [showQR, setShowQR] = useState(false);
@@ -12,9 +13,7 @@ function ItemCard({ item, onEdit, onStatusChange }) {
     let classes = 'item-card';
 
     if (item.status === 'in_freezer' && item.expiration_date) {
-      const daysUntilExpiry = Math.floor(
-        (new Date(item.expiration_date) - new Date()) / (1000 * 60 * 60 * 24)
-      );
+      const daysUntilExpiry = -daysBetween(item.expiration_date);
 
       if (daysUntilExpiry < 0) {
         classes += ' expired';
@@ -23,9 +22,7 @@ function ItemCard({ item, onEdit, onStatusChange }) {
       }
 
       // Check if it's one of the oldest (older than 6 months)
-      const daysInFreezer = Math.max(0, Math.floor(
-        (new Date() - new Date(item.added_date)) / (1000 * 60 * 60 * 24)
-      ));
+      const daysInFreezer = Math.max(0, daysBetween(item.added_date));
       if (daysInFreezer > 180) {
         classes += ' oldest';
       }
@@ -34,23 +31,13 @@ function ItemCard({ item, onEdit, onStatusChange }) {
     return classes;
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
-  };
-
   const getDaysInFreezer = () => {
-    const days = Math.floor(
-      (new Date() - new Date(item.added_date)) / (1000 * 60 * 60 * 24)
-    );
-    return Math.max(0, days); // Ensure it's never negative
+    return Math.max(0, daysBetween(item.added_date));
   };
 
   const getDaysUntilExpiry = () => {
     if (!item.expiration_date) return null;
-    return Math.floor(
-      (new Date(item.expiration_date) - new Date()) / (1000 * 60 * 60 * 24)
-    );
+    return -daysBetween(item.expiration_date);
   };
 
   return (
@@ -82,7 +69,7 @@ function ItemCard({ item, onEdit, onStatusChange }) {
 
       <div className="item-meta">
         {item.category_name && `${item.category_name} • `}
-        Added {formatDate(item.added_date)}
+        Added {formatLocalDate(item.added_date)}
         {item.added_by_username && ` by ${item.added_by_username}`}
       </div>
 
@@ -107,7 +94,7 @@ function ItemCard({ item, onEdit, onStatusChange }) {
           <p>
             <strong>Expires:</strong>
             <span>
-              {formatDate(item.expiration_date)}
+              {formatLocalDate(item.expiration_date)}
               {getDaysUntilExpiry() !== null && (
                 <> ({getDaysUntilExpiry() >= 0 ? `${getDaysUntilExpiry()} days` : 'EXPIRED'})</>
               )}
@@ -117,7 +104,7 @@ function ItemCard({ item, onEdit, onStatusChange }) {
         {item.removed_date && (
           <p>
             <strong>Removed:</strong>
-            <span>{formatDate(item.removed_date)}</span>
+            <span>{formatLocalDate(item.removed_date)}</span>
           </p>
         )}
         {item.notes && (

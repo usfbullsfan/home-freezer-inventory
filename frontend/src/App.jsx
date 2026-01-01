@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import './App.css';
+import { clearSession } from './utils/sessionTracking';
 
 import Login from './pages/Login';
 import Inventory from './pages/Inventory';
@@ -28,6 +29,7 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    clearSession(); // Clear recently added items session
     setUser(null);
   };
 
