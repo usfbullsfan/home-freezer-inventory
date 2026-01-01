@@ -41,6 +41,16 @@ export const authAPI = {
 
   changePassword: (currentPassword, newPassword) =>
     api.post('/auth/change-password', { current_password: currentPassword, new_password: newPassword }),
+
+  // Quick login (development only)
+  getQuickLoginStatus: () =>
+    axios.get('/api/auth/quick-login-status'),
+
+  getQuickLoginUsers: () =>
+    axios.get('/api/auth/quick-login-users'),
+
+  quickLogin: (userId) =>
+    axios.post('/api/auth/quick-login', { user_id: userId }),
 };
 
 // Items API
@@ -65,6 +75,9 @@ export const itemsAPI = {
 
   deleteItem: (id) =>
     api.delete(`/items/${id}`),
+
+  purgeAllItems: () =>
+    api.delete('/items/purge-all'),
 
   getExpiringSoon: (days = 30) =>
     api.get('/items/expiring-soon', { params: { days } }),

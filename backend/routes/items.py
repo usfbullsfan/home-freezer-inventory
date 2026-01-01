@@ -395,6 +395,37 @@ def delete_item(item_id):
     return jsonify({'message': 'Item deleted successfully'}), 200
 
 
+@items_bp.route('/purge-all', methods=['DELETE'])
+@jwt_required()
+def purge_all_items():
+    """Purge all items from database (development only).
+
+    This endpoint deletes ALL items regardless of status.
+    Only available in development environments.
+    """
+    # Only allow in development environment
+    if not os.environ.get('FLASK_ENV') == 'development':
+        return jsonify({'error': 'This endpoint is only available in development'}), 403
+
+    try:
+        # Count items before deletion
+        count = Item.query.count()
+
+        # Delete all items
+        Item.query.delete()
+        db.session.commit()
+
+        return jsonify({
+            'message': f'Successfully purged {count} items',
+            'count': count
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        logging.exception("Failed to purge items")
+        return jsonify({'error': 'Failed to purge items'}), 500
+
+
 @items_bp.route('/qr/<qr_code>/image', methods=['GET'])
 def get_qr_image(qr_code):
     """Generate and return QR code image"""
