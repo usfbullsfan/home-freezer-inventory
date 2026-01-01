@@ -9,12 +9,16 @@ function Settings({ user }) {
   });
   const [systemSettings, setSystemSettings] = useState({
     enable_image_fetching: 'true',
+    no_auth_mode: 'false',
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [systemError, setSystemError] = useState('');
   const [systemSuccess, setSystemSuccess] = useState('');
+
+  // Detect if running in development mode
+  const isDev = import.meta.env.DEV;
 
   // Backup/Restore state
   const [backupInfo, setBackupInfo] = useState(null);
@@ -331,6 +335,41 @@ function Settings({ user }) {
               When enabled, the system will automatically fetch product images from Pexels when adding items via UPC lookup. Disable this to conserve API quota or bandwidth.
             </small>
           </div>
+
+          {isDev && (
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={systemSettings.no_auth_mode === 'true'}
+                  onChange={(e) =>
+                    setSystemSettings({
+                      ...systemSettings,
+                      no_auth_mode: e.target.checked ? 'true' : 'false',
+                    })
+                  }
+                  style={{ marginRight: '0.5rem', width: 'auto' }}
+                />
+                Enable no-auth mode (Development Only)
+              </label>
+              <small style={{ color: '#7f8c8d', marginLeft: '1.5rem', display: 'block', marginTop: '0.25rem' }}>
+                When enabled, quick login buttons will appear on the login page, allowing you to log in as any user without a password. This is only available in development mode.
+              </small>
+              <div
+                style={{
+                  background: '#fff3cd',
+                  border: '1px solid #ffc107',
+                  padding: '0.75rem',
+                  borderRadius: '4px',
+                  marginTop: '0.5rem',
+                  marginLeft: '1.5rem',
+                  fontSize: '0.875rem',
+                }}
+              >
+                ⚠️ <strong>Security Warning:</strong> This feature is only for development environments. Never enable in production!
+              </div>
+            </div>
+          )}
 
           <button
             className="btn btn-primary"

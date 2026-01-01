@@ -61,6 +61,12 @@ jobs:
             git reset --hard origin/dev
             echo "✓ Code updated"
 
+            # Stop services before updating dependencies
+            echo "Stopping services..."
+            sudo systemctl stop freezer-backend-dev
+            sudo systemctl stop freezer-frontend-dev
+            echo "✓ Services stopped"
+
             # Update backend dependencies
             echo "Updating backend dependencies..."
             cd backend
@@ -72,6 +78,8 @@ jobs:
             # Update frontend dependencies
             echo "Updating frontend dependencies..."
             cd frontend
+            # Clean Vite cache with sudo (cache files may be owned by different user)
+            sudo rm -rf node_modules/.vite 2>/dev/null || true
             npm ci --quiet
             echo "✓ Frontend dependencies updated"
 

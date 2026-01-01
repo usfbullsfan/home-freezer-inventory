@@ -220,3 +220,88 @@ def reset_user_password(user_id):
 
     return jsonify({'message': 'Password reset successfully'}), 200
 
+
+@auth_bp.route('/quick-login-status', methods=['GET'])
+def quick_login_status():
+    """Check if no-auth mode is enabled (no JWT required)"""
+    import os
+    from models import Setting
+
+    # Only available in development
+    if os.environ.get('FLASK_ENV') != 'development':
+        return jsonify({'enabled': False, 'reason': 'Not in development mode'}), 200
+
+    # Check if no_auth_mode system setting is enabled
+    setting = Setting.query.filter_by(
+        user_id=None,
+        setting_name='no_auth_mode'
+    ).first()
+
+    enabled = setting and setting.setting_value == 'true'
+
+    return jsonify({'enabled': enabled}), 200
+
+
+@auth_bp.route('/quick-login-users', methods=['GET'])
+def quick_login_users():
+    """Get list of users for quick login (development only, no JWT required)"""
+    import os
+
+    # Only available in development
+    if os.environ.get('FLASK_ENV') != 'development':
+        return jsonify({'error': 'This endpoint is only available in development'}), 403
+
+    # Check if no_auth_mode is enabled
+    from models import Setting
+    setting = Setting.query.filter_by(
+        user_id=None,
+        setting_name='no_auth_mode'
+    ).first()
+
+    if not setting or setting.setting_value != 'true':
+        return jsonify({'error': 'No-auth mode is not enabled'}), 403
+
+    # Return all users
+    users = User.query.all()
+    return jsonify([user.to_dict() for user in users]), 200
+
+
+@auth_bp.route('/quick-login', methods=['POST'])
+def quick_login():
+    """Quick login without password (development only)"""
+    import os
+
+    # Only available in development
+    if os.environ.get('FLASK_ENV') != 'development':
+        return jsonify({'error': 'This endpoint is only available in development'}), 403
+
+    # Check if no_auth_mode is enabled
+    from models import Setting
+    setting = Setting.query.filter_by(
+        user_id=None,
+        setting_name='no_auth_mode'
+    ).first()
+
+    if not setting or setting.setting_value != 'true':
+        return jsonify({'error': 'No-auth mode is not enabled'}), 403
+
+    data = request.get_json()
+    if not data or not data.get('user_id'):
+        return jsonify({'error': 'user_id is required'}), 400
+
+    user = db.session.get(User, data['user_id'])
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Create access token (same as regular login)
+    access_token = create_access_token(
+        identity=str(user.id),
+        expires_delta=timedelta(hours=24),
+        additional_claims={'role': user.role, 'username': user.username}
+    )
+
+    return jsonify({
+        'access_token': access_token,
+        'user': user.to_dict()
+    }), 200
+

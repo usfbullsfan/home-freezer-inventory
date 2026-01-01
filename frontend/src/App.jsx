@@ -14,6 +14,9 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Detect if running in development mode
+  const isDev = import.meta.env.DEV;
+
   useEffect(() => {
     // Check if user is logged in
     const storedUser = localStorage.getItem('user');
@@ -43,7 +46,12 @@ function App() {
         <Login setUser={setUser} />
       ) : (
         <div className="app">
-          <nav className="navbar">
+          {isDev && (
+            <div className="dev-banner">
+              ⚠️ DEVELOPMENT ENVIRONMENT
+            </div>
+          )}
+          <nav className={`navbar ${isDev ? 'navbar-dev' : ''}`}>
             <div className="navbar-header">
               <h1>🧊 Freezer Inventory</h1>
               <button
