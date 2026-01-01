@@ -17,6 +17,31 @@ body {
   min-height: 100vh;
 }
 
+/* Development Environment Banner */
+.dev-banner {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8c42 100%);
+  color: white;
+  text-align: center;
+  padding: 0.5rem;
+  font-weight: bold;
+  font-size: 0.875rem;
+  letter-spacing: 1px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
 /* Navigation */
 .navbar {
   background-color: #2c3e50;
@@ -26,6 +51,12 @@ body {
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Dev environment navbar - distinct orange/yellow theme */
+.navbar-dev {
+  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+  border-bottom: 3px solid #d68910;
 }
 
 .navbar h1 {
