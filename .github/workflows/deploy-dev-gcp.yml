@@ -80,7 +80,7 @@ jobs:
             cd frontend
             # Remove node_modules completely for clean install (avoids permission issues)
             sudo rm -rf node_modules 2>/dev/null || true
-            npm ci --quiet
+            sudo npm ci --quiet
             echo "✓ Frontend dependencies updated"
 
             # Build frontend
