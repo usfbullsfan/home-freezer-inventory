@@ -426,6 +426,73 @@ def purge_all_items():
         return jsonify({'error': 'Failed to purge items'}), 500
 
 
+@items_bp.route('/copy-prod-db', methods=['POST'])
+@jwt_required()
+def copy_prod_db():
+    """Copy production database to development (development only).
+
+    This endpoint copies the production database file to the dev environment,
+    replacing the current dev database with fresh production data.
+    Only available in development environments.
+    """
+    import subprocess
+    import shutil
+    from flask import current_app
+
+    # Only allow in development environment
+    if not os.environ.get('FLASK_ENV') == 'development':
+        return jsonify({'error': 'This endpoint is only available in development'}), 403
+
+    try:
+        # Define paths
+        prod_db_path = '/home/michaelt452/freezer-inventory/backend/instance/freezer_inventory.db'
+        dev_db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+
+        # Check if production database exists
+        if not os.path.exists(prod_db_path):
+            return jsonify({'error': 'Production database not found'}), 404
+
+        # Get file sizes for logging
+        prod_size = os.path.getsize(prod_db_path)
+        dev_size = os.path.getsize(dev_db_path) if os.path.exists(dev_db_path) else 0
+
+        # Create a backup of the current dev database
+        if os.path.exists(dev_db_path):
+            backup_path = dev_db_path + '.backup'
+            shutil.copy2(dev_db_path, backup_path)
+            logging.info(f"Created backup of dev database at {backup_path}")
+
+        # Close all database connections
+        db.session.remove()
+        db.engine.dispose()
+
+        # Copy production database to dev
+        shutil.copy2(prod_db_path, dev_db_path)
+
+        logging.info(f"Copied production database ({prod_size} bytes) to dev ({dev_db_path})")
+
+        # Reconnect to the new database
+        db.engine.dispose()
+
+        # Count items in the new database
+        item_count = Item.query.count()
+
+        return jsonify({
+            'message': f'Successfully copied production database to dev',
+            'items_count': item_count,
+            'prod_db_size': prod_size,
+            'previous_dev_size': dev_size
+        }), 200
+
+    except PermissionError:
+        logging.exception("Permission denied copying production database")
+        return jsonify({'error': 'Permission denied. Check file permissions.'}), 500
+
+    except Exception as e:
+        logging.exception("Failed to copy production database")
+        return jsonify({'error': 'Failed to copy production database'}), 500
+
+
 @items_bp.route('/qr/<qr_code>/image', methods=['GET'])
 def get_qr_image(qr_code):
     """Generate and return QR code image"""
