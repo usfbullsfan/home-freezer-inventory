@@ -72,6 +72,8 @@ jobs:
             # Update frontend dependencies
             echo "Updating frontend dependencies..."
             cd frontend
+            # Clean Vite cache to avoid permission issues
+            rm -rf node_modules/.vite 2>/dev/null || true
             npm ci --quiet
             echo "✓ Frontend dependencies updated"
 
