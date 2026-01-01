@@ -78,8 +78,8 @@ jobs:
             # Update frontend dependencies
             echo "Updating frontend dependencies..."
             cd frontend
-            # Clean Vite cache (now safe since service is stopped)
-            rm -rf node_modules/.vite 2>/dev/null || true
+            # Clean Vite cache with sudo (cache files may be owned by different user)
+            sudo rm -rf node_modules/.vite 2>/dev/null || true
             npm ci --quiet
             echo "✓ Frontend dependencies updated"
 
