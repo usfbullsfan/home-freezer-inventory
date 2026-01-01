@@ -76,7 +76,8 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
     setFormData((prev) => ({ ...prev, category_id: categoryId }));
 
     // Auto-calculate expiration date based on category default
-    if (categoryId && !formData.expiration_date) {
+    // Always recalculate when category changes (not just when empty)
+    if (categoryId) {
       const category = categories.find((c) => c.id === parseInt(categoryId));
       if (category && category.default_expiration_days) {
         const expirationDate = new Date();
