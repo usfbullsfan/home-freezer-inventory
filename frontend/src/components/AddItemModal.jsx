@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { itemsAPI, categoriesAPI, uploadsAPI } from '../services/api';
 import { addItemToSession } from '../utils/sessionTracking';
+import BarcodeScanner from './BarcodeScanner';
 
 function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) {
   const [formData, setFormData] = useState({
@@ -21,6 +22,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
   const [upcLookupLoading, setUpcLookupLoading] = useState(false);
   const [upcMessage, setUpcMessage] = useState('');
   const [showCreateCategory, setShowCreateCategory] = useState(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [newCategoryData, setNewCategoryData] = useState({
     name: '',
     default_expiration_days: 180,
@@ -221,16 +223,29 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
     setSelectedCategoryFile(null);
   };
 
-  const handleLookupUPC = async () => {
-    if (!formData.upc || !formData.upc.trim()) {
+  const handleBarcodeScanned = (barcode) => {
+    // Close the scanner
+    setShowBarcodeScanner(false);
+
+    // Populate the UPC field
+    setFormData(prev => ({ ...prev, upc: barcode }));
+
+    // Automatically trigger lookup after a short delay
+    setTimeout(() => {
+      lookupUPCByValue(barcode);
+    }, 100);
+  };
+
+  const lookupUPCByValue = async (upcValue) => {
+    if (!upcValue || !upcValue.trim()) {
       setUpcMessage('Please enter a UPC code');
       return;
     }
 
-    const upcValue = formData.upc.trim();
+    const trimmedValue = upcValue.trim();
 
     // Validate UPC format (12 digits)
-    if (!validateUPC(upcValue)) {
+    if (!validateUPC(trimmedValue)) {
       setUpcMessage('Invalid UPC format. UPC must be exactly 12 digits.');
       return;
     }
@@ -240,7 +255,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
     setError('');
 
     try {
-      const response = await itemsAPI.lookupUPC(upcValue);
+      const response = await itemsAPI.lookupUPC(trimmedValue);
       const result = response.data;
 
       // Only show message if not found locally or if there's an error
@@ -264,6 +279,10 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
     } finally {
       setUpcLookupLoading(false);
     }
+  };
+
+  const handleLookupUPC = async () => {
+    lookupUPCByValue(formData.upc);
   };
 
   const handleSubmit = async (e, keepOpen = false) => {
@@ -376,6 +395,18 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
                   style={{ padding: '0.65rem' }}
                 />
               </div>
+              <button
+                type="button"
+                className="btn btn-success"
+                onClick={() => setShowBarcodeScanner(true)}
+                style={{
+                  padding: '0.65rem 1rem',
+                  fontSize: '0.9rem',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                📊 Scan
+              </button>
               <button
                 type="button"
                 className="btn btn-secondary"
@@ -681,6 +712,14 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
           </button>
         </div>
       </div>
+
+      {/* Barcode Scanner Modal */}
+      {showBarcodeScanner && (
+        <BarcodeScanner
+          onScan={handleBarcodeScanned}
+          onClose={() => setShowBarcodeScanner(false)}
+        />
+      )}
     </div>
   );
 }
