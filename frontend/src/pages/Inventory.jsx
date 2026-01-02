@@ -37,11 +37,12 @@ function Inventory() {
   useEffect(() => {
     const qrCode = searchParams.get('qr');
     if (qrCode) {
-      setSearch(qrCode);
-      setStatusFilter('all'); // Search across all statuses
-      // Clear the QR parameter from URL
+      // Clear the QR parameter from URL immediately
       setSearchParams({});
+      // Look up the item by QR code (same as "Locate Item by Code" button)
+      handleQRSubmit(qrCode);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
