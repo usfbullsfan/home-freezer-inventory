@@ -62,7 +62,13 @@ function BarcodeScanner({ onScan, onClose }) {
         (err) => {
           if (err) {
             console.error('Quagga initialization error:', err);
-            setError('Failed to start camera. Please ensure you have granted camera permissions and try again.');
+            // Only show error if it's a fatal error (camera access denied, etc.)
+            // Ignore warnings about image dimensions or other non-fatal issues
+            if (err.name === 'NotAllowedError' || err.name === 'NotFoundError' ||
+                err.message?.includes('permission') || err.message?.includes('not found')) {
+              setError('Failed to start camera. Please ensure you have granted camera permissions and try again.');
+            }
+            // For other errors, just log them but don't show to user if camera starts
             return;
           }
 
