@@ -356,6 +356,48 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
     handleSubmit(e, true);
   };
 
+  const handleMarkAsConsumed = async () => {
+    if (!item || !item.id) return;
+
+    try {
+      setLoading(true);
+      setError('');
+
+      await itemsAPI.updateItem(item.id, {
+        ...formData,
+        status: 'consumed',
+        removed_date: new Date().toISOString().split('T')[0]
+      });
+
+      onSave();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to mark item as consumed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMarkAsThrownOut = async () => {
+    if (!item || !item.id) return;
+
+    try {
+      setLoading(true);
+      setError('');
+
+      await itemsAPI.updateItem(item.id, {
+        ...formData,
+        status: 'thrown_out',
+        removed_date: new Date().toISOString().split('T')[0]
+      });
+
+      onSave();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to mark item as thrown out.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -692,6 +734,40 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
           >
             Cancel
           </button>
+
+          {/* Quick action buttons for items in freezer */}
+          {item?.id && item.status === 'in_freezer' && (
+            <>
+              <button
+                type="button"
+                className="btn"
+                onClick={handleMarkAsThrownOut}
+                disabled={loading}
+                style={{
+                  backgroundColor: '#ff9800',
+                  color: 'white',
+                  border: 'none'
+                }}
+              >
+                🗑️ Mark as Thrown Out
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={handleMarkAsConsumed}
+                disabled={loading}
+                style={{
+                  backgroundColor: '#4caf50',
+                  color: 'white',
+                  border: 'none'
+                }}
+              >
+                ✓ Mark as Consumed
+              </button>
+            </>
+          )}
+
+          {/* Add + Create More button (only for new items) */}
           {!item?.id && (
             <button
               type="button"
@@ -702,6 +778,8 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
               {loading ? 'Saving...' : 'Add + Create More'}
             </button>
           )}
+
+          {/* Update/Add button */}
           <button
             type="submit"
             form="item-form"
