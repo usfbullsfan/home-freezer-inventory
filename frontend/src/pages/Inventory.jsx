@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { itemsAPI, categoriesAPI } from '../services/api';
 import ItemCard from '../components/ItemCard';
 import AddItemModal from '../components/AddItemModal';
@@ -11,6 +12,7 @@ function Inventory() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Detect if running in development mode
   const isDev = import.meta.env.DEV;
@@ -30,6 +32,17 @@ function Inventory() {
 
   // Session tracking - force re-render when session changes
   const [sessionKey, setSessionKey] = useState(0);
+
+  // Handle QR code from URL parameter (when scanned)
+  useEffect(() => {
+    const qrCode = searchParams.get('qr');
+    if (qrCode) {
+      setSearch(qrCode);
+      setStatusFilter('all'); // Search across all statuses
+      // Clear the QR parameter from URL
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     loadCategories();

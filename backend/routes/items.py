@@ -18,6 +18,20 @@ from reportlab.lib.utils import ImageReader
 items_bp = Blueprint('items', __name__)
 
 
+def get_base_url():
+    """Get the base URL for the application based on environment.
+
+    Returns the appropriate domain for QR codes and links.
+    """
+    # Check if we're in development mode
+    is_dev = os.environ.get('FLASK_ENV') == 'development'
+
+    if is_dev:
+        return 'https://dev.thefreezer.xyz'
+    else:
+        return 'https://thefreezer.xyz'
+
+
 def get_category_stock_image(category_name):
     """Get a stock image URL for a given category.
 
@@ -503,8 +517,9 @@ def get_qr_image(qr_code):
         border=4,
     )
 
-    # Encode the QR code with the freezer item URL
-    qr_data = f"freezer-item:{qr_code}"
+    # Encode the QR code with a full URL that phones can open
+    base_url = get_base_url()
+    qr_data = f"{base_url}/item/{qr_code}"
     qr.add_data(qr_data)
     qr.make(fit=True)
 
@@ -802,7 +817,9 @@ def print_labels():
             box_size=10,
             border=2,
         )
-        qr_data = f"freezer-item:{item.qr_code}"
+        # Encode with full URL that phones can open
+        base_url = get_base_url()
+        qr_data = f"{base_url}/item/{item.qr_code}"
         qr.add_data(qr_data)
         qr.make(fit=True)
         img = qr.make_image(fill_color="black", back_color="white")
