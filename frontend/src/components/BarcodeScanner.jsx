@@ -28,15 +28,21 @@ function BarcodeScanner({ onScan, onClose }) {
             target: scannerRef.current,
             constraints: {
               facingMode: 'environment',
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
+              width: { ideal: 1920 },
+              height: { ideal: 1080 }
+            },
+            area: {
+              top: '25%',
+              right: '5%',
+              left: '5%',
+              bottom: '25%'
             }
           },
           locator: {
-            patchSize: 'medium',
-            halfSample: true
+            patchSize: 'large',
+            halfSample: false
           },
-          numOfWorkers: 2,
+          numOfWorkers: 4,
           frequency: 10,
           decoder: {
             readers: [
@@ -146,7 +152,7 @@ function BarcodeScanner({ onScan, onClose }) {
                     ref={scannerRef}
                     style={{
                       width: '100%',
-                      maxHeight: '400px',
+                      minHeight: '500px',
                       backgroundColor: '#000',
                       borderRadius: '4px',
                       overflow: 'hidden',
@@ -154,33 +160,35 @@ function BarcodeScanner({ onScan, onClose }) {
                     }}
                   />
 
-                  {/* Scanning guide overlay */}
+                  {/* Scanning guide overlay - larger area for easier alignment */}
                   {scanning && (
                     <div style={{
                       position: 'absolute',
                       top: '50%',
                       left: '50%',
                       transform: 'translate(-50%, -50%)',
-                      width: '80%',
-                      height: '100px',
-                      border: '2px solid #4caf50',
-                      borderRadius: '4px',
+                      width: '90%',
+                      height: '200px',
+                      border: '3px solid #4caf50',
+                      borderRadius: '8px',
                       pointerEvents: 'none',
-                      boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)'
+                      boxShadow: '0 0 0 9999px rgba(0,0,0,0.4)'
                     }}>
                       <div style={{
                         position: 'absolute',
-                        top: '-30px',
+                        top: '-35px',
                         left: '50%',
                         transform: 'translateX(-50%)',
-                        background: 'rgba(76, 175, 80, 0.9)',
+                        background: 'rgba(76, 175, 80, 0.95)',
                         color: 'white',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.8rem',
-                        whiteSpace: 'nowrap'
+                        padding: '0.4rem 0.75rem',
+                        borderRadius: '6px',
+                        fontSize: '0.9rem',
+                        fontWeight: '500',
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                       }}>
-                        Align barcode here
+                        Align barcode in this area
                       </div>
                     </div>
                   )}
