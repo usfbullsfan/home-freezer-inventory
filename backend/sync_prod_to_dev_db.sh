@@ -72,24 +72,40 @@ cp "$PROD_DB" "$DEV_DB"
 if [ -f "$ADMIN_BACKUP" ] && [ -s "$ADMIN_BACKUP" ]; then
     echo "🔑 Restoring dev admin user(s)..."
 
-    # Read the CSV backup and restore admin users
-    # This will update existing users or insert new ones while preserving dev admin credentials
-    while IFS=',' read -r id username password_hash role created_at; do
-        # Remove quotes from CSV fields
-        username=$(echo "$username" | sed 's/^"//;s/"$//')
-        password_hash=$(echo "$password_hash" | sed 's/^"//;s/"$//')
-        role=$(echo "$role" | sed 's/^"//;s/"$//')
-        created_at=$(echo "$created_at" | sed 's/^"//;s/"$//')
+    # Use sqlite3's .import command for safer CSV handling
+    # First, create SQL statements from CSV that properly escape special characters
+    sqlite3 "$DEV_DB" <<EOF
+-- Create a temporary table to hold the CSV data
+CREATE TEMP TABLE IF NOT EXISTS temp_dev_admins (
+    id INTEGER,
+    username TEXT,
+    password_hash TEXT,
+    role TEXT,
+    created_at TEXT
+);
 
-        # First, try to update existing user (in case prod has same username)
-        sqlite3 "$DEV_DB" "UPDATE users SET password_hash='$password_hash', role='$role' WHERE username='$username';"
+-- Import CSV data into temp table
+.mode csv
+.import $ADMIN_BACKUP temp_dev_admins
 
-        # If no rows were updated, insert the user
-        ROWS_UPDATED=$(sqlite3 "$DEV_DB" "SELECT changes();")
-        if [ "$ROWS_UPDATED" -eq 0 ]; then
-            sqlite3 "$DEV_DB" "INSERT INTO users (username, password_hash, role, created_at) VALUES ('$username', '$password_hash', '$role', '$created_at');"
-        fi
-    done < "$ADMIN_BACKUP"
+-- Update existing users with dev admin credentials
+UPDATE users
+SET password_hash = (
+    SELECT password_hash FROM temp_dev_admins
+    WHERE temp_dev_admins.username = users.username
+),
+    role = 'admin'
+WHERE username IN (SELECT username FROM temp_dev_admins);
+
+-- Insert any dev admins that don't exist in the copied database
+INSERT OR IGNORE INTO users (username, password_hash, role, created_at)
+SELECT username, password_hash, role, created_at
+FROM temp_dev_admins
+WHERE username NOT IN (SELECT username FROM users);
+
+-- Drop temp table
+DROP TABLE temp_dev_admins;
+EOF
 
     RESTORED_COUNT=$(sqlite3 "$DEV_DB" "SELECT COUNT(*) FROM users WHERE role='admin';" 2>/dev/null || echo "0")
     echo "   Restored $RESTORED_COUNT admin user(s)"
