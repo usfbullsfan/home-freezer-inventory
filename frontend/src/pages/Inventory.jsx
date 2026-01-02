@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { itemsAPI, categoriesAPI } from '../services/api';
 import ItemCard from '../components/ItemCard';
 import AddItemModal from '../components/AddItemModal';
@@ -11,6 +12,10 @@ function Inventory() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Detect if running in development mode
+  const isDev = import.meta.env.DEV;
 
   // Search and filter state
   const [search, setSearch] = useState('');
@@ -27,6 +32,18 @@ function Inventory() {
 
   // Session tracking - force re-render when session changes
   const [sessionKey, setSessionKey] = useState(0);
+
+  // Handle QR code from URL parameter (when scanned)
+  useEffect(() => {
+    const qrCode = searchParams.get('qr');
+    if (qrCode) {
+      // Clear the QR parameter from URL immediately
+      setSearchParams({});
+      // Look up the item by QR code (same as "Locate Item by Code" button)
+      handleQRSubmit(qrCode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     loadCategories();
@@ -148,6 +165,70 @@ function Inventory() {
     }
   };
 
+  const handlePurgeAllItems = async () => {
+    // Double confirmation for safety
+    const firstConfirm = window.confirm(
+      '⚠️ WARNING: This will permanently delete ALL items from the database!\n\n' +
+      'This includes:\n' +
+      '• Items in freezer\n' +
+      '• Consumed items\n' +
+      '• Thrown out items\n\n' +
+      'This action CANNOT be undone!\n\n' +
+      'Are you sure you want to continue?'
+    );
+
+    if (!firstConfirm) return;
+
+    // Second confirmation
+    const secondConfirm = window.confirm(
+      '⚠️ FINAL WARNING ⚠️\n\n' +
+      'You are about to delete ALL items permanently.\n\n' +
+      'Click OK to proceed with deletion, or Cancel to abort.'
+    );
+
+    if (!secondConfirm) return;
+
+    try {
+      setLoading(true);
+      const response = await itemsAPI.purgeAllItems();
+      alert(response.data.message || 'All items purged successfully');
+      loadItems();
+    } catch (err) {
+      console.error('Failed to purge items:', err);
+      const errorMsg = err.response?.data?.error || 'Failed to purge items';
+      alert(`Error: ${errorMsg}`);
+      setLoading(false);
+    }
+  };
+
+  const handleCopyProdDb = async () => {
+    // Confirmation for database copy
+    const confirm = window.confirm(
+      '📋 Copy Production Database to Dev?\n\n' +
+      'This will:\n' +
+      '• Replace the current dev database with production data\n' +
+      '• Create a backup of the current dev database\n' +
+      '• Reload all items from production\n\n' +
+      'Are you sure you want to continue?'
+    );
+
+    if (!confirm) return;
+
+    try {
+      setLoading(true);
+      const response = await itemsAPI.copyProdDb();
+      const msg = response.data.message || 'Production database copied successfully';
+      const count = response.data.items_count || 0;
+      alert(`${msg}\n\nItems loaded: ${count}`);
+      loadItems();
+    } catch (err) {
+      console.error('Failed to copy prod database:', err);
+      const errorMsg = err.response?.data?.error || 'Failed to copy production database';
+      alert(`Error: ${errorMsg}`);
+      setLoading(false);
+    }
+  };
+
   // Analyze items for warnings
   const expiringSoonCount = items.filter(item => {
     if (item.status !== 'in_freezer' || !item.expiration_date) return false;
@@ -190,6 +271,23 @@ function Inventory() {
           <button className="btn btn-success" onClick={handleAddItem}>
             ➕ Add Item
           </button>
+          {isDev && (
+            <>
+              <button
+                className="btn btn-primary"
+                onClick={handleCopyProdDb}
+                style={{ marginLeft: 'auto' }}
+              >
+                📋 Copy Prod DB
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={handlePurgeAllItems}
+              >
+                🗑️ Purge All Items
+              </button>
+            </>
+          )}
         </div>
       </div>
 

@@ -76,10 +76,12 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
     setFormData((prev) => ({ ...prev, category_id: categoryId }));
 
     // Auto-calculate expiration date based on category default
-    if (categoryId && !formData.expiration_date) {
+    // Always recalculate when category changes (not just when empty)
+    if (categoryId) {
       const category = categories.find((c) => c.id === parseInt(categoryId));
       if (category && category.default_expiration_days) {
         const expirationDate = new Date();
+        expirationDate.setHours(0, 0, 0, 0); // Reset to midnight for consistent day counting
         expirationDate.setDate(expirationDate.getDate() + category.default_expiration_days);
         setFormData((prev) => ({
           ...prev,
@@ -184,6 +186,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
       // Auto-calculate expiration date based on new category's default
       if (createdCategory.default_expiration_days && !formData.expiration_date) {
         const expirationDate = new Date();
+        expirationDate.setHours(0, 0, 0, 0); // Reset to midnight for consistent day counting
         expirationDate.setDate(expirationDate.getDate() + createdCategory.default_expiration_days);
         setFormData((prev) => ({
           ...prev,

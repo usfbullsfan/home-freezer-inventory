@@ -18,6 +18,20 @@ from reportlab.lib.utils import ImageReader
 items_bp = Blueprint('items', __name__)
 
 
+def get_base_url():
+    """Get the base URL for the application based on environment.
+
+    Returns the appropriate domain for QR codes and links.
+    """
+    # Check if we're in development mode
+    is_dev = os.environ.get('FLASK_ENV') == 'development'
+
+    if is_dev:
+        return 'https://dev.thefreezer.xyz'
+    else:
+        return 'https://thefreezer.xyz'
+
+
 def get_category_stock_image(category_name):
     """Get a stock image URL for a given category.
 
@@ -209,7 +223,7 @@ def get_items():
 @jwt_required()
 def get_item(item_id):
     """Get a specific item by ID"""
-    item = Item.query.get(item_id)
+    item = db.session.get(Item, item_id)
 
     if not item:
         return jsonify({'error': 'Item not found'}), 404
@@ -263,7 +277,7 @@ def create_item():
     if data.get('expiration_date'):
         expiration_date = datetime.fromisoformat(data['expiration_date'])
     elif data.get('category_id'):
-        category = Category.query.get(data['category_id'])
+        category = db.session.get(Category, data['category_id'])
         if category and category.default_expiration_days:
             # Use custom added_date if provided, otherwise use current time
             base_date = added_date or datetime.utcnow()
@@ -274,7 +288,7 @@ def create_item():
     if not image_url and not data.get('upc'):
         # No image URL and no UPC - use category-based stock image
         if not category and data.get('category_id'):
-            category = Category.query.get(data['category_id'])
+            category = db.session.get(Category, data['category_id'])
         if category:
             image_url = get_category_stock_image(category.name)
 
@@ -306,7 +320,7 @@ def create_item():
 @jwt_required()
 def update_item(item_id):
     """Update an existing item"""
-    item = Item.query.get(item_id)
+    item = db.session.get(Item, item_id)
 
     if not item:
         return jsonify({'error': 'Item not found'}), 404
@@ -350,7 +364,7 @@ def update_item(item_id):
 @jwt_required()
 def update_item_status(item_id):
     """Update item status (consume, throw out, return to freezer)"""
-    item = Item.query.get(item_id)
+    item = db.session.get(Item, item_id)
 
     if not item:
         return jsonify({'error': 'Item not found'}), 404
@@ -384,7 +398,7 @@ def delete_item(item_id):
     if claims.get('role') != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
 
-    item = Item.query.get(item_id)
+    item = db.session.get(Item, item_id)
 
     if not item:
         return jsonify({'error': 'Item not found'}), 404
@@ -393,6 +407,166 @@ def delete_item(item_id):
     db.session.commit()
 
     return jsonify({'message': 'Item deleted successfully'}), 200
+
+
+@items_bp.route('/purge-all', methods=['DELETE'])
+@jwt_required()
+def purge_all_items():
+    """Purge all items from database (development only).
+
+    This endpoint deletes ALL items regardless of status.
+    Only available in development environments.
+    """
+    # Only allow in development environment
+    if not os.environ.get('FLASK_ENV') == 'development':
+        return jsonify({'error': 'This endpoint is only available in development'}), 403
+
+    try:
+        # Count items before deletion
+        count = Item.query.count()
+
+        # Delete all items
+        Item.query.delete()
+        db.session.commit()
+
+        return jsonify({
+            'message': f'Successfully purged {count} items',
+            'count': count
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        logging.exception("Failed to purge items")
+        return jsonify({'error': 'Failed to purge items'}), 500
+
+
+@items_bp.route('/copy-prod-db', methods=['POST'])
+@jwt_required()
+def copy_prod_db():
+    """Copy production database to development (development only).
+
+    This endpoint copies the production database file to the dev environment,
+    replacing the current dev database with fresh production data, while
+    preserving the dev admin user(s).
+    Only available in development environments.
+    """
+    import subprocess
+    import shutil
+    from flask import current_app
+
+    # Only allow in development environment
+    if not os.environ.get('FLASK_ENV') == 'development':
+        return jsonify({'error': 'This endpoint is only available in development'}), 403
+
+    try:
+        # Define paths
+        prod_db_path = '/home/michaelt452/freezer-inventory/backend/instance/freezer_inventory.db'
+        dev_db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+
+        # Check if production database exists
+        if not os.path.exists(prod_db_path):
+            return jsonify({'error': 'Production database not found'}), 404
+
+        # Get file sizes for logging
+        prod_size = os.path.getsize(prod_db_path)
+        dev_size = os.path.getsize(dev_db_path) if os.path.exists(dev_db_path) else 0
+
+        # Save dev admin users before copying
+        dev_admins = []
+        try:
+            admin_users = User.query.filter_by(role='admin').all()
+            for admin in admin_users:
+                dev_admins.append({
+                    'username': admin.username,
+                    'password_hash': admin.password_hash,
+                    'role': admin.role,
+                    'created_at': admin.created_at
+                })
+            logging.info(f"Saved {len(dev_admins)} dev admin user(s): {[a['username'] for a in dev_admins]}")
+        except Exception as e:
+            logging.warning(f"Could not save dev admins (may not exist yet): {e}")
+
+        # Create a backup of the current dev database
+        if os.path.exists(dev_db_path):
+            backup_path = dev_db_path + '.backup'
+            shutil.copy2(dev_db_path, backup_path)
+            logging.info(f"Created backup of dev database at {backup_path}")
+
+        # Close all database connections
+        db.session.close()
+        db.session.remove()
+        db.engine.dispose()
+
+        # Copy production database to dev
+        shutil.copy2(prod_db_path, dev_db_path)
+
+        logging.info(f"Copied production database ({prod_size} bytes) to dev ({dev_db_path})")
+
+        # Force reconnect to the new database by creating a fresh engine
+        # This ensures we're working with the newly copied database, not cached connections
+        current_app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{dev_db_path}'
+        db.engine.dispose()
+
+        # Create a new session with the fresh database
+        db.session.close()
+        db.session.remove()
+
+        # Restore dev admin users
+        if dev_admins:
+            logging.info(f"Restoring {len(dev_admins)} dev admin user(s)...")
+            for admin_data in dev_admins:
+                # Check if this admin already exists in the copied prod DB
+                existing_admin = User.query.filter_by(username=admin_data['username']).first()
+
+                if existing_admin:
+                    # Update existing user to preserve dev credentials
+                    old_hash = existing_admin.password_hash
+                    existing_admin.password_hash = admin_data['password_hash']
+                    existing_admin.role = admin_data['role']
+                    logging.info(f"Updated admin user '{admin_data['username']}' - changed password_hash from {old_hash[:20]}... to {admin_data['password_hash'][:20]}...")
+                else:
+                    # Add the dev admin if they don't exist in prod
+                    new_admin = User(
+                        username=admin_data['username'],
+                        password_hash=admin_data['password_hash'],
+                        role=admin_data['role'],
+                        created_at=admin_data['created_at']
+                    )
+                    db.session.add(new_admin)
+                    logging.info(f"Added new dev admin user '{admin_data['username']}'")
+
+            db.session.commit()
+
+            # Verify the admin users were restored correctly
+            for admin_data in dev_admins:
+                verify_admin = User.query.filter_by(username=admin_data['username']).first()
+                if verify_admin:
+                    matches = verify_admin.password_hash == admin_data['password_hash']
+                    logging.info(f"Verification for '{admin_data['username']}': password_hash matches = {matches}")
+
+            logging.info(f"Successfully restored {len(dev_admins)} dev admin user(s)")
+
+        # Count items in the new database
+        item_count = Item.query.count()
+        user_count = User.query.count()
+
+        return jsonify({
+            'message': f'Successfully copied production database to dev',
+            'items_count': item_count,
+            'users_count': user_count,
+            'dev_admins_preserved': len(dev_admins),
+            'prod_db_size': prod_size,
+            'previous_dev_size': dev_size
+        }), 200
+
+    except PermissionError:
+        logging.exception("Permission denied copying production database")
+        return jsonify({'error': 'Permission denied. Check file permissions.'}), 500
+
+    except Exception as e:
+        db.session.rollback()
+        logging.exception("Failed to copy production database")
+        return jsonify({'error': 'Failed to copy production database'}), 500
 
 
 @items_bp.route('/qr/<qr_code>/image', methods=['GET'])
@@ -405,8 +579,9 @@ def get_qr_image(qr_code):
         border=4,
     )
 
-    # Encode the QR code with the freezer item URL
-    qr_data = f"freezer-item:{qr_code}"
+    # Encode the QR code with a full URL that phones can open
+    base_url = get_base_url()
+    qr_data = f"{base_url}/item/{qr_code}"
     qr.add_data(qr_data)
     qr.make(fit=True)
 
@@ -704,7 +879,9 @@ def print_labels():
             box_size=10,
             border=2,
         )
-        qr_data = f"freezer-item:{item.qr_code}"
+        # Encode with full URL that phones can open
+        base_url = get_base_url()
+        qr_data = f"{base_url}/item/{item.qr_code}"
         qr.add_data(qr_data)
         qr.make(fit=True)
         img = qr.make_image(fill_color="black", back_color="white")

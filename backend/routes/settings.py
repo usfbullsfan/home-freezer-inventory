@@ -97,6 +97,8 @@ def get_system_settings():
     # Set defaults if not present
     if 'enable_image_fetching' not in settings_dict:
         settings_dict['enable_image_fetching'] = 'true'
+    if 'no_auth_mode' not in settings_dict:
+        settings_dict['no_auth_mode'] = 'false'
 
     return jsonify(settings_dict), 200
 

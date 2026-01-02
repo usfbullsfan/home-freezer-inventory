@@ -5,6 +5,11 @@ on:
     branches:
       - dev
 
+# SECURITY: Explicitly limit GITHUB_TOKEN permissions (principle of least privilege)
+# This workflow only needs to read repository contents for checkout
+permissions:
+  contents: read
+
 jobs:
   deploy:
     name: Deploy to GCP Development Server
@@ -56,6 +61,12 @@ jobs:
             git reset --hard origin/dev
             echo "✓ Code updated"
 
+            # Stop services before updating dependencies
+            echo "Stopping services..."
+            sudo systemctl stop freezer-backend-dev
+            sudo systemctl stop freezer-frontend-dev
+            echo "✓ Services stopped"
+
             # Update backend dependencies
             echo "Updating backend dependencies..."
             cd backend
@@ -67,7 +78,9 @@ jobs:
             # Update frontend dependencies
             echo "Updating frontend dependencies..."
             cd frontend
-            npm ci --quiet
+            # Remove node_modules completely for clean install (avoids permission issues)
+            sudo rm -rf node_modules 2>/dev/null || true
+            sudo npm ci --quiet
             echo "✓ Frontend dependencies updated"
 
             # Build frontend

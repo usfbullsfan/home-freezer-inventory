@@ -20,11 +20,14 @@ def register():
     if not data or not data.get('username') or not data.get('password'):
         return jsonify({'error': 'Username and password required'}), 400
 
-    if User.query.filter_by(username=data['username']).first():
+    # Normalize username to lowercase for case-insensitive matching
+    username_lower = data['username'].lower()
+
+    if User.query.filter_by(username=username_lower).first():
         return jsonify({'error': 'Username already exists'}), 400
 
     user = User(
-        username=data['username'],
+        username=username_lower,
         role=data.get('role', 'user')  # Default to 'user' role
     )
     user.set_password(data['password'])
@@ -46,7 +49,10 @@ def login():
     if not data or not data.get('username') or not data.get('password'):
         return jsonify({'error': 'Username and password required'}), 400
 
-    user = User.query.filter_by(username=data['username']).first()
+    # Normalize username to lowercase for case-insensitive matching
+    username_lower = data['username'].lower()
+
+    user = User.query.filter_by(username=username_lower).first()
 
     if not user or not user.check_password(data['password']):
         return jsonify({'error': 'Invalid username or password'}), 401
@@ -69,7 +75,7 @@ def login():
 def get_current_user():
     """Get current user info from JWT token"""
     current_user_id = int(get_jwt_identity())
-    user = User.query.get(current_user_id)
+    user = db.session.get(User, current_user_id)
 
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -96,7 +102,7 @@ def get_users():
 def change_password():
     """Change current user's password"""
     current_user_id = int(get_jwt_identity())
-    user = User.query.get(current_user_id)
+    user = db.session.get(User, current_user_id)
 
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -131,17 +137,21 @@ def update_user(user_id):
     if claims.get('role') != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
 
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
     data = request.get_json()
 
     # Update username if provided
-    if 'username' in data and data['username'] != user.username:
-        if User.query.filter_by(username=data['username']).first():
-            return jsonify({'error': 'Username already exists'}), 400
-        user.username = data['username']
+    if 'username' in data:
+        # Normalize username to lowercase for case-insensitive matching
+        new_username_lower = data['username'].lower()
+
+        if new_username_lower != user.username:
+            if User.query.filter_by(username=new_username_lower).first():
+                return jsonify({'error': 'Username already exists'}), 400
+            user.username = new_username_lower
 
     # Update role if provided
     if 'role' in data:
@@ -173,7 +183,7 @@ def delete_user(user_id):
     if user_id == current_user_id:
         return jsonify({'error': 'Cannot delete your own account'}), 400
 
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
@@ -193,7 +203,7 @@ def reset_user_password(user_id):
     if claims.get('role') != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
 
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
@@ -209,4 +219,89 @@ def reset_user_password(user_id):
     db.session.commit()
 
     return jsonify({'message': 'Password reset successfully'}), 200
+
+
+@auth_bp.route('/quick-login-status', methods=['GET'])
+def quick_login_status():
+    """Check if no-auth mode is enabled (no JWT required)"""
+    import os
+    from models import Setting
+
+    # Only available in development
+    if os.environ.get('FLASK_ENV') != 'development':
+        return jsonify({'enabled': False, 'reason': 'Not in development mode'}), 200
+
+    # Check if no_auth_mode system setting is enabled
+    setting = Setting.query.filter_by(
+        user_id=None,
+        setting_name='no_auth_mode'
+    ).first()
+
+    enabled = setting and setting.setting_value == 'true'
+
+    return jsonify({'enabled': enabled}), 200
+
+
+@auth_bp.route('/quick-login-users', methods=['GET'])
+def quick_login_users():
+    """Get list of users for quick login (development only, no JWT required)"""
+    import os
+
+    # Only available in development
+    if os.environ.get('FLASK_ENV') != 'development':
+        return jsonify({'error': 'This endpoint is only available in development'}), 403
+
+    # Check if no_auth_mode is enabled
+    from models import Setting
+    setting = Setting.query.filter_by(
+        user_id=None,
+        setting_name='no_auth_mode'
+    ).first()
+
+    if not setting or setting.setting_value != 'true':
+        return jsonify({'error': 'No-auth mode is not enabled'}), 403
+
+    # Return all users
+    users = User.query.all()
+    return jsonify([user.to_dict() for user in users]), 200
+
+
+@auth_bp.route('/quick-login', methods=['POST'])
+def quick_login():
+    """Quick login without password (development only)"""
+    import os
+
+    # Only available in development
+    if os.environ.get('FLASK_ENV') != 'development':
+        return jsonify({'error': 'This endpoint is only available in development'}), 403
+
+    # Check if no_auth_mode is enabled
+    from models import Setting
+    setting = Setting.query.filter_by(
+        user_id=None,
+        setting_name='no_auth_mode'
+    ).first()
+
+    if not setting or setting.setting_value != 'true':
+        return jsonify({'error': 'No-auth mode is not enabled'}), 403
+
+    data = request.get_json()
+    if not data or not data.get('user_id'):
+        return jsonify({'error': 'user_id is required'}), 400
+
+    user = db.session.get(User, data['user_id'])
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Create access token (same as regular login)
+    access_token = create_access_token(
+        identity=str(user.id),
+        expires_delta=timedelta(hours=24),
+        additional_claims={'role': user.role, 'username': user.username}
+    )
+
+    return jsonify({
+        'access_token': access_token,
+        'user': user.to_dict()
+    }), 200
 
