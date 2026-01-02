@@ -210,16 +210,16 @@ function QRScanner({ onScan, onClose }) {
         style={{ display: 'none' }}
       />
 
-      {/* Scanning guide overlay */}
+      {/* Scanning guide overlay - large square for QR codes */}
       {scanning && !item && !loading && (
         <div style={{
           position: 'absolute',
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: '85%',
-          maxWidth: '400px',
-          height: '180px',
+          width: '75%',
+          maxWidth: '350px',
+          aspectRatio: '1 / 1',
           border: '3px solid #4caf50',
           borderRadius: '12px',
           pointerEvents: 'none',
