@@ -143,86 +143,169 @@ function QRScanner({ onScan, onClose }) {
     }
   };
 
+  // Full-page scanner (better for mobile)
   return (
-    <div className="qr-scanner-modal">
-      <div className="modal-overlay" onClick={onClose}>
-        <div className="modal qr-scanner-container" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header">
-            <h2>📷 Scan QR Code</h2>
-            <button onClick={onClose} className="close-button">×</button>
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: '#000',
+      zIndex: 9999,
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      {/* Header */}
+      <div style={{
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)',
+        padding: '1rem',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 10
+      }}>
+        <h2 style={{ color: 'white', margin: 0, fontSize: '1.2rem' }}>📷 Scan QR Code</h2>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'rgba(255,255,255,0.2)',
+            border: 'none',
+            color: 'white',
+            fontSize: '2rem',
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Camera area */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          position: 'absolute',
+          top: 0,
+          left: 0
+        }}
+      />
+      <canvas
+        ref={canvasRef}
+        style={{ display: 'none' }}
+      />
+
+      {/* Scanning guide overlay */}
+      {scanning && !item && !loading && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '85%',
+          maxWidth: '400px',
+          height: '180px',
+          border: '3px solid #4caf50',
+          borderRadius: '12px',
+          pointerEvents: 'none',
+          boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)'
+        }}>
+          <div style={{
+            position: 'absolute',
+            top: '-40px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(76, 175, 80, 0.95)',
+            color: 'white',
+            padding: '0.5rem 1rem',
+            borderRadius: '8px',
+            fontSize: '0.95rem',
+            fontWeight: '500',
+            whiteSpace: 'nowrap',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+          }}>
+            Align QR code here
           </div>
+        </div>
+      )}
 
-          <div className="modal-content">
-            {error && (
-              <div className="error-message" style={{
-                background: '#fff3cd',
-                color: '#856404',
-                padding: '1rem',
-                borderRadius: '4px',
-                marginBottom: '1rem',
-                border: '1px solid #ffeaa7'
-              }}>
-                ⚠️ {error}
-              </div>
-            )}
+      {/* Messages */}
+      {error && (
+        <div style={{
+          position: 'absolute',
+          bottom: '2rem',
+          left: '1rem',
+          right: '1rem',
+          background: 'rgba(255, 243, 205, 0.95)',
+          color: '#856404',
+          padding: '1rem',
+          borderRadius: '8px',
+          border: '1px solid #ffeaa7',
+          textAlign: 'center',
+          zIndex: 10
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
 
-            {loading && (
-              <div style={{ textAlign: 'center', padding: '1rem' }}>
-                <p style={{ fontSize: '1.1rem', color: '#1976d2' }}>🔍 Looking up item...</p>
-              </div>
-            )}
+      {loading && (
+        <div style={{
+          position: 'absolute',
+          bottom: '2rem',
+          left: '1rem',
+          right: '1rem',
+          background: 'rgba(33, 150, 243, 0.95)',
+          color: 'white',
+          padding: '1rem',
+          borderRadius: '8px',
+          textAlign: 'center',
+          fontSize: '1.1rem',
+          fontWeight: '500',
+          zIndex: 10
+        }}>
+          🔍 Looking up item...
+        </div>
+      )}
 
-            {!item && !loading && (
-              <>
-                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem', textAlign: 'center' }}>
-                  Point your camera at a QR code to scan
-                </p>
-
-                <div className="scanner-area">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    style={{
-                      width: '100%',
-                      maxHeight: '400px',
-                      backgroundColor: '#000',
-                      borderRadius: '4px'
-                    }}
-                  />
-                  <canvas
-                    ref={canvasRef}
-                    style={{ display: 'none' }}
-                  />
-                </div>
-
-                {scanning && (
-                  <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-                    <p style={{ fontSize: '0.85rem', color: '#666' }}>
-                      📸 Camera is active - position QR code in view
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Item result */}
-            {item && (
-              <div style={{ marginTop: '1rem', padding: '1rem', background: '#e8f5e9', borderRadius: '4px' }}>
-                <h3 style={{ marginBottom: '0.5rem', color: '#2e7d32' }}>✓ Item Found!</h3>
-                <div style={{ marginTop: '1rem' }}>
-                  <p><strong>Name:</strong> {item.name}</p>
-                  <p><strong>Category:</strong> {item.category_name || 'N/A'}</p>
-                  <p><strong>QR Code:</strong> <code>{item.qr_code}</code></p>
-                  {item.expiration_date && (
-                    <p><strong>Expires:</strong> {new Date(item.expiration_date).toLocaleDateString()}</p>
-                  )}
-                </div>
-              </div>
+      {item && (
+        <div style={{
+          position: 'absolute',
+          bottom: '2rem',
+          left: '1rem',
+          right: '1rem',
+          background: 'rgba(232, 245, 233, 0.95)',
+          color: '#2e7d32',
+          padding: '1.25rem',
+          borderRadius: '8px',
+          border: '2px solid #4caf50',
+          zIndex: 10
+        }}>
+          <h3 style={{ marginTop: 0, marginBottom: '0.75rem', color: '#2e7d32', fontSize: '1.2rem' }}>✓ Item Found!</h3>
+          <div style={{ fontSize: '0.95rem' }}>
+            <p style={{ margin: '0.5rem 0' }}><strong>Name:</strong> {item.name}</p>
+            <p style={{ margin: '0.5rem 0' }}><strong>Category:</strong> {item.category_name || 'N/A'}</p>
+            <p style={{ margin: '0.5rem 0' }}><strong>QR Code:</strong> <code>{item.qr_code}</code></p>
+            {item.expiration_date && (
+              <p style={{ margin: '0.5rem 0' }}><strong>Expires:</strong> {new Date(item.expiration_date).toLocaleDateString()}</p>
             )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
