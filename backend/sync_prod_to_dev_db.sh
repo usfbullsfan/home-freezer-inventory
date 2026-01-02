@@ -35,17 +35,20 @@ echo ""
 # Save dev admin users before copying
 if [ -f "$DEV_DB" ]; then
     echo "💾 Saving dev admin user(s)..."
-    sqlite3 "$DEV_DB" "SELECT * FROM users WHERE role='admin';" > /dev/null 2>&1 && \
-    sqlite3 "$DEV_DB" <<EOF > "$ADMIN_BACKUP"
-.mode insert users
-SELECT * FROM users WHERE role='admin';
-EOF
 
     ADMIN_COUNT=$(sqlite3 "$DEV_DB" "SELECT COUNT(*) FROM users WHERE role='admin';" 2>/dev/null || echo "0")
+
     if [ "$ADMIN_COUNT" -gt 0 ]; then
+        # Export admin users as a CSV file (easier to import later)
+        sqlite3 "$DEV_DB" <<EOF > "$ADMIN_BACKUP"
+.mode csv
+.headers off
+SELECT id, username, password_hash, role, created_at FROM users WHERE role='admin';
+EOF
         echo "   Saved $ADMIN_COUNT dev admin user(s)"
     else
-        echo "   No admin users found in dev database"
+        echo "   ⚠️  No admin users found in dev database"
+        echo "   Admin credentials will be copied from production"
         rm -f "$ADMIN_BACKUP"
     fi
     echo ""
@@ -69,28 +72,39 @@ cp "$PROD_DB" "$DEV_DB"
 if [ -f "$ADMIN_BACKUP" ] && [ -s "$ADMIN_BACKUP" ]; then
     echo "🔑 Restoring dev admin user(s)..."
 
-    # For each admin in the backup, update or insert them
+    # Use sqlite3's .import command for safer CSV handling
+    # First, create SQL statements from CSV that properly escape special characters
     sqlite3 "$DEV_DB" <<EOF
--- Create a temporary table to hold backup admin data
-CREATE TEMP TABLE temp_admins AS SELECT * FROM users WHERE 0;
+-- Create a temporary table to hold the CSV data
+CREATE TEMP TABLE IF NOT EXISTS temp_dev_admins (
+    id INTEGER,
+    username TEXT,
+    password_hash TEXT,
+    role TEXT,
+    created_at TEXT
+);
 
--- Load the backup admin data
-$(cat "$ADMIN_BACKUP")
+-- Import CSV data into temp table
+.mode csv
+.import $ADMIN_BACKUP temp_dev_admins
 
--- Update existing users or insert new ones
--- First, update any users that exist in both databases
+-- Update existing users with dev admin credentials
 UPDATE users
-SET password_hash = (SELECT password_hash FROM temp_admins WHERE temp_admins.username = users.username),
+SET password_hash = (
+    SELECT password_hash FROM temp_dev_admins
+    WHERE temp_dev_admins.username = users.username
+),
     role = 'admin'
-WHERE username IN (SELECT username FROM temp_admins);
+WHERE username IN (SELECT username FROM temp_dev_admins);
 
--- Then insert any that don't exist
-INSERT OR IGNORE INTO users (id, username, password_hash, role, created_at)
-SELECT id, username, password_hash, role, created_at FROM temp_admins
+-- Insert any dev admins that don't exist in the copied database
+INSERT OR IGNORE INTO users (username, password_hash, role, created_at)
+SELECT username, password_hash, role, created_at
+FROM temp_dev_admins
 WHERE username NOT IN (SELECT username FROM users);
 
--- Clean up
-DROP TABLE temp_admins;
+-- Drop temp table
+DROP TABLE temp_dev_admins;
 EOF
 
     RESTORED_COUNT=$(sqlite3 "$DEV_DB" "SELECT COUNT(*) FROM users WHERE role='admin';" 2>/dev/null || echo "0")
