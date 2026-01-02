@@ -446,7 +446,8 @@ def copy_prod_db():
     """Copy production database to development (development only).
 
     This endpoint copies the production database file to the dev environment,
-    replacing the current dev database with fresh production data.
+    replacing the current dev database with fresh production data, while
+    preserving the dev admin user(s).
     Only available in development environments.
     """
     import subprocess
@@ -470,6 +471,21 @@ def copy_prod_db():
         prod_size = os.path.getsize(prod_db_path)
         dev_size = os.path.getsize(dev_db_path) if os.path.exists(dev_db_path) else 0
 
+        # Save dev admin users before copying
+        dev_admins = []
+        try:
+            admin_users = User.query.filter_by(role='admin').all()
+            for admin in admin_users:
+                dev_admins.append({
+                    'username': admin.username,
+                    'password_hash': admin.password_hash,
+                    'role': admin.role,
+                    'created_at': admin.created_at
+                })
+            logging.info(f"Saved {len(dev_admins)} dev admin user(s): {[a['username'] for a in dev_admins]}")
+        except Exception as e:
+            logging.warning(f"Could not save dev admins (may not exist yet): {e}")
+
         # Create a backup of the current dev database
         if os.path.exists(dev_db_path):
             backup_path = dev_db_path + '.backup'
@@ -488,12 +504,40 @@ def copy_prod_db():
         # Reconnect to the new database
         db.engine.dispose()
 
+        # Restore dev admin users
+        if dev_admins:
+            for admin_data in dev_admins:
+                # Check if this admin already exists in the copied prod DB
+                existing_admin = User.query.filter_by(username=admin_data['username']).first()
+
+                if existing_admin:
+                    # Update existing user to preserve dev credentials
+                    existing_admin.password_hash = admin_data['password_hash']
+                    existing_admin.role = admin_data['role']
+                    logging.info(f"Updated existing admin user '{admin_data['username']}' with dev credentials")
+                else:
+                    # Add the dev admin if they don't exist in prod
+                    new_admin = User(
+                        username=admin_data['username'],
+                        password_hash=admin_data['password_hash'],
+                        role=admin_data['role'],
+                        created_at=admin_data['created_at']
+                    )
+                    db.session.add(new_admin)
+                    logging.info(f"Re-added dev admin user '{admin_data['username']}'")
+
+            db.session.commit()
+            logging.info(f"Successfully restored {len(dev_admins)} dev admin user(s)")
+
         # Count items in the new database
         item_count = Item.query.count()
+        user_count = User.query.count()
 
         return jsonify({
             'message': f'Successfully copied production database to dev',
             'items_count': item_count,
+            'users_count': user_count,
+            'dev_admins_preserved': len(dev_admins),
             'prod_db_size': prod_size,
             'previous_dev_size': dev_size
         }), 200
@@ -503,6 +547,7 @@ def copy_prod_db():
         return jsonify({'error': 'Permission denied. Check file permissions.'}), 500
 
     except Exception as e:
+        db.session.rollback()
         logging.exception("Failed to copy production database")
         return jsonify({'error': 'Failed to copy production database'}), 500
 
