@@ -363,11 +363,16 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
       setLoading(true);
       setError('');
 
-      await itemsAPI.updateItem(item.id, {
+      const submitData = {
         ...formData,
+        weight: formData.weight ? parseFloat(formData.weight) : null,
+        category_id: formData.category_id ? parseInt(formData.category_id) : null,
+        upc: formData.upc && formData.upc.trim() ? formData.upc.trim() : null,
         status: 'consumed',
         removed_date: new Date().toISOString().split('T')[0]
-      });
+      };
+
+      await itemsAPI.updateItem(item.id, submitData);
 
       onSave();
     } catch (err) {
@@ -384,11 +389,16 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
       setLoading(true);
       setError('');
 
-      await itemsAPI.updateItem(item.id, {
+      const submitData = {
         ...formData,
+        weight: formData.weight ? parseFloat(formData.weight) : null,
+        category_id: formData.category_id ? parseInt(formData.category_id) : null,
+        upc: formData.upc && formData.upc.trim() ? formData.upc.trim() : null,
         status: 'thrown_out',
         removed_date: new Date().toISOString().split('T')[0]
-      });
+      };
+
+      await itemsAPI.updateItem(item.id, submitData);
 
       onSave();
     } catch (err) {
@@ -744,7 +754,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
                 onClick={handleMarkAsThrownOut}
                 disabled={loading}
                 style={{
-                  backgroundColor: '#ff9800',
+                  backgroundColor: '#f44336',
                   color: 'white',
                   border: 'none'
                 }}
