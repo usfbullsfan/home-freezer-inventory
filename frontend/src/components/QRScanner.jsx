@@ -130,6 +130,12 @@ function QRScanner({ onScan, onClose }) {
       if (onScan) {
         onScan(response.data);
       }
+
+      // Close the scanner after successfully passing the item to parent
+      // Give a brief moment to show the success message, then close
+      setTimeout(() => {
+        onClose();
+      }, 500);
     } catch (err) {
       setError(`Item not found: ${qrCode}`);
       // Restart scanning after a brief delay to allow user to read error

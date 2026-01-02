@@ -357,7 +357,14 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
   };
 
   const handleMarkAsConsumed = async () => {
-    if (!item || !item.id) return;
+    console.log('handleMarkAsConsumed called');
+    console.log('item:', item);
+    console.log('formData:', formData);
+
+    if (!item || !item.id) {
+      console.log('Early return: no item or item.id');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -372,10 +379,15 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
         removed_date: new Date().toISOString().split('T')[0]
       };
 
+      console.log('submitData:', submitData);
+      console.log('Calling API updateItem with id:', item.id);
+
       await itemsAPI.updateItem(item.id, submitData);
 
+      console.log('API call succeeded, calling onSave()');
       onSave();
     } catch (err) {
+      console.error('Error in handleMarkAsConsumed:', err);
       setError(err.response?.data?.error || 'Failed to mark item as consumed.');
     } finally {
       setLoading(false);
@@ -383,7 +395,14 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
   };
 
   const handleMarkAsThrownOut = async () => {
-    if (!item || !item.id) return;
+    console.log('handleMarkAsThrownOut called');
+    console.log('item:', item);
+    console.log('formData:', formData);
+
+    if (!item || !item.id) {
+      console.log('Early return: no item or item.id');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -398,10 +417,15 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
         removed_date: new Date().toISOString().split('T')[0]
       };
 
+      console.log('submitData:', submitData);
+      console.log('Calling API updateItem with id:', item.id);
+
       await itemsAPI.updateItem(item.id, submitData);
 
+      console.log('API call succeeded, calling onSave()');
       onSave();
     } catch (err) {
+      console.error('Error in handleMarkAsThrownOut:', err);
       setError(err.response?.data?.error || 'Failed to mark item as thrown out.');
     } finally {
       setLoading(false);

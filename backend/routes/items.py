@@ -354,6 +354,13 @@ def update_item(item_id):
         item.expiration_date = datetime.fromisoformat(data['expiration_date']) if data['expiration_date'] else None
     if 'notes' in data:
         item.notes = data['notes']
+    if 'status' in data:
+        # Validate status
+        if data['status'] not in ['in_freezer', 'consumed', 'thrown_out']:
+            return jsonify({'error': 'Invalid status'}), 400
+        item.status = data['status']
+    if 'removed_date' in data:
+        item.removed_date = datetime.fromisoformat(data['removed_date']) if data['removed_date'] else None
 
     db.session.commit()
 
