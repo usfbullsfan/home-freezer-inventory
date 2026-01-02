@@ -493,6 +493,7 @@ def copy_prod_db():
             logging.info(f"Created backup of dev database at {backup_path}")
 
         # Close all database connections
+        db.session.close()
         db.session.remove()
         db.engine.dispose()
 
@@ -501,20 +502,28 @@ def copy_prod_db():
 
         logging.info(f"Copied production database ({prod_size} bytes) to dev ({dev_db_path})")
 
-        # Reconnect to the new database
+        # Force reconnect to the new database by creating a fresh engine
+        # This ensures we're working with the newly copied database, not cached connections
+        current_app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{dev_db_path}'
         db.engine.dispose()
+
+        # Create a new session with the fresh database
+        db.session.close()
+        db.session.remove()
 
         # Restore dev admin users
         if dev_admins:
+            logging.info(f"Restoring {len(dev_admins)} dev admin user(s)...")
             for admin_data in dev_admins:
                 # Check if this admin already exists in the copied prod DB
                 existing_admin = User.query.filter_by(username=admin_data['username']).first()
 
                 if existing_admin:
                     # Update existing user to preserve dev credentials
+                    old_hash = existing_admin.password_hash
                     existing_admin.password_hash = admin_data['password_hash']
                     existing_admin.role = admin_data['role']
-                    logging.info(f"Updated existing admin user '{admin_data['username']}' with dev credentials")
+                    logging.info(f"Updated admin user '{admin_data['username']}' - changed password_hash from {old_hash[:20]}... to {admin_data['password_hash'][:20]}...")
                 else:
                     # Add the dev admin if they don't exist in prod
                     new_admin = User(
@@ -524,9 +533,17 @@ def copy_prod_db():
                         created_at=admin_data['created_at']
                     )
                     db.session.add(new_admin)
-                    logging.info(f"Re-added dev admin user '{admin_data['username']}'")
+                    logging.info(f"Added new dev admin user '{admin_data['username']}'")
 
             db.session.commit()
+
+            # Verify the admin users were restored correctly
+            for admin_data in dev_admins:
+                verify_admin = User.query.filter_by(username=admin_data['username']).first()
+                if verify_admin:
+                    matches = verify_admin.password_hash == admin_data['password_hash']
+                    logging.info(f"Verification for '{admin_data['username']}': password_hash matches = {matches}")
+
             logging.info(f"Successfully restored {len(dev_admins)} dev admin user(s)")
 
         # Count items in the new database
