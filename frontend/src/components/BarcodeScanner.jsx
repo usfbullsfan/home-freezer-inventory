@@ -21,6 +21,14 @@ function BarcodeScanner({ onScan, onClose }) {
       setError('');
       setDetected('');
 
+      // Wait a bit for the DOM to be ready
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      if (!scannerRef.current) {
+        setError('Scanner not ready. Please try again.');
+        return;
+      }
+
       await Quagga.init(
         {
           inputStream: {
@@ -28,21 +36,15 @@ function BarcodeScanner({ onScan, onClose }) {
             target: scannerRef.current,
             constraints: {
               facingMode: 'environment',
-              width: { ideal: 1920 },
-              height: { ideal: 1080 }
-            },
-            area: {
-              top: '25%',
-              right: '5%',
-              left: '5%',
-              bottom: '25%'
+              width: { min: 640, ideal: 1280, max: 1920 },
+              height: { min: 480, ideal: 720, max: 1080 }
             }
           },
           locator: {
             patchSize: 'large',
-            halfSample: false
+            halfSample: true
           },
-          numOfWorkers: 4,
+          numOfWorkers: navigator.hardwareConcurrency || 2,
           frequency: 10,
           decoder: {
             readers: [
@@ -52,14 +54,15 @@ function BarcodeScanner({ onScan, onClose }) {
               'ean_8_reader',
               'code_128_reader',
               'code_39_reader'
-            ]
+            ],
+            multiple: false
           },
           locate: true
         },
         (err) => {
           if (err) {
             console.error('Quagga initialization error:', err);
-            setError('Failed to start camera: ' + err.message + '. Please ensure you have granted camera permissions.');
+            setError('Failed to start camera. Please ensure you have granted camera permissions and try again.');
             return;
           }
 
@@ -72,7 +75,7 @@ function BarcodeScanner({ onScan, onClose }) {
       Quagga.onDetected(handleDetected);
     } catch (err) {
       console.error('Scanner error:', err);
-      setError('Failed to start barcode scanner. Please try again.');
+      setError('Failed to start barcode scanner: ' + err.message);
     }
   };
 
@@ -104,108 +107,139 @@ function BarcodeScanner({ onScan, onClose }) {
     }
   };
 
+  // Full-page scanner (better for mobile)
   return (
-    <div className="qr-scanner-modal">
-      <div className="modal-overlay" onClick={onClose}>
-        <div className="modal qr-scanner-container" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header">
-            <h2>📊 Scan Barcode</h2>
-            <button onClick={onClose} className="close-button">×</button>
-          </div>
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: '#000',
+      zIndex: 9999,
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      {/* Header */}
+      <div style={{
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)',
+        padding: '1rem',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 10
+      }}>
+        <h2 style={{ color: 'white', margin: 0, fontSize: '1.2rem' }}>📊 Scan Barcode</h2>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'rgba(255,255,255,0.2)',
+            border: 'none',
+            color: 'white',
+            fontSize: '2rem',
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0
+          }}
+        >
+          ×
+        </button>
+      </div>
 
-          <div className="modal-content">
-            {error && (
-              <div className="error-message" style={{
-                background: '#fff3cd',
-                color: '#856404',
-                padding: '1rem',
-                borderRadius: '4px',
-                marginBottom: '1rem',
-                border: '1px solid #ffeaa7'
-              }}>
-                ⚠️ {error}
-              </div>
-            )}
+      {/* Scanner area */}
+      <div
+        ref={scannerRef}
+        id="barcode-scanner"
+        style={{
+          flex: 1,
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      />
 
-            {detected && (
-              <div style={{
-                background: '#e8f5e9',
-                color: '#2e7d32',
-                padding: '1rem',
-                borderRadius: '4px',
-                marginBottom: '1rem',
-                border: '1px solid #4caf50',
-                textAlign: 'center'
-              }}>
-                ✓ Detected: {detected}
-              </div>
-            )}
-
-            {!detected && (
-              <>
-                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem', textAlign: 'center' }}>
-                  Point your camera at a barcode (UPC, EAN, etc.)
-                </p>
-
-                <div className="scanner-area" style={{ position: 'relative' }}>
-                  <div
-                    ref={scannerRef}
-                    style={{
-                      width: '100%',
-                      minHeight: '500px',
-                      backgroundColor: '#000',
-                      borderRadius: '4px',
-                      overflow: 'hidden',
-                      position: 'relative'
-                    }}
-                  />
-
-                  {/* Scanning guide overlay - larger area for easier alignment */}
-                  {scanning && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      width: '90%',
-                      height: '200px',
-                      border: '3px solid #4caf50',
-                      borderRadius: '8px',
-                      pointerEvents: 'none',
-                      boxShadow: '0 0 0 9999px rgba(0,0,0,0.4)'
-                    }}>
-                      <div style={{
-                        position: 'absolute',
-                        top: '-35px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        background: 'rgba(76, 175, 80, 0.95)',
-                        color: 'white',
-                        padding: '0.4rem 0.75rem',
-                        borderRadius: '6px',
-                        fontSize: '0.9rem',
-                        fontWeight: '500',
-                        whiteSpace: 'nowrap',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                      }}>
-                        Align barcode in this area
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {scanning && (
-                  <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-                    <p style={{ fontSize: '0.85rem', color: '#666' }}>
-                      📸 Camera is active - position barcode in the guide
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
+      {/* Scanning guide overlay */}
+      {scanning && !detected && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '85%',
+          maxWidth: '400px',
+          height: '180px',
+          border: '3px solid #4caf50',
+          borderRadius: '12px',
+          pointerEvents: 'none',
+          boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)'
+        }}>
+          <div style={{
+            position: 'absolute',
+            top: '-40px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(76, 175, 80, 0.95)',
+            color: 'white',
+            padding: '0.5rem 1rem',
+            borderRadius: '8px',
+            fontSize: '0.95rem',
+            fontWeight: '500',
+            whiteSpace: 'nowrap',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+          }}>
+            Align barcode here
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Messages */}
+      {error && (
+        <div style={{
+          position: 'absolute',
+          bottom: '2rem',
+          left: '1rem',
+          right: '1rem',
+          background: 'rgba(255, 243, 205, 0.95)',
+          color: '#856404',
+          padding: '1rem',
+          borderRadius: '8px',
+          border: '1px solid #ffeaa7',
+          textAlign: 'center',
+          zIndex: 10
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
+
+      {detected && (
+        <div style={{
+          position: 'absolute',
+          bottom: '2rem',
+          left: '1rem',
+          right: '1rem',
+          background: 'rgba(232, 245, 233, 0.95)',
+          color: '#2e7d32',
+          padding: '1rem',
+          borderRadius: '8px',
+          border: '2px solid #4caf50',
+          textAlign: 'center',
+          fontSize: '1.1rem',
+          fontWeight: '500',
+          zIndex: 10
+        }}>
+          ✓ Detected: {detected}
+        </div>
+      )}
     </div>
   );
 }
