@@ -26,7 +26,7 @@ A web-based application for tracking freezer inventory with alphanumeric code la
 
 **Backend:**
 - Python Flask
-- SQLAlchemy (SQLite database)
+- SQLAlchemy (SQLite or PostgreSQL database)
 - Flask-JWT-Extended for authentication
 - Gunicorn for production WSGI server
 - Pytest for comprehensive testing
@@ -102,6 +102,22 @@ python3 migrate_add_category_images.py
 ```
 
 The migration script will automatically find your database in either `backend/` or `backend/instance/` and add the required column.
+
+**Database Options: SQLite vs PostgreSQL**
+
+The application supports both SQLite (default) and PostgreSQL databases:
+
+- **SQLite (Default)**: Perfect for single-user/home use, no setup required
+- **PostgreSQL (Optional)**: Recommended for production, multi-user deployments, or cloud hosting
+
+To use PostgreSQL, set the `DATABASE_URL` environment variable:
+
+```bash
+# In backend/.env
+DATABASE_URL=postgresql://username:password@host:port/database
+```
+
+For detailed PostgreSQL setup and migration instructions, see [PostgreSQL Setup Guide](docs/deployment/postgresql-setup.md).
 
 ### 3. UPC/Barcode Lookup Setup (Optional)
 
