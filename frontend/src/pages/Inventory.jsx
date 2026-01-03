@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { itemsAPI, categoriesAPI } from '../services/api';
 import ItemCard from '../components/ItemCard';
 import AddItemModal from '../components/AddItemModal';
@@ -13,6 +13,7 @@ function Inventory({ isMobile = false }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   // Detect if running in development mode
   const isDev = import.meta.env.DEV;
@@ -399,6 +400,10 @@ function Inventory({ isMobile = false }) {
           onClose={() => {
             setShowAddModal(false);
             setEditingItem(null);
+            // Navigate back to landing page on mobile
+            if (isMobile) {
+              navigate('/home');
+            }
           }}
           onSave={handleItemSaved}
           onCategoryCreated={loadCategories}
@@ -407,14 +412,26 @@ function Inventory({ isMobile = false }) {
 
       {showQRModal && (
         <QRInputModal
-          onClose={() => setShowQRModal(false)}
+          onClose={() => {
+            setShowQRModal(false);
+            // Navigate back to landing page on mobile
+            if (isMobile) {
+              navigate('/home');
+            }
+          }}
           onSubmit={handleQRSubmit}
         />
       )}
 
       {showQRScanner && (
         <QRScanner
-          onClose={() => setShowQRScanner(false)}
+          onClose={() => {
+            setShowQRScanner(false);
+            // Navigate back to landing page on mobile
+            if (isMobile) {
+              navigate('/home');
+            }
+          }}
           onScan={(item) => {
             setShowQRScanner(false);
             setEditingItem(item);
