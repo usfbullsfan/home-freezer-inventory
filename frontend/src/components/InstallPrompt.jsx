@@ -41,7 +41,7 @@ const InstallPrompt = () => {
 
   const checkIfDismissed = async () => {
     try {
-      const response = await api.get('/api/settings/user');
+      const response = await api.get('/settings/user');
       const settings = response.data;
 
       // Find the install_prompt_dismissed setting
@@ -83,7 +83,7 @@ const InstallPrompt = () => {
 
     // Mark as dismissed in the database
     try {
-      await api.post('/api/settings/user', {
+      await api.post('/settings/user', {
         setting_name: 'install_prompt_dismissed',
         setting_value: 'true'
       });
