@@ -865,10 +865,10 @@ body {
 
 /* Navbar Logo */
 .navbar-logo {
-  width: 32px;
-  height: 32px;
-  margin-right: 0.75rem;
-  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  margin-right: 0.5rem;
+  border-radius: 4px;
   vertical-align: middle;
 }
 
