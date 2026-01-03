@@ -2,14 +2,18 @@ import { useState, useEffect } from 'react';
 import { settingsAPI, authAPI } from '../services/api';
 import UserManagement from '../components/UserManagement';
 import ImportExport from '../components/ImportExport';
+import api from '../services/api';
 
-function Settings({ user }) {
+function Settings({ user, isMobile = false, setUseDesktopInterface }) {
   const [settings, setSettings] = useState({
     track_history: 'true',
   });
   const [systemSettings, setSystemSettings] = useState({
     enable_image_fetching: 'true',
     no_auth_mode: 'false',
+  });
+  const [userSettings, setUserSettings] = useState({
+    use_desktop_interface: 'false',
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -38,6 +42,7 @@ function Settings({ user }) {
 
   useEffect(() => {
     loadSettings();
+    loadUserSettings();
     if (user && user.role === 'admin') {
       loadBackupInfo();
       loadSystemSettings();
@@ -58,6 +63,23 @@ function Settings({ user }) {
     }
   };
 
+  const loadUserSettings = async () => {
+    try {
+      const response = await api.get('/api/settings/user');
+      const settings = response.data;
+      const desktopPref = settings.find(s => s.setting_name === 'use_desktop_interface');
+
+      if (desktopPref) {
+        setUserSettings({
+          ...userSettings,
+          use_desktop_interface: desktopPref.setting_value,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load user settings:', err);
+    }
+  };
+
   const handleSaveSettings = async () => {
     setError('');
     setSuccess('');
@@ -67,6 +89,40 @@ function Settings({ user }) {
       setSuccess('Settings saved successfully');
     } catch (err) {
       setError('Failed to save settings');
+    }
+  };
+
+  const handleDesktopInterfaceToggle = async (enabled) => {
+    setError('');
+    setSuccess('');
+
+    try {
+      // Update in database
+      await api.post('/api/settings/user', {
+        setting_name: 'use_desktop_interface',
+        setting_value: enabled ? 'true' : 'false',
+      });
+
+      // Update local state
+      setUserSettings({
+        ...userSettings,
+        use_desktop_interface: enabled ? 'true' : 'false',
+      });
+
+      // Update parent component state to trigger interface change
+      if (setUseDesktopInterface) {
+        setUseDesktopInterface(enabled);
+      }
+
+      setSuccess(enabled ? 'Desktop interface enabled. Page will reload.' : 'Mobile interface enabled. Page will reload.');
+
+      // Reload page after a short delay to apply changes
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      setError('Failed to update interface preference');
+      console.error('Failed to update desktop interface setting:', err);
     }
   };
 
@@ -248,6 +304,23 @@ function Settings({ user }) {
             When enabled, items marked as consumed or thrown out will be kept in the database for historical tracking
           </small>
         </div>
+
+        {isMobile && (
+          <div className="form-group" style={{ marginTop: '1.5rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={userSettings.use_desktop_interface === 'true'}
+                onChange={(e) => handleDesktopInterfaceToggle(e.target.checked)}
+                style={{ marginRight: '0.5rem', width: 'auto' }}
+              />
+              Use desktop interface on mobile
+            </label>
+            <small style={{ color: '#7f8c8d', marginLeft: '1.5rem', display: 'block', marginTop: '0.25rem' }}>
+              When enabled, you'll see the full desktop interface instead of the simplified mobile experience. Page will reload when changed.
+            </small>
+          </div>
+        )}
 
         <button
           className="btn btn-primary"

@@ -7,7 +7,7 @@ import QRInputModal from '../components/QRInputModal';
 import QRScanner from '../components/QRScanner';
 import SessionBanner from '../components/SessionBanner';
 
-function Inventory() {
+function Inventory({ isMobile = false }) {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -278,16 +278,20 @@ function Inventory() {
             </p>
           )}
         </div>
+        {!isMobile && (
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <button className="btn btn-secondary" onClick={() => setShowQRModal(true)}>
+              🔍 Locate Item by Code
+            </button>
+            <button className="btn btn-secondary" onClick={() => setShowQRScanner(true)}>
+              📷 Scan QR Code
+            </button>
+            <button className="btn btn-success" onClick={handleAddItem}>
+              ➕ Add Item
+            </button>
+          </div>
+        )}
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <button className="btn btn-secondary" onClick={() => setShowQRModal(true)}>
-            🔍 Locate Item by Code
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowQRScanner(true)}>
-            📷 Scan QR Code
-          </button>
-          <button className="btn btn-success" onClick={handleAddItem}>
-            ➕ Add Item
-          </button>
           {isDev && (
             <>
               <button
@@ -308,7 +312,7 @@ function Inventory() {
         </div>
       </div>
 
-      <div className="search-filters">
+      <div className={`search-filters ${isMobile ? 'search-filters-mobile' : ''}`}>
         <div className="search-row">
           <div className="form-group">
             <label>Search</label>
