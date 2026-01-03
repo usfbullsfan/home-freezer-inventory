@@ -112,7 +112,7 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
 
     try {
       // Update in database
-      await api.post('/api/settings/user', {
+      const response = await api.post('/api/settings/user', {
         setting_name: 'use_desktop_interface',
         setting_value: enabled ? 'true' : 'false',
       });
@@ -135,8 +135,14 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
         window.location.reload();
       }, 1500);
     } catch (err) {
-      setError('Failed to update interface preference');
-      console.error('Failed to update desktop interface setting:', err);
+      const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
+      setError(`Failed to update interface preference: ${errorMsg}`);
+      console.error('Desktop interface toggle error:', {
+        error: err,
+        response: err.response,
+        data: err.response?.data,
+        status: err.response?.status
+      });
     }
   };
 

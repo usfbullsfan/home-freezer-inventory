@@ -40,18 +40,59 @@ const versionInfo = {
   buildDate: new Date().toISOString(),
 };
 
-// Write to public/version.json
+// Detect environment (check if dev branch or dev environment variable)
+const isDev = branch.includes('dev') ||
+              process.env.NODE_ENV === 'development' ||
+              process.env.VITE_DEV === 'true';
+
+// Generate PWA manifest based on environment
+const manifest = {
+  name: isDev ? 'Freezer App - Dev' : 'Freezer App',
+  short_name: isDev ? 'Freezer App - Dev' : 'Freezer App',
+  description: 'Track and manage your freezer inventory',
+  start_url: '/',
+  display: 'standalone',
+  background_color: '#ffffff',
+  theme_color: isDev ? '#f39c12' : '#1976d2',
+  orientation: 'portrait-primary',
+  icons: [
+    {
+      src: isDev ? '/logo-dev-192.png' : '/logo-192.png',
+      sizes: '192x192',
+      type: 'image/png',
+      purpose: 'any maskable'
+    },
+    {
+      src: isDev ? '/logo-dev-512.png' : '/logo-512.png',
+      sizes: '512x512',
+      type: 'image/png',
+      purpose: 'any maskable'
+    }
+  ]
+};
+
+// Write to public directory
 const publicDir = join(__dirname, '..', 'public');
-const outputPath = join(publicDir, 'version.json');
 
 try {
   mkdirSync(publicDir, { recursive: true });
-  writeFileSync(outputPath, JSON.stringify(versionInfo, null, 2));
+
+  // Write version.json
+  const versionPath = join(publicDir, 'version.json');
+  writeFileSync(versionPath, JSON.stringify(versionInfo, null, 2));
+
+  // Write manifest.json
+  const manifestPath = join(publicDir, 'manifest.json');
+  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+
   console.log('✓ Generated version.json');
   console.log(`  Version: ${version}`);
   console.log(`  Commit: ${commitShort}`);
   console.log(`  Branch: ${branch}`);
+  console.log('✓ Generated manifest.json');
+  console.log(`  Environment: ${isDev ? 'Development' : 'Production'}`);
+  console.log(`  App Name: ${manifest.short_name}`);
 } catch (error) {
-  console.error('Error writing version.json:', error);
+  console.error('Error writing files:', error);
   process.exit(1);
 }
