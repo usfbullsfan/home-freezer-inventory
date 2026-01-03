@@ -61,7 +61,7 @@ function AppContent() {
       // If user is logged in, check their desktop interface preference
       if (user) {
         try {
-          const response = await api.get('/api/settings/user');
+          const response = await api.get('/settings/user');
           const settings = response.data;
           const desktopPref = settings.find(s => s.setting_name === 'use_desktop_interface');
 

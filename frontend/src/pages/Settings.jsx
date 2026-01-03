@@ -69,7 +69,7 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
 
   const loadUserSettings = async () => {
     try {
-      const response = await api.get('/api/settings/user');
+      const response = await api.get('/settings/user');
       const settings = response.data;
       const desktopPref = settings.find(s => s.setting_name === 'use_desktop_interface');
 
@@ -112,7 +112,7 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
 
     try {
       // Update in database
-      const response = await api.post('/api/settings/user', {
+      const response = await api.post('/settings/user', {
         setting_name: 'use_desktop_interface',
         setting_value: enabled ? 'true' : 'false',
       });
