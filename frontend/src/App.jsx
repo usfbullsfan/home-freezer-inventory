@@ -137,8 +137,7 @@ function AppContent() {
               <nav className="navbar-links">
                 {showMobileInterface ? (
                   // Mobile menu structure
-                  <>
-                    <Link to="/home" onClick={() => setMobileMenuOpen(false)}>Home</Link>
+                  <div className="mobile-menu-buttons">
                     <details className="navbar-submenu">
                       <summary>Manage</summary>
                       <div className="navbar-submenu-items">
@@ -146,8 +145,8 @@ function AppContent() {
                         <Link to="/print-labels" onClick={() => setMobileMenuOpen(false)}>Print Labels</Link>
                       </div>
                     </details>
-                    <Link to="/settings" onClick={() => setMobileMenuOpen(false)}>Settings</Link>
-                  </>
+                    <Link to="/settings" className="navbar-settings-link" onClick={() => setMobileMenuOpen(false)}>Settings</Link>
+                  </div>
                 ) : (
                   // Desktop menu structure (unchanged)
                   <>

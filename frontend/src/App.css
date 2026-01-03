@@ -618,6 +618,80 @@ body {
     gap: 0.5rem;
   }
 
+  /* Mobile-optimized filters */
+  .search-filters-mobile {
+    padding: 1rem;
+  }
+
+  .search-filters-mobile .search-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .search-filters-mobile .search-row .form-group:first-child {
+    /* Search input stays full width */
+    width: 100%;
+  }
+
+  .search-filters-mobile .search-row .form-group:not(:first-child) {
+    /* Category and Status side-by-side */
+    flex: 1;
+  }
+
+  .search-filters-mobile .search-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    gap: 0.75rem;
+  }
+
+  /* Second row: Category and Status side-by-side */
+  .search-filters-mobile .search-row .form-group:nth-child(2),
+  .search-filters-mobile .search-row .form-group:nth-child(3) {
+    grid-row: 2;
+  }
+
+  .search-filters-mobile .search-row .form-group:nth-child(2) {
+    grid-column: 1;
+  }
+
+  .search-filters-mobile .search-row .form-group:nth-child(3) {
+    grid-column: 2;
+  }
+
+  /* Reorganize search row for mobile */
+  .search-filters-mobile .search-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .search-filters-mobile .search-row .form-group:first-child {
+    grid-column: 1 / -1; /* Search takes full width */
+  }
+
+  /* Filter row: Sort By and Order side-by-side */
+  .search-filters-mobile .filter-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  /* Larger touch targets for mobile */
+  .search-filters-mobile input,
+  .search-filters-mobile select {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .search-filters-mobile label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
   /* Items Grid */
   .items-grid {
     grid-template-columns: 1fr;
@@ -929,4 +1003,29 @@ body {
   .mobile-menu-toggle {
     font-size: 1.25rem;
   }
+}
+
+/* Mobile Menu Buttons Side-by-Side */
+.mobile-menu-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.mobile-menu-buttons .navbar-submenu,
+.mobile-menu-buttons .navbar-settings-link {
+  margin: 0;
+}
+
+.navbar-settings-link {
+  display: block;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.navbar-settings-link:hover {
+  background: rgba(255, 255, 255, 0.15);
 }

@@ -1,7 +1,7 @@
 /* Mobile Landing Page */
 .mobile-landing {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f5f5f5;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -10,7 +10,7 @@
 .mobile-landing-header {
   text-align: center;
   padding: 40px 20px 20px;
-  color: white;
+  color: #2c3e50;
 }
 
 .mobile-landing-logo {
@@ -19,20 +19,19 @@
   border-radius: 20px;
   margin: 0 auto 20px;
   display: block;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .mobile-landing-title {
   font-size: 28px;
   font-weight: 700;
   margin: 0 0 8px;
-  color: white;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  color: #2c3e50;
 }
 
 .mobile-landing-subtitle {
   font-size: 16px;
-  color: rgba(255, 255, 255, 0.9);
+  color: #7f8c8d;
   margin: 0;
 }
 
@@ -130,7 +129,7 @@
 
 .mobile-landing-footer-text {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
+  color: #95a5a6;
   margin: 0;
   line-height: 1.5;
 }
