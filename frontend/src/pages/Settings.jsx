@@ -40,9 +40,13 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
 
+  // Version info
+  const [versionInfo, setVersionInfo] = useState(null);
+
   useEffect(() => {
     loadSettings();
     loadUserSettings();
+    loadVersionInfo();
     if (user && user.role === 'admin') {
       loadBackupInfo();
       loadSystemSettings();
@@ -77,6 +81,16 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
       }
     } catch (err) {
       console.error('Failed to load user settings:', err);
+    }
+  };
+
+  const loadVersionInfo = async () => {
+    try {
+      const response = await fetch('/version.json');
+      const data = await response.json();
+      setVersionInfo(data);
+    } catch (err) {
+      console.error('Failed to load version info:', err);
     }
   };
 
@@ -554,11 +568,44 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
       <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
         <h3 style={{ marginBottom: '1rem' }}>About</h3>
         <p style={{ color: '#7f8c8d' }}>
-          <strong>Freezer Inventory Tracker</strong> - MVP Version
+          <strong>Freezer Inventory Tracker</strong>
         </p>
         <p style={{ color: '#7f8c8d', marginTop: '0.5rem' }}>
           Track your freezer inventory with ease. Add items with simple codes and never lose track of what's in your freezer.
         </p>
+
+        {versionInfo && (
+          <div style={{
+            marginTop: '1.5rem',
+            padding: '1rem',
+            background: '#f8f9fa',
+            borderRadius: '4px',
+            border: '1px solid #e9ecef',
+            fontSize: '0.9rem'
+          }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.5rem 1rem', color: '#7f8c8d' }}>
+              <strong>Version:</strong>
+              <span>v{versionInfo.version}</span>
+
+              {isDev && (
+                <>
+                  <strong>Commit:</strong>
+                  <span style={{ fontFamily: 'monospace' }}>{versionInfo.commitShort}</span>
+
+                  <strong>Branch:</strong>
+                  <span style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                    {versionInfo.branch.length > 40
+                      ? versionInfo.branch.substring(0, 40) + '...'
+                      : versionInfo.branch}
+                  </span>
+                </>
+              )}
+
+              <strong>Build Date:</strong>
+              <span>{new Date(versionInfo.buildDate).toLocaleString()}</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
