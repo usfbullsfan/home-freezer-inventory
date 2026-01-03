@@ -872,6 +872,15 @@ body {
   vertical-align: middle;
 }
 
+/* Larger logo on desktop */
+@media (min-width: 769px) {
+  .navbar-logo {
+    width: 30px;
+    height: 30px;
+    border-radius: 5px;
+  }
+}
+
 /* Mobile Navbar Adjustments */
 .navbar-mobile {
   position: sticky;
