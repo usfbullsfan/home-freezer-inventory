@@ -26,8 +26,8 @@ function AppContent() {
   // Detect if running in development mode
   const isDev = import.meta.env.DEV;
 
+  // Initial user check on mount
   useEffect(() => {
-    // Check if user is logged in
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
 
@@ -40,15 +40,18 @@ function AppContent() {
         sessionStorage.removeItem('redirectAfterLogin');
         navigate(redirectUrl);
       }
-    } else {
-      // Not logged in - save current URL if it's not the home page
-      if (location.pathname !== '/') {
-        sessionStorage.setItem('redirectAfterLogin', location.pathname + location.search);
-      }
     }
 
     setLoading(false);
-  }, [location, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
+
+  // Save current URL for redirect after login
+  useEffect(() => {
+    if (!user && location.pathname !== '/') {
+      sessionStorage.setItem('redirectAfterLogin', location.pathname + location.search);
+    }
+  }, [location, user]);
 
   // Check mobile status and user preferences
   useEffect(() => {
@@ -56,7 +59,10 @@ function AppContent() {
       // Detect if mobile device
       const mobileDetected = isMobileDevice();
       const desktopRequested = isDesktopSiteRequested();
-      setIsMobile(mobileDetected && !desktopRequested);
+      const newIsMobile = mobileDetected && !desktopRequested;
+
+      // Only update if changed
+      setIsMobile(prev => prev === newIsMobile ? prev : newIsMobile);
 
       // If user is logged in, check their desktop interface preference
       if (user) {
@@ -65,9 +71,8 @@ function AppContent() {
           const settings = response.data;
           const desktopPref = settings.find(s => s.setting_name === 'use_desktop_interface');
 
-          if (desktopPref && desktopPref.setting_value === 'true') {
-            setUseDesktopInterface(true);
-          }
+          const shouldUseDesktop = desktopPref && desktopPref.setting_value === 'true';
+          setUseDesktopInterface(prev => prev === shouldUseDesktop ? prev : shouldUseDesktop);
         } catch (error) {
           console.error('Error fetching user preferences:', error);
         }
@@ -80,7 +85,8 @@ function AppContent() {
     const handleResize = () => {
       const mobileDetected = isMobileDevice();
       const desktopRequested = isDesktopSiteRequested();
-      setIsMobile(mobileDetected && !desktopRequested);
+      const newIsMobile = mobileDetected && !desktopRequested;
+      setIsMobile(prev => prev === newIsMobile ? prev : newIsMobile);
     };
 
     window.addEventListener('resize', handleResize);
