@@ -14,14 +14,24 @@ def create_app(test_config=None):
     # Configuration
     if test_config is None:
         # Production configuration
-        # Use absolute path for database to ensure it's always in the backend directory
         basedir = os.path.abspath(os.path.dirname(__file__))
 
-        # Allow environment-specific database paths
-        # Use DATABASE_PATH env var if set, otherwise default to freezer_inventory.db
-        db_filename = os.environ.get('DATABASE_PATH', 'freezer_inventory.db')
-        db_path = os.path.join(basedir, 'instance', db_filename)
-        app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+        # Database configuration - supports both SQLite and PostgreSQL
+        # Priority: DATABASE_URL > DATABASE_PATH (SQLite) > default SQLite
+        database_url = os.environ.get('DATABASE_URL')
+
+        if database_url:
+            # PostgreSQL or other database via DATABASE_URL
+            # Format: postgresql://username:password@host:port/database
+            app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+            print(f"Using database from DATABASE_URL: {database_url.split('@')[0]}@***")
+        else:
+            # SQLite (default)
+            # Use DATABASE_PATH env var if set, otherwise default to freezer_inventory.db
+            db_filename = os.environ.get('DATABASE_PATH', 'freezer_inventory.db')
+            db_path = os.path.join(basedir, 'instance', db_filename)
+            app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'dev-secret-key-change-in-production')
         app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max file size
@@ -56,10 +66,16 @@ def create_app(test_config=None):
     if not app.config.get('TESTING', False):
         with app.app_context():
             try:
-                # Print database location for debugging
-                db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
-                abs_db_path = os.path.abspath(db_path)
-                print(f"Database will be created at: {abs_db_path}")
+                # Print database info for debugging
+                db_uri = app.config['SQLALCHEMY_DATABASE_URI']
+                if db_uri.startswith('sqlite:///'):
+                    db_path = db_uri.replace('sqlite:///', '')
+                    abs_db_path = os.path.abspath(db_path)
+                    print(f"Database will be created at: {abs_db_path}")
+                else:
+                    # For PostgreSQL or other databases, show connection info (without password)
+                    safe_uri = db_uri.split('@')[0] + '@***' if '@' in db_uri else db_uri
+                    print(f"Connecting to database: {safe_uri}")
 
                 db.create_all()
                 print("Database tables created successfully")

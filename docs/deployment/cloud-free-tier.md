@@ -269,26 +269,21 @@ crontab -e
 
 For PostgreSQL instead of SQLite:
 
-1. **Create RDS Instance**:
-   - Engine: PostgreSQL
-   - Template: Free tier
-   - Instance: db.t3.micro (20 GB storage)
-   - Public access: No
-   - VPC: Same as EC2
+1. **Follow the [PostgreSQL Setup Guide](postgresql-setup.md#aws-rds)** for detailed instructions
 
-2. **Update Backend Configuration**:
+2. **Quick Setup**:
+   - Create RDS Instance (Engine: PostgreSQL, Template: Free tier)
+   - Get RDS endpoint
+   - Set DATABASE_URL in .env:
+     ```bash
+     DATABASE_URL=postgresql://username:password@rds-endpoint:5432/freezer_inventory
+     ```
+   - Run migration script if you have existing SQLite data:
+     ```bash
+     python migrate_sqlite_to_postgres.py
+     ```
 
-```bash
-# Install PostgreSQL adapter
-cd /opt/home-freezer-inventory/backend
-source venv/bin/activate
-pip install psycopg2-binary
-
-# Update .env
-echo "DATABASE_URL=postgresql://username:password@rds-endpoint:5432/freezer_inventory" >> .env
-```
-
-3. **Modify app.py** to use DATABASE_URL environment variable
+The application automatically detects DATABASE_URL and uses PostgreSQL.
 
 ---
 
@@ -385,29 +380,23 @@ crontab -e
 
 ### Cloud SQL (Optional)
 
-For PostgreSQL:
+For PostgreSQL instead of SQLite:
 
-1. **Create Cloud SQL Instance**:
-   - Database engine: PostgreSQL
-   - Instance ID: `freezer-inventory-db`
-   - Password: Set root password
-   - Region: Same as VM
-   - Machine type: Shared core (1 vCPU, 0.6 GB)
-   - Storage: 10 GB HDD
+1. **Follow the [PostgreSQL Setup Guide](postgresql-setup.md#gcp-cloud-sql)** for detailed instructions
 
-2. **Configure Connection**:
+2. **Quick Setup**:
+   - Create Cloud SQL Instance (PostgreSQL, Shared core)
+   - Install and run Cloud SQL Proxy
+   - Set DATABASE_URL in .env:
+     ```bash
+     DATABASE_URL=postgresql://postgres:password@localhost:5432/freezer_inventory
+     ```
+   - Run migration script if you have existing SQLite data:
+     ```bash
+     python migrate_sqlite_to_postgres.py
+     ```
 
-```bash
-# Install Cloud SQL Proxy
-wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O cloud_sql_proxy
-chmod +x cloud_sql_proxy
-sudo mv cloud_sql_proxy /usr/local/bin/
-
-# Run proxy
-cloud_sql_proxy -instances=PROJECT:REGION:INSTANCE=tcp:5432 &
-```
-
-3. **Update Backend**: Same as AWS RDS section
+The application automatically detects DATABASE_URL and uses PostgreSQL.
 
 ---
 
