@@ -766,3 +766,167 @@ body {
 .empty-state h3 {
   margin-bottom: 1rem;
 }
+
+/* ==========================================
+   Mobile-First Design Additions
+   ========================================== */
+
+/* Navbar Home Icon */
+.navbar-home-icon {
+  font-size: 1.5rem;
+  padding: 0.5rem;
+  margin-right: 0.5rem;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.navbar-home-icon:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  opacity: 1;
+}
+
+/* Mobile Navbar Adjustments */
+.navbar-mobile {
+  position: sticky;
+  top: 0;
+  z-index: 999;
+}
+
+/* Navbar Submenu (for "Manage") */
+.navbar-submenu {
+  position: relative;
+  list-style: none;
+}
+
+.navbar-submenu summary {
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  text-align: center;
+  user-select: none;
+}
+
+.navbar-submenu summary:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.navbar-submenu-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-left: 1rem;
+}
+
+.navbar-submenu-items a {
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.navbar-submenu-items a:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Hide details marker */
+.navbar-submenu summary::-webkit-details-marker,
+.navbar-submenu summary::marker {
+  display: none;
+}
+
+/* Print Labels Banner - Hide on Mobile */
+@media (max-width: 768px) {
+  .print-labels-banner {
+    display: none !important;
+  }
+}
+
+/* Mobile App Container */
+.app-mobile {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Touch-friendly improvements for mobile */
+@media (max-width: 768px) {
+  /* Ensure all interactive elements are at least 44px (iOS touch target minimum) */
+  button,
+  a,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  .btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Prevent text zoom on input focus (iOS) */
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  input[type="password"],
+  input[type="email"],
+  input[type="url"],
+  select,
+  textarea {
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+
+  /* Better mobile padding */
+  .container {
+    padding: 0.75rem;
+  }
+
+  /* Mobile-optimized cards */
+  .item-card {
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Mobile search/filter improvements */
+  .search-filters {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  /* Better mobile modals */
+  .modal {
+    border-radius: 16px 16px 0 0;
+    max-height: 85vh;
+  }
+
+  .modal-overlay {
+    align-items: flex-end;
+  }
+}
+
+/* PWA Safe Areas */
+@supports(padding: max(0px)) {
+  .app {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+
+  .navbar {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+}
+
+/* Mobile Landscape Optimizations */
+@media (max-height: 500px) and (orientation: landscape) {
+  .navbar h1 {
+    font-size: 1rem;
+  }
+
+  .mobile-menu-toggle {
+    font-size: 1.25rem;
+  }
+}
