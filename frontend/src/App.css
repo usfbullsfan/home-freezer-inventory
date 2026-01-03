@@ -930,3 +930,28 @@ body {
     font-size: 1.25rem;
   }
 }
+
+/* Mobile Menu Buttons Side-by-Side */
+.mobile-menu-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.mobile-menu-buttons .navbar-submenu,
+.mobile-menu-buttons .navbar-settings-link {
+  margin: 0;
+}
+
+.navbar-settings-link {
+  display: block;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.navbar-settings-link:hover {
+  background: rgba(255, 255, 255, 0.15);
+}

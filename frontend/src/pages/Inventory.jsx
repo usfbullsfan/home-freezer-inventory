@@ -45,6 +45,23 @@ function Inventory() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, setSearchParams]);
 
+  // Handle action parameter from URL (from mobile landing page)
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action) {
+      // Clear the action parameter
+      setSearchParams({});
+
+      // Trigger the appropriate modal
+      if (action === 'add') {
+        setShowAddModal(true);
+      } else if (action === 'scan') {
+        setShowQRScanner(true);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, setSearchParams]);
+
   useEffect(() => {
     loadCategories();
     loadItems();

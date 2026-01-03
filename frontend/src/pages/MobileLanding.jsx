@@ -62,12 +62,6 @@ const MobileLanding = () => {
           </button>
         ))}
       </div>
-
-      <div className="mobile-landing-footer">
-        <p className="mobile-landing-footer-text">
-          Swipe left on the menu to access Categories, Settings, and more
-        </p>
-      </div>
     </div>
   );
 };
