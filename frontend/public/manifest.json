@@ -1,6 +1,6 @@
 {
   "name": "Freezer App",
-  "short_name": "Freezer",
+  "short_name": "Freezer App",
   "description": "Track and manage your freezer inventory",
   "start_url": "/",
   "display": "standalone",

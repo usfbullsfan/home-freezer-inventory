@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
 import { clearSession } from './utils/sessionTracking';
-import { isMobileDevice, isDesktopSiteRequested } from './utils/deviceDetection';
+import { isMobileDevice, isDesktopSiteRequested, getLogoPath } from './utils/deviceDetection';
 import api from './services/api';
 
 import Login from './pages/Login';
@@ -124,7 +124,10 @@ function AppContent() {
                   🏠
                 </Link>
               )}
-              <h1>🧊 Freezer Inventory</h1>
+              <h1>
+                <img src={getLogoPath()} alt="Logo" className="navbar-logo" />
+                Freezer Inventory
+              </h1>
               <button
                 className="mobile-menu-toggle"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

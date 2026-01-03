@@ -42,7 +42,6 @@ const MobileLanding = () => {
       <div className="mobile-landing-header">
         <img src={getLogoPath()} alt="Logo" className="mobile-landing-logo" />
         <h1 className="mobile-landing-title">{getAppName()}</h1>
-        <p className="mobile-landing-subtitle">Quick access to your freezer</p>
       </div>
 
       <div className="mobile-landing-actions">

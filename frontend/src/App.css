@@ -863,6 +863,15 @@ body {
   opacity: 1;
 }
 
+/* Navbar Logo */
+.navbar-logo {
+  width: 32px;
+  height: 32px;
+  margin-right: 0.75rem;
+  border-radius: 6px;
+  vertical-align: middle;
+}
+
 /* Mobile Navbar Adjustments */
 .navbar-mobile {
   position: sticky;
@@ -1011,11 +1020,22 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
   width: 100%;
+  align-items: start;
 }
 
 .mobile-menu-buttons .navbar-submenu,
 .mobile-menu-buttons .navbar-settings-link {
   margin: 0;
+}
+
+/* Ensure submenu items don't break the grid layout */
+.mobile-menu-buttons .navbar-submenu {
+  grid-column: 1;
+}
+
+.mobile-menu-buttons .navbar-settings-link {
+  grid-column: 2;
+  grid-row: 1;
 }
 
 .navbar-settings-link {

@@ -10,7 +10,7 @@ export const updateManifest = () => {
 
   const manifest = {
     name: isDev ? 'Freezer App - Dev' : 'Freezer App',
-    short_name: isDev ? 'Freezer Dev' : 'Freezer',
+    short_name: isDev ? 'Freezer App - Dev' : 'Freezer App',
     description: 'Track and manage your freezer inventory',
     start_url: '/',
     display: 'standalone',
