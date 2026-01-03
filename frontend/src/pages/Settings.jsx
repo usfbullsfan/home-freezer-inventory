@@ -3,6 +3,7 @@ import { settingsAPI, authAPI } from '../services/api';
 import UserManagement from '../components/UserManagement';
 import ImportExport from '../components/ImportExport';
 import api from '../services/api';
+import { isMobileDevice } from '../utils/deviceDetection';
 
 function Settings({ user, isMobile = false, setUseDesktopInterface }) {
   const [settings, setSettings] = useState({
@@ -325,7 +326,7 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
           </small>
         </div>
 
-        {isMobile && (
+        {isMobileDevice() && (
           <div className="form-group" style={{ marginTop: '1.5rem' }}>
             <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
               <input

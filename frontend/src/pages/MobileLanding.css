@@ -2,30 +2,30 @@
 .mobile-landing {
   min-height: 100vh;
   background: #f5f5f5;
-  padding: 20px;
+  padding: 15px;
   display: flex;
   flex-direction: column;
 }
 
 .mobile-landing-header {
   text-align: center;
-  padding: 15px 20px 0;
+  padding: 10px 15px 0;
   color: #2c3e50;
 }
 
 .mobile-landing-logo {
-  width: 100px;
-  height: 100px;
-  border-radius: 20px;
-  margin: 0 auto 10px;
+  width: 80px;
+  height: 80px;
+  border-radius: 16px;
+  margin: 0 auto 8px;
   display: block;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
 }
 
 .mobile-landing-title {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
-  margin: 0 0 0 0;
+  margin: 0;
   color: #2c3e50;
 }
 
@@ -36,12 +36,10 @@
 }
 
 .mobile-landing-actions {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 5px 0;
-  justify-content: center;
+  gap: 12px;
+  padding: 12px 0 0 0;
 }
 
 .mobile-landing-button {
