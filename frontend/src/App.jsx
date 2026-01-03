@@ -148,7 +148,7 @@ function AppContent() {
                         <Link to="/print-labels" onClick={() => setMobileMenuOpen(false)}>Print Labels</Link>
                       </div>
                     </details>
-                    <Link to="/settings" className="navbar-settings-link" onClick={() => setMobileMenuOpen(false)}>Settings</Link>
+                    <Link to="/settings" className="navbar-settings-link" onClick={() => setMobileMenuOpen(false)}>⚙️ Settings</Link>
                   </div>
                 ) : (
                   // Desktop menu structure (unchanged)
