@@ -47,13 +47,11 @@ const InstallPrompt = () => {
     }
 
     try {
-      const response = await api.get('/settings/user');
-      const settings = response.data;
+      const response = await api.get('/auth/me');
+      const user = response.data;
 
-      // Find the install_prompt_dismissed setting
-      const dismissed = settings.find(s => s.setting_name === 'install_prompt_dismissed');
-
-      if (dismissed && dismissed.setting_value === 'true') {
+      // Check if user has dismissed the prompt
+      if (user.pwa_install_dismissed) {
         // Sync to localStorage
         localStorage.setItem('install_prompt_dismissed', 'true');
         return; // Don't show prompt
@@ -99,9 +97,8 @@ const InstallPrompt = () => {
 
     // Also save to database for persistence across devices
     try {
-      await api.post('/settings/user', {
-        setting_name: 'install_prompt_dismissed',
-        setting_value: 'true'
+      await api.patch('/auth/me', {
+        pwa_install_dismissed: true
       });
     } catch (error) {
       console.error('Error saving install prompt dismissal:', error);
