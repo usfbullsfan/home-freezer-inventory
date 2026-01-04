@@ -190,7 +190,9 @@ def register_complete():
         })
 
     except Exception as e:
-        return jsonify({'error': f'Verification failed: {str(e)}'}), 400
+        # Log the full error for debugging, but don't expose to user
+        print(f'Passkey registration verification error: {str(e)}')
+        return jsonify({'error': 'Passkey registration failed. Please try again.'}), 400
 
 
 # ==================== AUTHENTICATION ====================
@@ -350,7 +352,9 @@ def login_complete():
         })
 
     except Exception as e:
-        return jsonify({'error': f'Authentication failed: {str(e)}'}), 400
+        # Log the full error for debugging, but don't expose to user
+        print(f'Passkey authentication error: {str(e)}')
+        return jsonify({'error': 'Passkey authentication failed. Please try again.'}), 400
 
 
 # ==================== RECOVERY CODES ====================
