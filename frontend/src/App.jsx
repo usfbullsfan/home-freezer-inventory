@@ -1,18 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
 import { clearSession } from './utils/sessionTracking';
 import { isMobileDevice, isDesktopSiteRequested, getLogoPath } from './utils/deviceDetection';
 import api from './services/api';
 
-import Login from './pages/Login';
-import Inventory from './pages/Inventory';
-import Categories from './pages/Categories';
-import PrintLabels from './pages/PrintLabels';
-import Settings from './pages/Settings';
-import QRRedirect from './pages/QRRedirect';
-import MobileLanding from './pages/MobileLanding';
-import InstallPrompt from './components/InstallPrompt';
+// Lazy load route components for better code splitting
+const Login = lazy(() => import('./pages/Login'));
+const Inventory = lazy(() => import('./pages/Inventory'));
+const Categories = lazy(() => import('./pages/Categories'));
+const PrintLabels = lazy(() => import('./pages/PrintLabels'));
+const Settings = lazy(() => import('./pages/Settings'));
+const QRRedirect = lazy(() => import('./pages/QRRedirect'));
+const MobileLanding = lazy(() => import('./pages/MobileLanding'));
+const InstallPrompt = lazy(() => import('./components/InstallPrompt'));
 
 function AppContent() {
   const [user, setUser] = useState(null);
@@ -111,11 +112,17 @@ function AppContent() {
   return (
     <>
       {!user ? (
-        <Login setUser={setUser} />
+        <Suspense fallback={<div className="loading">Loading...</div>}>
+          <Login setUser={setUser} />
+        </Suspense>
       ) : (
         <div className={`app ${showMobileInterface ? 'app-mobile' : ''}`}>
           {/* Install Prompt for mobile users */}
-          {showMobileInterface && <InstallPrompt />}
+          {showMobileInterface && (
+            <Suspense fallback={null}>
+              <InstallPrompt />
+            </Suspense>
+          )}
 
           {isDev && (
             <div className="dev-banner">
@@ -175,31 +182,33 @@ function AppContent() {
             </div>
           </nav>
 
-          <Routes>
-            {showMobileInterface ? (
-              // Mobile routes
-              <>
-                <Route path="/home" element={<MobileLanding />} />
-                <Route path="/" element={<Navigate to="/home" replace />} />
-                <Route path="/inventory" element={<Inventory isMobile={true} />} />
-                <Route path="/item/:qrCode" element={<QRRedirect />} />
-                <Route path="/categories" element={<Categories />} />
-                <Route path="/print-labels" element={<PrintLabels />} />
-                <Route path="/settings" element={<Settings user={user} isMobile={true} setUseDesktopInterface={setUseDesktopInterface} />} />
-                <Route path="*" element={<Navigate to="/home" />} />
-              </>
-            ) : (
-              // Desktop routes (unchanged)
-              <>
-                <Route path="/" element={<Inventory />} />
-                <Route path="/item/:qrCode" element={<QRRedirect />} />
-                <Route path="/categories" element={<Categories />} />
-                <Route path="/print-labels" element={<PrintLabels />} />
-                <Route path="/settings" element={<Settings user={user} />} />
-                <Route path="*" element={<Navigate to="/" />} />
-              </>
-            )}
-          </Routes>
+          <Suspense fallback={<div className="loading">Loading...</div>}>
+            <Routes>
+              {showMobileInterface ? (
+                // Mobile routes
+                <>
+                  <Route path="/home" element={<MobileLanding />} />
+                  <Route path="/" element={<Navigate to="/home" replace />} />
+                  <Route path="/inventory" element={<Inventory isMobile={true} />} />
+                  <Route path="/item/:qrCode" element={<QRRedirect />} />
+                  <Route path="/categories" element={<Categories />} />
+                  <Route path="/print-labels" element={<PrintLabels />} />
+                  <Route path="/settings" element={<Settings user={user} isMobile={true} setUseDesktopInterface={setUseDesktopInterface} />} />
+                  <Route path="*" element={<Navigate to="/home" />} />
+                </>
+              ) : (
+                // Desktop routes (unchanged)
+                <>
+                  <Route path="/" element={<Inventory />} />
+                  <Route path="/item/:qrCode" element={<QRRedirect />} />
+                  <Route path="/categories" element={<Categories />} />
+                  <Route path="/print-labels" element={<PrintLabels />} />
+                  <Route path="/settings" element={<Settings user={user} />} />
+                  <Route path="*" element={<Navigate to="/" />} />
+                </>
+              )}
+            </Routes>
+          </Suspense>
         </div>
       )}
     </>
