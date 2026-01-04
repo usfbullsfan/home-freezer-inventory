@@ -457,8 +457,8 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
             marginBottom: '1rem',
             border: '1px solid #e0e0e0'
           }}>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem' }}>
-              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.35rem' }}>
+              <div className="form-group" style={{ flex: 1, marginBottom: 0, minWidth: 0 }}>
                 <label htmlFor="upc" style={{ fontSize: '0.9rem', marginBottom: '0.35rem' }}>
                   UPC/Barcode (optional)
                 </label>
@@ -477,7 +477,9 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
                     fontSize: '1rem',
                     letterSpacing: '1px',
                     fontFamily: 'monospace',
-                    minWidth: 0
+                    width: '100%',
+                    minWidth: 0,
+                    boxSizing: 'border-box'
                   }}
                 />
               </div>
@@ -486,11 +488,14 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
                 className="btn btn-success"
                 onClick={() => setShowBarcodeScanner(true)}
                 style={{
-                  padding: upcFieldFocused ? '0.65rem 0.4rem' : '0.65rem 1rem',
-                  fontSize: upcFieldFocused ? '1.1rem' : '0.9rem',
+                  padding: '0.65rem',
+                  fontSize: '1.1rem',
                   transition: 'all 0.2s ease',
-                  minWidth: upcFieldFocused ? 'auto' : '80px',
-                  flexShrink: 0
+                  width: upcFieldFocused ? '40px' : 'auto',
+                  minWidth: upcFieldFocused ? '40px' : '70px',
+                  flexShrink: 0,
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap'
                 }}
                 title="Scan barcode"
               >
@@ -502,11 +507,14 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
                 onClick={handleLookupUPC}
                 disabled={upcLookupLoading || !formData.upc}
                 style={{
-                  padding: upcFieldFocused ? '0.65rem 0.4rem' : '0.65rem 1rem',
-                  fontSize: upcFieldFocused ? '1.1rem' : '0.9rem',
+                  padding: '0.65rem',
+                  fontSize: '1.1rem',
                   transition: 'all 0.2s ease',
-                  minWidth: upcFieldFocused ? 'auto' : '90px',
-                  flexShrink: 0
+                  width: upcFieldFocused ? '40px' : 'auto',
+                  minWidth: upcFieldFocused ? '40px' : '80px',
+                  flexShrink: 0,
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap'
                 }}
                 title="Lookup UPC"
               >
