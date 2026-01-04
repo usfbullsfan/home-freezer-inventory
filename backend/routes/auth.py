@@ -8,8 +8,11 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/register', methods=['POST'])
 @jwt_required()
 def register():
-    """Register a new user (admin only)"""
+    """Register a new user (admin only) - generates activation code for passkey enrollment"""
     from flask_jwt_extended import get_jwt
+    import secrets
+    import string
+
     claims = get_jwt()
 
     if claims.get('role') != 'admin':
@@ -17,8 +20,8 @@ def register():
 
     data = request.get_json()
 
-    if not data or not data.get('username') or not data.get('password'):
-        return jsonify({'error': 'Username and password required'}), 400
+    if not data or not data.get('username'):
+        return jsonify({'error': 'Username required'}), 400
 
     # Normalize username to lowercase for case-insensitive matching
     username_lower = data['username'].lower()
@@ -26,19 +29,58 @@ def register():
     if User.query.filter_by(username=username_lower).first():
         return jsonify({'error': 'Username already exists'}), 400
 
+    # Generate activation code (8 characters: uppercase letters + digits)
+    activation_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+
     user = User(
         username=username_lower,
-        role=data.get('role', 'user')  # Default to 'user' role
+        role=data.get('role', 'user'),  # Default to 'user' role
+        activation_code=activation_code,
+        activated=False
     )
-    user.set_password(data['password'])
+    # Set a random password placeholder (won't be used with passkeys)
+    user.set_password(secrets.token_urlsafe(32))
 
     db.session.add(user)
     db.session.commit()
 
     return jsonify({
-        'message': 'User created successfully',
-        'user': user.to_dict()
+        'message': 'User created successfully. Share the activation code with the user for passkey enrollment.',
+        'user': user.to_dict(),
+        'activation_code': activation_code  # Only returned once!
     }), 201
+
+
+@auth_bp.route('/activate', methods=['POST'])
+def activate():
+    """Activate account with one-time activation code and enroll passkey"""
+    data = request.get_json()
+
+    if not data or not data.get('activation_code'):
+        return jsonify({'error': 'Activation code required'}), 400
+
+    # Find user with this activation code
+    user = User.query.filter_by(activation_code=data['activation_code'], activated=False).first()
+
+    if not user:
+        return jsonify({'error': 'Invalid or already used activation code'}), 401
+
+    # Mark as activated and clear the activation code
+    user.activated = True
+    user.activation_code = None  # Clear code after use
+    db.session.commit()
+
+    # Create token for passkey registration (24 hour expiration)
+    access_token = create_access_token(
+        identity=str(user.id),
+        expires_delta=timedelta(hours=24),
+        additional_claims={'role': user.role, 'username': user.username}
+    )
+
+    return jsonify({
+        'token': access_token,
+        'user': user.to_dict()
+    }), 200
 
 
 @auth_bp.route('/login', methods=['POST'])
