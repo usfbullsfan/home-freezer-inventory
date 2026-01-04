@@ -4,7 +4,7 @@
  */
 
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
-import api from './api';
+import api from '../services/api';
 
 /**
  * Register a new passkey for a user
