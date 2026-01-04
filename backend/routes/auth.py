@@ -83,27 +83,6 @@ def get_current_user():
     return jsonify(user.to_dict()), 200
 
 
-@auth_bp.route('/me', methods=['PATCH'])
-@jwt_required()
-def update_current_user():
-    """Update current user settings"""
-    current_user_id = int(get_jwt_identity())
-    user = db.session.get(User, current_user_id)
-
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-
-    data = request.get_json()
-
-    # Only allow updating specific fields
-    if 'pwa_install_dismissed' in data:
-        user.pwa_install_dismissed = data['pwa_install_dismissed']
-
-    db.session.commit()
-
-    return jsonify(user.to_dict()), 200
-
-
 @auth_bp.route('/users', methods=['GET'])
 @jwt_required()
 def get_users():

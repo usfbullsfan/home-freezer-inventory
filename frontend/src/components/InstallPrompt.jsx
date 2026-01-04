@@ -40,32 +40,21 @@ const InstallPrompt = () => {
   }, []);
 
   const checkIfDismissed = async () => {
-    // First check localStorage for quick dismissal check
-    const localDismissed = localStorage.getItem('install_prompt_dismissed');
-    if (localDismissed === 'true') {
-      return; // Don't show prompt
-    }
-
     try {
-      const response = await api.get('/auth/me');
-      const user = response.data;
+      const response = await api.get('/settings/user');
+      const settings = response.data;
 
-      // Check if user has dismissed the prompt
-      if (user.pwa_install_dismissed) {
-        // Sync to localStorage
-        localStorage.setItem('install_prompt_dismissed', 'true');
-        return; // Don't show prompt
-      }
+      // Find the install_prompt_dismissed setting
+      const dismissed = settings.find(s => s.setting_name === 'install_prompt_dismissed');
 
-      // Show prompt after a short delay (give user time to orient)
-      setTimeout(() => setShowPrompt(true), 3000);
-    } catch (error) {
-      console.error('Error checking install prompt status:', error);
-      // Don't show prompt if API fails (user likely not logged in)
-      // Only show on first visit (no localStorage entry)
-      if (!localDismissed) {
+      if (!dismissed || dismissed.setting_value === 'false') {
+        // Show prompt after a short delay (give user time to orient)
         setTimeout(() => setShowPrompt(true), 3000);
       }
+    } catch (error) {
+      console.error('Error checking install prompt status:', error);
+      // Show prompt anyway if we can't check
+      setTimeout(() => setShowPrompt(true), 3000);
     }
   };
 
@@ -92,17 +81,14 @@ const InstallPrompt = () => {
   const handleClose = async () => {
     setShowPrompt(false);
 
-    // Save to localStorage immediately for instant effect
-    localStorage.setItem('install_prompt_dismissed', 'true');
-
-    // Also save to database for persistence across devices
+    // Mark as dismissed in the database
     try {
-      await api.patch('/auth/me', {
-        pwa_install_dismissed: true
+      await api.post('/settings/user', {
+        setting_name: 'install_prompt_dismissed',
+        setting_value: 'true'
       });
     } catch (error) {
       console.error('Error saving install prompt dismissal:', error);
-      // localStorage will still prevent re-showing on this device
     }
   };
 
