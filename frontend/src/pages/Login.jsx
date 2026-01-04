@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { authAPI } from '../services/api';
 import { loginWithPasskey, registerPasskey, supportsPasskeys, generateRecoveryCodes } from '../utils/passkey';
-import './Login.css';
+import '../App.css';
 
 function Login({ setUser }) {
   const [username, setUsername] = useState('');
