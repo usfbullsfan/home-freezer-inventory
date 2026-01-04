@@ -2,14 +2,19 @@ import { useState, useEffect } from 'react';
 import { settingsAPI, authAPI } from '../services/api';
 import UserManagement from '../components/UserManagement';
 import ImportExport from '../components/ImportExport';
+import api from '../services/api';
+import { isMobileDevice } from '../utils/deviceDetection';
 
-function Settings({ user }) {
+function Settings({ user, isMobile = false, setUseDesktopInterface }) {
   const [settings, setSettings] = useState({
     track_history: 'true',
   });
   const [systemSettings, setSystemSettings] = useState({
     enable_image_fetching: 'true',
     no_auth_mode: 'false',
+  });
+  const [userSettings, setUserSettings] = useState({
+    use_desktop_interface: 'false',
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -36,8 +41,13 @@ function Settings({ user }) {
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
 
+  // Version info
+  const [versionInfo, setVersionInfo] = useState(null);
+
   useEffect(() => {
     loadSettings();
+    loadUserSettings();
+    loadVersionInfo();
     if (user && user.role === 'admin') {
       loadBackupInfo();
       loadSystemSettings();
@@ -58,6 +68,33 @@ function Settings({ user }) {
     }
   };
 
+  const loadUserSettings = async () => {
+    try {
+      const response = await api.get('/settings/user');
+      const settings = response.data;
+      const desktopPref = settings.find(s => s.setting_name === 'use_desktop_interface');
+
+      if (desktopPref) {
+        setUserSettings({
+          ...userSettings,
+          use_desktop_interface: desktopPref.setting_value,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load user settings:', err);
+    }
+  };
+
+  const loadVersionInfo = async () => {
+    try {
+      const response = await fetch('/version.json');
+      const data = await response.json();
+      setVersionInfo(data);
+    } catch (err) {
+      console.error('Failed to load version info:', err);
+    }
+  };
+
   const handleSaveSettings = async () => {
     setError('');
     setSuccess('');
@@ -67,6 +104,46 @@ function Settings({ user }) {
       setSuccess('Settings saved successfully');
     } catch (err) {
       setError('Failed to save settings');
+    }
+  };
+
+  const handleDesktopInterfaceToggle = async (enabled) => {
+    setError('');
+    setSuccess('');
+
+    try {
+      // Update in database
+      const response = await api.post('/settings/user', {
+        setting_name: 'use_desktop_interface',
+        setting_value: enabled ? 'true' : 'false',
+      });
+
+      // Update local state
+      setUserSettings({
+        ...userSettings,
+        use_desktop_interface: enabled ? 'true' : 'false',
+      });
+
+      // Update parent component state to trigger interface change
+      if (setUseDesktopInterface) {
+        setUseDesktopInterface(enabled);
+      }
+
+      setSuccess(enabled ? 'Desktop interface enabled. Page will reload.' : 'Mobile interface enabled. Page will reload.');
+
+      // Reload page after a short delay to apply changes
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
+      setError(`Failed to update interface preference: ${errorMsg}`);
+      console.error('Desktop interface toggle error:', {
+        error: err,
+        response: err.response,
+        data: err.response?.data,
+        status: err.response?.status
+      });
     }
   };
 
@@ -248,6 +325,23 @@ function Settings({ user }) {
             When enabled, items marked as consumed or thrown out will be kept in the database for historical tracking
           </small>
         </div>
+
+        {isMobileDevice() && (
+          <div className="form-group" style={{ marginTop: '1.5rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={userSettings.use_desktop_interface === 'true'}
+                onChange={(e) => handleDesktopInterfaceToggle(e.target.checked)}
+                style={{ marginRight: '0.5rem', width: 'auto' }}
+              />
+              Use desktop interface on mobile
+            </label>
+            <small style={{ color: '#7f8c8d', marginLeft: '1.5rem', display: 'block', marginTop: '0.25rem' }}>
+              When enabled, you'll see the full desktop interface instead of the simplified mobile experience. Page will reload when changed.
+            </small>
+          </div>
+        )}
 
         <button
           className="btn btn-primary"
@@ -481,11 +575,44 @@ function Settings({ user }) {
       <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
         <h3 style={{ marginBottom: '1rem' }}>About</h3>
         <p style={{ color: '#7f8c8d' }}>
-          <strong>Freezer Inventory Tracker</strong> - MVP Version
+          <strong>Freezer Inventory Tracker</strong>
         </p>
         <p style={{ color: '#7f8c8d', marginTop: '0.5rem' }}>
           Track your freezer inventory with ease. Add items with simple codes and never lose track of what's in your freezer.
         </p>
+
+        {versionInfo && (
+          <div style={{
+            marginTop: '1.5rem',
+            padding: '1rem',
+            background: '#f8f9fa',
+            borderRadius: '4px',
+            border: '1px solid #e9ecef',
+            fontSize: '0.9rem'
+          }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.5rem 1rem', color: '#7f8c8d' }}>
+              <strong>Version:</strong>
+              <span>v{versionInfo.version}</span>
+
+              {isDev && (
+                <>
+                  <strong>Commit:</strong>
+                  <span style={{ fontFamily: 'monospace' }}>{versionInfo.commitShort}</span>
+
+                  <strong>Branch:</strong>
+                  <span style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                    {versionInfo.branch.length > 40
+                      ? versionInfo.branch.substring(0, 40) + '...'
+                      : versionInfo.branch}
+                  </span>
+                </>
+              )}
+
+              <strong>Build Date:</strong>
+              <span>{new Date(versionInfo.buildDate).toLocaleString()}</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

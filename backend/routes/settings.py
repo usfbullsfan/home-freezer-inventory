@@ -58,6 +58,53 @@ def update_settings():
     return jsonify({'message': 'Settings updated successfully'}), 200
 
 
+@settings_bp.route('/user', methods=['GET'])
+@jwt_required()
+def get_user_settings():
+    """Get all settings for current user (returns array format for mobile preferences)"""
+    current_user_id = int(get_jwt_identity())
+    settings = Setting.query.filter_by(user_id=current_user_id).all()
+
+    # Return as array of objects
+    return jsonify([{
+        'setting_name': s.setting_name,
+        'setting_value': s.setting_value
+    } for s in settings]), 200
+
+
+@settings_bp.route('/user', methods=['POST'])
+@jwt_required()
+def update_user_setting():
+    """Update a single setting for current user"""
+    current_user_id = int(get_jwt_identity())
+    data = request.get_json()
+
+    if not data or 'setting_name' not in data or 'setting_value' not in data:
+        return jsonify({'error': 'setting_name and setting_value required'}), 400
+
+    setting_name = data['setting_name']
+    setting_value = data['setting_value']
+
+    setting = Setting.query.filter_by(
+        user_id=current_user_id,
+        setting_name=setting_name
+    ).first()
+
+    if setting:
+        setting.setting_value = str(setting_value)
+    else:
+        setting = Setting(
+            user_id=current_user_id,
+            setting_name=setting_name,
+            setting_value=str(setting_value)
+        )
+        db.session.add(setting)
+
+    db.session.commit()
+
+    return jsonify({'message': 'Setting updated successfully'}), 200
+
+
 @settings_bp.route('/purge-history', methods=['POST'])
 @jwt_required()
 def purge_history():

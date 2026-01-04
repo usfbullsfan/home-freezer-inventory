@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { itemsAPI, categoriesAPI } from '../services/api';
 import ItemCard from '../components/ItemCard';
 import AddItemModal from '../components/AddItemModal';
@@ -7,12 +7,13 @@ import QRInputModal from '../components/QRInputModal';
 import QRScanner from '../components/QRScanner';
 import SessionBanner from '../components/SessionBanner';
 
-function Inventory() {
+function Inventory({ isMobile = false }) {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   // Detect if running in development mode
   const isDev = import.meta.env.DEV;
@@ -41,6 +42,23 @@ function Inventory() {
       setSearchParams({});
       // Look up the item by QR code (same as "Locate Item by Code" button)
       handleQRSubmit(qrCode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, setSearchParams]);
+
+  // Handle action parameter from URL (from mobile landing page)
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action) {
+      // Clear the action parameter
+      setSearchParams({});
+
+      // Trigger the appropriate modal
+      if (action === 'add') {
+        setShowAddModal(true);
+      } else if (action === 'scan') {
+        setShowQRScanner(true);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, setSearchParams]);
@@ -261,16 +279,20 @@ function Inventory() {
             </p>
           )}
         </div>
+        {!isMobile && (
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <button className="btn btn-secondary" onClick={() => setShowQRModal(true)}>
+              🔍 Locate Item by Code
+            </button>
+            <button className="btn btn-secondary" onClick={() => setShowQRScanner(true)}>
+              📷 Scan QR Code
+            </button>
+            <button className="btn btn-success" onClick={handleAddItem}>
+              ➕ Add Item
+            </button>
+          </div>
+        )}
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <button className="btn btn-secondary" onClick={() => setShowQRModal(true)}>
-            🔍 Locate Item by Code
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowQRScanner(true)}>
-            📷 Scan QR Code
-          </button>
-          <button className="btn btn-success" onClick={handleAddItem}>
-            ➕ Add Item
-          </button>
           {isDev && (
             <>
               <button
@@ -291,7 +313,7 @@ function Inventory() {
         </div>
       </div>
 
-      <div className="search-filters">
+      <div className={`search-filters ${isMobile ? 'search-filters-mobile' : ''}`}>
         <div className="search-row">
           <div className="form-group">
             <label>Search</label>
@@ -378,6 +400,10 @@ function Inventory() {
           onClose={() => {
             setShowAddModal(false);
             setEditingItem(null);
+            // Navigate back to landing page on mobile
+            if (isMobile) {
+              navigate('/home');
+            }
           }}
           onSave={handleItemSaved}
           onCategoryCreated={loadCategories}
@@ -386,14 +412,26 @@ function Inventory() {
 
       {showQRModal && (
         <QRInputModal
-          onClose={() => setShowQRModal(false)}
+          onClose={() => {
+            setShowQRModal(false);
+            // Navigate back to landing page on mobile
+            if (isMobile) {
+              navigate('/home');
+            }
+          }}
           onSubmit={handleQRSubmit}
         />
       )}
 
       {showQRScanner && (
         <QRScanner
-          onClose={() => setShowQRScanner(false)}
+          onClose={() => {
+            setShowQRScanner(false);
+            // Navigate back to landing page on mobile
+            if (isMobile) {
+              navigate('/home');
+            }
+          }}
           onScan={(item) => {
             setShowQRScanner(false);
             setEditingItem(item);
