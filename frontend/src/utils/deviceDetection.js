@@ -67,7 +67,9 @@ export const getAppName = () => {
  * @returns {string} Logo path
  */
 export const getLogoPath = () => {
-  return isDevEnvironment() ? '/logo-dev-192.png' : '/logo-192.png';
+  // Cache-busting version - update when logos change
+  const logoVersion = 'v2';
+  return isDevEnvironment() ? `/logo-dev-192.png?${logoVersion}` : `/logo-192.png?${logoVersion}`;
 };
 
 /**

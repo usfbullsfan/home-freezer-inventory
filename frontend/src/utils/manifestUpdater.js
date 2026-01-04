@@ -8,6 +8,9 @@ export const updateManifest = () => {
                 window.location.hostname === 'localhost' ||
                 window.location.hostname === '127.0.0.1';
 
+  // Cache-busting version - update this when logos change
+  const logoVersion = 'v2';
+
   const manifest = {
     name: isDev ? 'Freezer App - Dev' : 'Freezer App',
     short_name: isDev ? 'Freezer App - Dev' : 'Freezer App',
@@ -19,13 +22,13 @@ export const updateManifest = () => {
     orientation: 'portrait-primary',
     icons: [
       {
-        src: isDev ? '/logo-dev-192.png' : '/logo-192.png',
+        src: isDev ? `/logo-dev-192.png?${logoVersion}` : `/logo-192.png?${logoVersion}`,
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any maskable'
       },
       {
-        src: isDev ? '/logo-dev-512.png' : '/logo-512.png',
+        src: isDev ? `/logo-dev-512.png?${logoVersion}` : `/logo-512.png?${logoVersion}`,
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any maskable'
@@ -58,14 +61,14 @@ export const updateManifest = () => {
     themeColor.setAttribute('content', manifest.theme_color);
   }
 
-  // Update favicon and apple touch icon
+  // Update favicon and apple touch icon with cache-busting
   const favicon = document.querySelector('link[rel="icon"]');
   if (favicon) {
-    favicon.href = isDev ? '/logo-dev-192.png' : '/logo-192.png';
+    favicon.href = isDev ? `/logo-dev-192.png?${logoVersion}` : `/logo-192.png?${logoVersion}`;
   }
 
   const appleTouchIcon = document.querySelector('link[rel="apple-touch-icon"]');
   if (appleTouchIcon) {
-    appleTouchIcon.href = isDev ? '/logo-dev-192.png' : '/logo-192.png';
+    appleTouchIcon.href = isDev ? `/logo-dev-192.png?${logoVersion}` : `/logo-192.png?${logoVersion}`;
   }
 };
