@@ -59,3 +59,8 @@ backend/uploads/category_images/*
 # Backups
 backend/*.db.backup_*
 frontend/package-lock*.json
+
+# Database migration temporary files
+check_db.py
+run_migration.py
+*.db.bak
