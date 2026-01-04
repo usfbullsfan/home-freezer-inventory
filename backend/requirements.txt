@@ -14,3 +14,4 @@ psycopg2-binary==2.9.10  # PostgreSQL adapter (optional, for PostgreSQL support)
 pytest==9.0.2
 pytest-flask==1.3.0
 pytest-cov==7.0.0
+webauthn==2.2.0
