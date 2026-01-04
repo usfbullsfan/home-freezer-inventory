@@ -6,9 +6,10 @@ import './Login.css';
 function Login({ setUser }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [activationCode, setActivationCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState('passkey'); // 'passkey', 'password', 'register'
+  const [mode, setMode] = useState('passkey'); // 'passkey', 'password', 'activate'
   const [recoveryCodes, setRecoveryCodes] = useState(null);
   const [showRecoveryCodes, setShowRecoveryCodes] = useState(false);
 
@@ -55,14 +56,14 @@ function Login({ setUser }) {
     setLoading(false);
   };
 
-  const handleRegister = async (e) => {
+  const handleActivate = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      // Step 1: Create user account (no password!)
-      const response = await authAPI.signup(username);
+      // Step 1: Activate account with activation code
+      const response = await authAPI.activate(activationCode);
       const { token, user } = response.data;
 
       // Store token temporarily
@@ -70,10 +71,10 @@ function Login({ setUser }) {
       localStorage.setItem('user', JSON.stringify(user));
 
       // Step 2: Register passkey
-      const passkeyResult = await registerPasskey(username);
+      const passkeyResult = await registerPasskey(user.username);
 
       if (!passkeyResult.success) {
-        setError('Account created but passkey registration failed. Please try adding a passkey in Settings.');
+        setError('Account activated but passkey registration failed. Please try adding a passkey in Settings.');
         setUser(user);
         setLoading(false);
         return;
@@ -89,7 +90,7 @@ function Login({ setUser }) {
 
       setUser(user);
     } catch (err) {
-      setError(err.response?.data?.error || 'Registration failed');
+      setError(err.response?.data?.error || 'Activation failed');
     }
 
     setLoading(false);
@@ -183,12 +184,12 @@ function Login({ setUser }) {
 
             <div style={{ textAlign: 'center', color: '#666', marginBottom: '1rem' }}>
               <small>
-                New user? <button
-                  onClick={() => setMode('register')}
+                Have an activation code? <button
+                  onClick={() => setMode('activate')}
                   className="link-button"
                   disabled={loading}
                 >
-                  Create Account
+                  Activate Account
                 </button>
               </small>
             </div>
@@ -257,24 +258,25 @@ function Login({ setUser }) {
             )}
           </form>
         ) : (
-          // Registration
-          <form onSubmit={handleRegister}>
-            <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Create Account</h2>
+          // Activation
+          <form onSubmit={handleActivate}>
+            <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Activate Account</h2>
             <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1rem', textAlign: 'center' }}>
-              Secure your account with a passkey (Face ID, fingerprint, etc.)
+              Enter the activation code provided by your administrator to set up your passkey
             </p>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label htmlFor="username-reg">Username</label>
+              <label htmlFor="activation-code">Activation Code</label>
               <input
                 type="text"
-                id="username-reg"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="activation-code"
+                value={activationCode}
+                onChange={(e) => setActivationCode(e.target.value.toUpperCase())}
                 required
                 disabled={loading}
-                style={{ width: '100%' }}
-                placeholder="Choose a username"
+                style={{ width: '100%', fontFamily: 'monospace', letterSpacing: '0.1em' }}
+                placeholder="XXXXXXXX"
+                maxLength={8}
               />
             </div>
 
@@ -284,7 +286,7 @@ function Login({ setUser }) {
               className="btn btn-primary"
               style={{ width: '100%', marginBottom: '1rem' }}
             >
-              {loading ? 'Creating Account...' : 'Create Account & Setup Passkey'}
+              {loading ? 'Activating Account...' : 'Activate & Setup Passkey'}
             </button>
 
             <div style={{ textAlign: 'center', color: '#999', fontSize: '0.9rem' }}>

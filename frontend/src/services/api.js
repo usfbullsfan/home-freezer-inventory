@@ -24,8 +24,8 @@ export const authAPI = {
   register: (username, password, role = 'user') =>
     api.post('/auth/register', { username, password, role }),
 
-  signup: (username) =>
-    api.post('/auth/signup', { username }),
+  activate: (activationCode) =>
+    api.post('/auth/activate', { activation_code: activationCode }),
 
   getCurrentUser: () =>
     api.get('/auth/me'),
