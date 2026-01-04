@@ -1,6 +1,6 @@
 /* Mobile Landing Page */
 .mobile-landing {
-  min-height: 100vh;
+  min-height: calc(100vh - 70px); /* Account for navbar height */
   background: #f5f5f5;
   padding: 15px;
   display: flex;

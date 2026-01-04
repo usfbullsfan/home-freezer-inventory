@@ -23,12 +23,21 @@ export const isMobileDevice = () => {
  * @returns {boolean} True if desktop site requested
  */
 export const isDesktopSiteRequested = () => {
-  // Check if the browser is requesting desktop site
-  // This is a heuristic - desktop mode on mobile typically has larger width
   const userAgent = navigator.userAgent || navigator.vendor || window.opera;
   const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
 
-  // If mobile UA but width > 1024, user probably requested desktop site
+  // iOS Safari "Request Desktop Site" detection
+  // When enabled, viewport width becomes 980+ and "Mobile" is removed from UA
+  const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+  if (isIOS) {
+    // Check if "Mobile" is missing from user agent (desktop site requested)
+    const hasMobileInUA = /Mobile/i.test(userAgent);
+    if (!hasMobileInUA && window.innerWidth >= 980) {
+      return true;
+    }
+  }
+
+  // Android/other browsers: If mobile UA but width > 1024, desktop site requested
   if (isMobileUA && window.innerWidth > 1024) {
     return true;
   }
