@@ -41,6 +41,45 @@ def register():
     }), 201
 
 
+@auth_bp.route('/signup', methods=['POST'])
+def signup():
+    """Public user registration (passwordless with passkey)"""
+    data = request.get_json()
+
+    if not data or not data.get('username'):
+        return jsonify({'error': 'Username required'}), 400
+
+    # Normalize username to lowercase for case-insensitive matching
+    username_lower = data['username'].lower()
+
+    if User.query.filter_by(username=username_lower).first():
+        return jsonify({'error': 'Username already exists'}), 400
+
+    # Create user without password (passkey-only)
+    user = User(
+        username=username_lower,
+        role='user'
+    )
+    # Set a random password as a placeholder (won't be used)
+    import secrets
+    user.set_password(secrets.token_urlsafe(32))
+
+    db.session.add(user)
+    db.session.commit()
+
+    # Create token for immediate passkey registration
+    access_token = create_access_token(
+        identity=str(user.id),
+        expires_delta=timedelta(hours=24),
+        additional_claims={'role': user.role, 'username': user.username}
+    )
+
+    return jsonify({
+        'token': access_token,
+        'user': user.to_dict()
+    }), 201
+
+
 @auth_bp.route('/login', methods=['POST'])
 def login():
     """Login and receive JWT token"""
