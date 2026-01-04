@@ -26,6 +26,7 @@ yarn-error.log*
 # Build
 frontend/dist/
 frontend/build/
+frontend/public/version.json
 
 # Environment
 .env

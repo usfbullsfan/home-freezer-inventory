@@ -23,6 +23,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
   const [upcMessage, setUpcMessage] = useState('');
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [upcFieldFocused, setUpcFieldFocused] = useState(false);
   const [newCategoryData, setNewCategoryData] = useState({
     name: '',
     default_expiration_days: 180,
@@ -456,10 +457,10 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
             marginBottom: '1rem',
             border: '1px solid #e0e0e0'
           }}>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem' }}>
-              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.35rem' }}>
+              <div className="form-group" style={{ flex: 1, marginBottom: 0, minWidth: 0 }}>
                 <label htmlFor="upc" style={{ fontSize: '0.9rem', marginBottom: '0.35rem' }}>
-                  UPC / Barcode (Optional)
+                  UPC/Barcode (optional)
                 </label>
                 <input
                   type="text"
@@ -467,8 +468,19 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
                   name="upc"
                   value={formData.upc}
                   onChange={handleChange}
-                  placeholder="e.g., 012345678901"
-                  style={{ padding: '0.65rem' }}
+                  onFocus={() => setUpcFieldFocused(true)}
+                  onBlur={() => setUpcFieldFocused(false)}
+                  placeholder="012345678901"
+                  maxLength="16"
+                  style={{
+                    padding: '0.65rem',
+                    fontSize: '1rem',
+                    letterSpacing: '1px',
+                    fontFamily: 'monospace',
+                    width: '100%',
+                    minWidth: 0,
+                    boxSizing: 'border-box'
+                  }}
                 />
               </div>
               <button
@@ -476,12 +488,18 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
                 className="btn btn-success"
                 onClick={() => setShowBarcodeScanner(true)}
                 style={{
-                  padding: '0.65rem 1rem',
-                  fontSize: '0.9rem',
+                  padding: '0.65rem',
+                  fontSize: '1.1rem',
+                  transition: 'all 0.2s ease',
+                  width: upcFieldFocused ? '40px' : 'auto',
+                  minWidth: upcFieldFocused ? '40px' : '70px',
+                  flexShrink: 0,
+                  overflow: 'hidden',
                   whiteSpace: 'nowrap'
                 }}
+                title="Scan barcode"
               >
-                📊 Scan
+                {upcFieldFocused ? '📷' : '📷 Scan'}
               </button>
               <button
                 type="button"
@@ -489,12 +507,18 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
                 onClick={handleLookupUPC}
                 disabled={upcLookupLoading || !formData.upc}
                 style={{
-                  padding: '0.65rem 1rem',
-                  fontSize: '0.9rem',
+                  padding: '0.65rem',
+                  fontSize: '1.1rem',
+                  transition: 'all 0.2s ease',
+                  width: upcFieldFocused ? '40px' : 'auto',
+                  minWidth: upcFieldFocused ? '40px' : '80px',
+                  flexShrink: 0,
+                  overflow: 'hidden',
                   whiteSpace: 'nowrap'
                 }}
+                title="Lookup UPC"
               >
-                {upcLookupLoading ? '🔍 Looking up...' : '🔍 Lookup'}
+                {upcLookupLoading ? '🔍' : (upcFieldFocused ? '🔍' : '🔍 Lookup')}
               </button>
             </div>
             <small style={{ color: '#6c757d', display: 'block', marginTop: '0.5rem', fontSize: '0.8rem' }}>

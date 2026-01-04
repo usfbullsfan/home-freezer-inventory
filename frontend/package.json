@@ -1,11 +1,11 @@
 {
   "name": "freezer-inventory-frontend",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "node scripts/generate-version.js && vite",
+    "build": "node scripts/generate-version.js && vite build",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
