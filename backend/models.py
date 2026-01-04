@@ -12,12 +12,9 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='user')  # 'admin' or 'user'
-<<<<<<< HEAD
-    pwa_install_dismissed = db.Column(db.Boolean, default=False)  # True if user dismissed PWA install prompt
-=======
     activation_code = db.Column(db.String(20), unique=True)  # For initial passkey enrollment
     activated = db.Column(db.Boolean, default=False)  # True once user sets up passkey
->>>>>>> 9ca95a9 (Implement activation code flow for secure passkey enrollment)
+    pwa_install_dismissed = db.Column(db.Boolean, default=False)  # True if user dismissed PWA install prompt
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -36,11 +33,8 @@ class User(db.Model):
             'id': self.id,
             'username': self.username,
             'role': self.role,
-<<<<<<< HEAD
-            'pwa_install_dismissed': self.pwa_install_dismissed,
-=======
             'activated': self.activated,
->>>>>>> 9ca95a9 (Implement activation code flow for secure passkey enrollment)
+            'pwa_install_dismissed': self.pwa_install_dismissed,
             'created_at': self.created_at.isoformat()
         }
 
