@@ -4,6 +4,7 @@ import UserManagement from '../components/UserManagement';
 import ImportExport from '../components/ImportExport';
 import api from '../services/api';
 import { isMobileDevice } from '../utils/deviceDetection';
+import { registerPasskey, supportsPasskeys, generateRecoveryCodes } from '../utils/passkey';
 
 function Settings({ user, isMobile = false, setUseDesktopInterface }) {
   const [settings, setSettings] = useState({
@@ -40,6 +41,13 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
   });
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  // Passkey state
+  const [passkeyError, setPasskeyError] = useState('');
+  const [passkeySuccess, setPasskeySuccess] = useState('');
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [recoveryCodes, setRecoveryCodes] = useState(null);
+  const [showRecoveryCodes, setShowRecoveryCodes] = useState(false);
 
   // Version info
   const [versionInfo, setVersionInfo] = useState(null);
@@ -288,6 +296,41 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
     }
   };
 
+  const handleRegisterPasskey = async () => {
+    setPasskeyError('');
+    setPasskeySuccess('');
+    setPasskeyLoading(true);
+
+    try {
+      // Register the passkey
+      const result = await registerPasskey(user.username);
+
+      if (!result.success) {
+        setPasskeyError(result.error || 'Failed to register passkey');
+        setPasskeyLoading(false);
+        return;
+      }
+
+      setPasskeySuccess('Passkey registered successfully! You can now use it to log in.');
+
+      // Generate recovery codes
+      const codesResult = await generateRecoveryCodes();
+      if (codesResult.success) {
+        setRecoveryCodes(codesResult.codes);
+        setShowRecoveryCodes(true);
+      }
+    } catch (err) {
+      setPasskeyError(err.message || 'Failed to register passkey');
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
+
+  const handleSaveRecoveryCodes = () => {
+    setShowRecoveryCodes(false);
+    setRecoveryCodes(null);
+  };
+
   if (loading) {
     return (
       <div className="container">
@@ -402,6 +445,87 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
           </button>
         </form>
       </div>
+
+      {supportsPasskeys() && (
+        <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
+          <h3 style={{ marginBottom: '1.5rem' }}>Passkey Authentication</h3>
+
+          {passkeyError && <div className="error-message">{passkeyError}</div>}
+          {passkeySuccess && <div className="success-message">{passkeySuccess}</div>}
+
+          {showRecoveryCodes && recoveryCodes ? (
+            <div style={{
+              background: '#fff3cd',
+              border: '1px solid #ffc107',
+              padding: '1.5rem',
+              borderRadius: '4px',
+              marginBottom: '1rem'
+            }}>
+              <h4 style={{ marginBottom: '1rem', color: '#856404' }}>⚠️ Save Your Recovery Codes</h4>
+              <p style={{ color: '#856404', marginBottom: '1rem' }}>
+                These codes can be used to access your account if you lose your passkey.
+                <strong> Save them somewhere safe - they won't be shown again!</strong>
+              </p>
+
+              <div style={{
+                background: 'white',
+                padding: '1rem',
+                borderRadius: '4px',
+                fontFamily: 'monospace',
+                fontSize: '14px',
+                marginBottom: '1rem',
+                border: '1px solid #ddd'
+              }}>
+                {recoveryCodes.map((code, idx) => (
+                  <div key={idx} style={{ padding: '0.25rem 0' }}>
+                    {idx + 1}. {code}
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={handleSaveRecoveryCodes}
+                className="btn btn-primary"
+              >
+                I've Saved These Codes
+              </button>
+            </div>
+          ) : (
+            <>
+              <p style={{ color: '#7f8c8d', marginBottom: '1.5rem' }}>
+                Add a passkey to enable passwordless login using Face ID, Touch ID, Windows Hello, or a security key.
+                Passkeys are more secure than passwords and easier to use.
+              </p>
+
+              <button
+                onClick={handleRegisterPasskey}
+                disabled={passkeyLoading}
+                className="btn btn-primary"
+              >
+                {passkeyLoading ? '🔐 Registering...' : '🔐 Add Passkey'}
+              </button>
+
+              <div style={{
+                marginTop: '1rem',
+                padding: '1rem',
+                background: '#f8f9fa',
+                borderRadius: '4px',
+                border: '1px solid #e9ecef',
+                fontSize: '0.9rem',
+                color: '#7f8c8d'
+              }}>
+                <strong style={{ display: 'block', marginBottom: '0.5rem', color: '#495057' }}>
+                  What is a passkey?
+                </strong>
+                <p style={{ margin: 0 }}>
+                  Passkeys use biometric authentication (fingerprint, face recognition) or a PIN to securely log you in
+                  without typing a password. They're stored on your device and can't be phished or stolen in data breaches.
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {user && user.role === 'admin' && (
         <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
