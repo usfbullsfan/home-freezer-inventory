@@ -14,7 +14,9 @@ from webauthn import (
 )
 from webauthn.helpers.structs import (
     PublicKeyCredentialDescriptor,
-    UserVerificationRequirement
+    UserVerificationRequirement,
+    AuthenticatorSelectionCriteria,
+    ResidentKeyRequirement
 )
 from webauthn.helpers.cose import COSEAlgorithmIdentifier
 import secrets
@@ -111,10 +113,10 @@ def register_begin():
             COSEAlgorithmIdentifier.ECDSA_SHA_256,
             COSEAlgorithmIdentifier.RSASSA_PKCS1_v1_5_SHA_256,
         ],
-        authenticator_selection={
-            'residentKey': 'preferred',
-            'userVerification': 'preferred',
-        }
+        authenticator_selection=AuthenticatorSelectionCriteria(
+            resident_key=ResidentKeyRequirement.PREFERRED,
+            user_verification=UserVerificationRequirement.PREFERRED
+        )
     )
 
     return jsonify({
