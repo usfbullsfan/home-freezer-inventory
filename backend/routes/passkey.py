@@ -454,3 +454,56 @@ def use_recovery_code():
     )
 
     return jsonify({'temporaryToken': access_token})
+
+
+# ==================== PASSKEY MANAGEMENT ====================
+
+@passkey_bp.route('/list', methods=['GET'])
+@jwt_required()
+def list_passkeys():
+    """List user's registered passkeys"""
+    current_user_id = int(get_jwt_identity())
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT id, created_at, last_used_at FROM passkey_credentials WHERE user_id = ? ORDER BY created_at DESC',
+        (current_user_id,)
+    )
+    passkeys = cursor.fetchall()
+    conn.close()
+
+    result = []
+    for pk in passkeys:
+        result.append({
+            'id': pk[0],
+            'created_at': pk[1],
+            'last_used_at': pk[2]
+        })
+
+    return jsonify({'passkeys': result})
+
+
+@passkey_bp.route('/delete/<int:passkey_id>', methods=['DELETE'])
+@jwt_required()
+def delete_passkey(passkey_id):
+    """Delete a passkey"""
+    current_user_id = int(get_jwt_identity())
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify ownership
+    cursor.execute('SELECT user_id FROM passkey_credentials WHERE id = ?', (passkey_id,))
+    result = cursor.fetchone()
+
+    if not result or result[0] != current_user_id:
+        conn.close()
+        return jsonify({'error': 'Passkey not found'}), 404
+
+    cursor.execute('DELETE FROM passkey_credentials WHERE id = ?', (passkey_id,))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'message': 'Passkey deleted successfully'})
+
