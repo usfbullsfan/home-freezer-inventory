@@ -41,7 +41,15 @@ def get_expected_origin():
 def get_db_connection():
     """Get database connection"""
     import sqlite3
-    return sqlite3.connect('freezer_inventory.db')
+    from flask import current_app
+
+    # Get database path from Flask app config
+    db_uri = current_app.config['SQLALCHEMY_DATABASE_URI']
+    if db_uri.startswith('sqlite:///'):
+        db_path = db_uri.replace('sqlite:///', '')
+        return sqlite3.connect(db_path)
+    else:
+        raise ValueError('Passkey routes only support SQLite databases')
 
 # ==================== REGISTRATION ====================
 
