@@ -21,6 +21,7 @@ from webauthn.helpers.structs import (
 from webauthn.helpers.cose import COSEAlgorithmIdentifier
 import secrets
 import hashlib
+import base64
 from datetime import datetime, timedelta
 from models import db, User
 import os
@@ -305,7 +306,9 @@ def login_complete():
     conn.close()
 
     # Get credential from database
-    credential_id = bytes.fromhex(credential['id']).hex()
+    # credential['id'] is base64url-encoded from frontend
+    credential_id_bytes = base64.urlsafe_b64decode(credential['id'] + '==')  # Add padding if needed
+    credential_id = credential_id_bytes.hex()
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
