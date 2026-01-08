@@ -353,7 +353,11 @@ def login_complete():
             return jsonify({'error': 'User not found'}), 404
 
         # Create JWT token
-        access_token = create_access_token(identity=str(user.id))
+        access_token = create_access_token(
+            identity=str(user.id),
+            expires_delta=timedelta(hours=24),
+            additional_claims={'role': user.role, 'username': user.username}
+        )
 
         return jsonify({
             'token': access_token,
