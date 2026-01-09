@@ -331,21 +331,24 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
   };
 
   const handleRegisterPasskey = async () => {
-    // Prompt for a name
-    const name = window.prompt('Give this passkey a name (e.g., "iPhone", "Yubikey", "Windows Hello"):', '');
+    // Prompt for a name with a better default
+    const name = window.prompt('Give this passkey a name (e.g., "iPhone", "Yubikey", "Windows Hello"):', 'My Device');
 
     if (name === null) {
       // User cancelled
       return;
     }
 
+    // Trim whitespace and use the name directly (don't default if empty)
+    const trimmedName = name.trim();
+
     setPasskeyError('');
     setPasskeySuccess('');
     setPasskeyLoading(true);
 
     try {
-      // Register the passkey with the provided name
-      const result = await registerPasskey(user.username, name || 'Passkey');
+      // Register the passkey with the provided name (or fallback to 'Passkey')
+      const result = await registerPasskey(user.username, trimmedName || 'Passkey');
 
       if (!result.success) {
         setPasskeyError(result.error || 'Failed to register passkey');

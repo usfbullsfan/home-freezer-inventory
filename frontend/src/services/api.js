@@ -42,6 +42,9 @@ export const authAPI = {
   resetUserPassword: (userId, newPassword) =>
     api.post(`/auth/users/${userId}/reset-password`, { new_password: newPassword }),
 
+  regenerateActivationCode: (userId) =>
+    api.post(`/auth/users/${userId}/regenerate-activation`),
+
   changePassword: (currentPassword, newPassword) =>
     api.post('/auth/change-password', { current_password: currentPassword, new_password: newPassword }),
 

@@ -284,6 +284,36 @@ def reset_user_password(user_id):
     return jsonify({'message': 'Password reset successfully'}), 200
 
 
+@auth_bp.route('/users/<int:user_id>/regenerate-activation', methods=['POST'])
+@jwt_required()
+def regenerate_activation_code(user_id):
+    """Regenerate activation code for a user (admin only)"""
+    from flask_jwt_extended import get_jwt
+    import secrets
+    import string
+    claims = get_jwt()
+
+    if claims.get('role') != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Generate new activation code
+    activation_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+
+    # Set new activation code and mark as not activated
+    user.activation_code = activation_code
+    user.activated = False
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Activation code regenerated successfully',
+        'activation_code': activation_code
+    }), 200
+
+
 @auth_bp.route('/quick-login-status', methods=['GET'])
 def quick_login_status():
     """Check if no-auth mode is enabled (no JWT required)"""
