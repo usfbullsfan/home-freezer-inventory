@@ -331,13 +331,21 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
   };
 
   const handleRegisterPasskey = async () => {
+    // Prompt for a name
+    const name = window.prompt('Give this passkey a name (e.g., "iPhone", "Yubikey", "Windows Hello"):', '');
+
+    if (name === null) {
+      // User cancelled
+      return;
+    }
+
     setPasskeyError('');
     setPasskeySuccess('');
     setPasskeyLoading(true);
 
     try {
-      // Register the passkey
-      const result = await registerPasskey(user.username);
+      // Register the passkey with the provided name
+      const result = await registerPasskey(user.username, name || 'Passkey');
 
       if (!result.success) {
         setPasskeyError(result.error || 'Failed to register passkey');
@@ -558,7 +566,7 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
                       >
                         <div>
                           <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>
-                            🔐 Passkey #{passkey.id}
+                            🔐 {passkey.name}
                           </div>
                           <div style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>
                             Created: {new Date(passkey.created_at).toLocaleString()}

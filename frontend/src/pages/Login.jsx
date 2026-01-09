@@ -13,6 +13,9 @@ function Login({ setUser }) {
   const [recoveryCodes, setRecoveryCodes] = useState(null);
   const [showRecoveryCodes, setShowRecoveryCodes] = useState(false);
 
+  // Detect if running in development mode
+  const isDev = import.meta.env.DEV;
+
   // Check passkey support on mount
   useEffect(() => {
     if (!supportsPasskeys()) {
@@ -86,8 +89,11 @@ function Login({ setUser }) {
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
 
-      // Step 2: Register passkey
-      const passkeyResult = await registerPasskey(user.username);
+      // Step 2: Prompt for passkey name
+      const name = window.prompt('Name your passkey (e.g., "iPhone", "Yubikey", "Windows Hello"):', 'My Passkey');
+
+      // Step 3: Register passkey
+      const passkeyResult = await registerPasskey(user.username, name || 'My Passkey');
 
       if (!passkeyResult.success) {
         setError('Account activated but passkey registration failed. Please try adding a passkey in Settings.');
@@ -119,8 +125,13 @@ function Login({ setUser }) {
 
   if (showRecoveryCodes && recoveryCodes) {
     return (
-      <div className="login-container">
-        <div className="login-box" style={{ maxWidth: '600px' }}>
+      <div className="login-page">
+        {isDev && (
+          <div className="dev-banner">
+            ⚠️ DEVELOPMENT ENVIRONMENT
+          </div>
+        )}
+        <div className={`login-card ${isDev ? 'login-card-dev' : ''}`} style={{ maxWidth: '600px' }}>
           <h2>⚠️ Save Your Recovery Codes</h2>
           <p style={{ color: '#666', marginBottom: '1rem' }}>
             These codes can be used to access your account if you lose your passkey.

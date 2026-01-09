@@ -24,6 +24,7 @@ CREATE TABLE passkey_credentials (
     credential_id TEXT UNIQUE NOT NULL,
     public_key TEXT NOT NULL,
     sign_count INTEGER DEFAULT 0,
+    name TEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_used_at TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
