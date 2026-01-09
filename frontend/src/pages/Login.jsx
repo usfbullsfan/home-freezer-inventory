@@ -90,19 +90,31 @@ function Login({ setUser }) {
       localStorage.setItem('user', JSON.stringify(user));
 
       // Step 2: Prompt for passkey name
-      const name = window.prompt('Name your passkey (e.g., "iPhone", "Yubikey", "Windows Hello"):', 'My Passkey');
+      const name = window.prompt('Name your passkey (e.g., "iPhone", "Yubikey", "Windows Hello"):', 'My Device');
 
-      // Step 3: Register passkey
-      const passkeyResult = await registerPasskey(user.username, name || 'My Passkey');
-
-      if (!passkeyResult.success) {
-        setError('Account activated but passkey registration failed. Please try adding a passkey in Settings.');
-        setUser(user);
+      // If user cancels the prompt, logout and show error
+      if (name === null) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setError('Account activation cancelled. You must set up a passkey to complete activation.');
         setLoading(false);
         return;
       }
 
-      // Step 3: Generate recovery codes
+      // Step 3: Register passkey
+      const trimmedName = name.trim();
+      const passkeyResult = await registerPasskey(user.username, trimmedName || 'My Device');
+
+      if (!passkeyResult.success) {
+        // Logout if passkey registration fails
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setError('Passkey registration failed. Please contact your administrator for a new activation code.');
+        setLoading(false);
+        return;
+      }
+
+      // Step 4: Generate recovery codes
       const codesResult = await generateRecoveryCodes();
 
       if (codesResult.success) {
