@@ -36,6 +36,22 @@ function Login({ setUser }) {
     setLoading(false);
   };
 
+  const handleDiscoverablePasskeyLogin = async () => {
+    setError('');
+    setLoading(true);
+
+    // Call without username for discoverable credential authentication
+    const result = await loginWithPasskey(null);
+
+    if (result.success) {
+      setUser(result.user);
+    } else {
+      setError(result.error);
+    }
+
+    setLoading(false);
+  };
+
   const handlePasswordLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -155,8 +171,35 @@ function Login({ setUser }) {
           <div>
             <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Sign In</h2>
 
+            <button
+              onClick={handleDiscoverablePasskeyLogin}
+              disabled={loading}
+              className="btn btn-primary"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                fontSize: '1.1rem',
+                marginBottom: '1rem'
+              }}
+            >
+              {loading ? '🔐 Authenticating...' : '🔐 Sign in with Passkey'}
+            </button>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              margin: '1.5rem 0',
+              color: '#999'
+            }}>
+              <div style={{ flex: 1, height: '1px', background: '#ddd' }}></div>
+              <div style={{ padding: '0 1rem', fontSize: '0.9rem' }}>or</div>
+              <div style={{ flex: 1, height: '1px', background: '#ddd' }}></div>
+            </div>
+
             <div style={{ marginBottom: '1rem' }}>
-              <label htmlFor="username">Username</label>
+              <label htmlFor="username" style={{ fontSize: '0.9rem', color: '#666' }}>
+                Sign in with username
+              </label>
               <input
                 type="text"
                 id="username"
@@ -171,15 +214,18 @@ function Login({ setUser }) {
             <button
               onClick={handlePasskeyLogin}
               disabled={loading || !username}
-              className="btn btn-primary"
+              className="btn btn-secondary"
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                fontSize: '1.1rem',
-                marginBottom: '1rem'
+                fontSize: '1rem',
+                marginBottom: '1.5rem',
+                background: 'white',
+                color: '#2c3e50',
+                border: '1px solid #ddd'
               }}
             >
-              {loading ? '🔐 Authenticating...' : '🔐 Sign in with Passkey'}
+              {loading ? '🔐 Authenticating...' : '🔐 Sign in with Username + Passkey'}
             </button>
 
             <div style={{ textAlign: 'center', color: '#666', marginBottom: '1rem' }}>

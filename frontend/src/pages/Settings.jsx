@@ -48,6 +48,8 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [recoveryCodes, setRecoveryCodes] = useState(null);
   const [showRecoveryCodes, setShowRecoveryCodes] = useState(false);
+  const [passkeys, setPasskeys] = useState([]);
+  const [passkeysLoading, setPasskeysLoading] = useState(false);
 
   // Version info
   const [versionInfo, setVersionInfo] = useState(null);
@@ -56,6 +58,9 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
     loadSettings();
     loadUserSettings();
     loadVersionInfo();
+    if (supportsPasskeys()) {
+      loadPasskeys();
+    }
     if (user && user.role === 'admin') {
       loadBackupInfo();
       loadSystemSettings();
@@ -100,6 +105,35 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
       setVersionInfo(data);
     } catch (err) {
       console.error('Failed to load version info:', err);
+    }
+  };
+
+  const loadPasskeys = async () => {
+    setPasskeysLoading(true);
+    try {
+      const response = await api.get('/passkey/list');
+      setPasskeys(response.data.passkeys || []);
+    } catch (err) {
+      console.error('Failed to load passkeys:', err);
+    } finally {
+      setPasskeysLoading(false);
+    }
+  };
+
+  const handleDeletePasskey = async (passkeyId) => {
+    if (!window.confirm('Are you sure you want to delete this passkey? You will no longer be able to use it to log in.')) {
+      return;
+    }
+
+    setPasskeyError('');
+    setPasskeySuccess('');
+
+    try {
+      await api.delete(`/passkey/delete/${passkeyId}`);
+      setPasskeySuccess('Passkey deleted successfully');
+      loadPasskeys(); // Reload the list
+    } catch (err) {
+      setPasskeyError(err.response?.data?.error || 'Failed to delete passkey');
     }
   };
 
@@ -319,6 +353,9 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
         setRecoveryCodes(codesResult.codes);
         setShowRecoveryCodes(true);
       }
+
+      // Reload passkey list
+      loadPasskeys();
     } catch (err) {
       setPasskeyError(err.message || 'Failed to register passkey');
     } finally {
@@ -493,9 +530,57 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
           ) : (
             <>
               <p style={{ color: '#7f8c8d', marginBottom: '1.5rem' }}>
-                Add a passkey to enable passwordless login using Face ID, Touch ID, Windows Hello, or a security key.
-                Passkeys are more secure than passwords and easier to use.
+                Passkeys enable passwordless login using Face ID, Touch ID, Windows Hello, or a security key.
+                They're more secure than passwords and easier to use.
               </p>
+
+              {passkeysLoading ? (
+                <div style={{ color: '#7f8c8d', marginBottom: '1rem' }}>Loading passkeys...</div>
+              ) : passkeys.length > 0 ? (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h4 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Your Passkeys</h4>
+                  <div style={{
+                    background: '#f8f9fa',
+                    border: '1px solid #e9ecef',
+                    borderRadius: '4px',
+                    overflow: 'hidden'
+                  }}>
+                    {passkeys.map((passkey, idx) => (
+                      <div
+                        key={passkey.id}
+                        style={{
+                          padding: '1rem',
+                          borderBottom: idx < passkeys.length - 1 ? '1px solid #e9ecef' : 'none',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>
+                            🔐 Passkey #{passkey.id}
+                          </div>
+                          <div style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>
+                            Created: {new Date(passkey.created_at).toLocaleString()}
+                            {passkey.last_used_at && (
+                              <span style={{ marginLeft: '1rem' }}>
+                                Last used: {new Date(passkey.last_used_at).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeletePasskey(passkey.id)}
+                          className="btn btn-danger"
+                          style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               <button
                 onClick={handleRegisterPasskey}
