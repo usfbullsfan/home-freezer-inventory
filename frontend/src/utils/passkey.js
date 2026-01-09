@@ -9,9 +9,10 @@ import api from '../services/api';
 /**
  * Register a new passkey for a user
  * @param {string} username - Username to register passkey for
+ * @param {string} [name] - Optional friendly name for the passkey
  * @returns {Promise<{success: boolean, credentialId?: string, error?: string}>}
  */
-export async function registerPasskey(username) {
+export async function registerPasskey(username, name = null) {
   try {
     // Step 1: Get registration options from server
     const beginResponse = await api.post('/passkey/register/begin', { username });
@@ -23,7 +24,8 @@ export async function registerPasskey(username) {
     // Step 3: Send credential to server for verification
     const completeResponse = await api.post('/passkey/register/complete', {
       credential,
-      challengeId
+      challengeId,
+      name: name || 'Passkey'
     });
 
     return {

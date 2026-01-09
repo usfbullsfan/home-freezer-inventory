@@ -130,11 +130,12 @@ def register_begin():
 def register_complete():
     """
     Complete passkey registration
-    Input: { credential, challengeId }
+    Input: { credential, challengeId, name }
     """
     data = request.get_json()
     credential = data.get('credential')
     challenge_id = data.get('challengeId')
+    name = data.get('name', 'Passkey')  # Default to 'Passkey' if not provided
 
     if not credential or not challenge_id:
         return jsonify({'error': 'Missing required fields'}), 400
@@ -183,13 +184,14 @@ def register_complete():
         cursor = conn.cursor()
         cursor.execute(
             '''INSERT INTO passkey_credentials
-               (user_id, credential_id, public_key, sign_count)
-               VALUES (?, ?, ?, ?)''',
+               (user_id, credential_id, public_key, sign_count, name)
+               VALUES (?, ?, ?, ?, ?)''',
             (
                 user_id,
                 verification.credential_id.hex(),
                 verification.credential_public_key.hex(),
-                verification.sign_count
+                verification.sign_count,
+                name
             )
         )
         conn.commit()
@@ -471,7 +473,7 @@ def list_passkeys():
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        'SELECT id, created_at, last_used_at FROM passkey_credentials WHERE user_id = ? ORDER BY created_at DESC',
+        'SELECT id, name, created_at, last_used_at FROM passkey_credentials WHERE user_id = ? ORDER BY created_at DESC',
         (current_user_id,)
     )
     passkeys = cursor.fetchall()
@@ -481,8 +483,9 @@ def list_passkeys():
     for pk in passkeys:
         result.append({
             'id': pk[0],
-            'created_at': pk[1],
-            'last_used_at': pk[2]
+            'name': pk[1] or 'Passkey',
+            'created_at': pk[2],
+            'last_used_at': pk[3]
         })
 
     return jsonify({'passkeys': result})
