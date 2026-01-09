@@ -166,13 +166,36 @@ function Login({ setUser }) {
   }
 
   return (
-    <div className="login-container">
-      <div className="login-box">
-        <h1 className="login-title">Freezer Inventory</h1>
-        <p className="login-subtitle">Track and manage your freezer items</p>
+    <div className="login-page">
+      {isDev && (
+        <div className="dev-banner">
+          ⚠️ DEVELOPMENT ENVIRONMENT
+        </div>
+      )}
+      <div className={`login-card ${isDev ? 'login-card-dev' : ''}`}>
+        <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+          <img
+            src={isDev ? '/logo-dev-192.png' : '/logo-192.png'}
+            alt="Freezer Inventory Logo"
+            style={{ width: '80px', height: '80px', marginBottom: '0.5rem' }}
+          />
+        </div>
+        <h2>🧊 Freezer Inventory Tracker</h2>
+        {isDev && (
+          <div style={{
+            color: '#e67e22',
+            fontSize: '0.875rem',
+            fontWeight: 'bold',
+            marginTop: '-0.5rem',
+            marginBottom: '1rem',
+            textAlign: 'center'
+          }}>
+            Development Mode
+          </div>
+        )}
 
         {error && (
-          <div className="error-message" style={{ marginBottom: '1rem' }}>
+          <div className="error-message">
             {error}
           </div>
         )}
@@ -180,8 +203,6 @@ function Login({ setUser }) {
         {mode === 'passkey' ? (
           // Passkey Login (Primary)
           <div>
-            <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Sign In</h2>
-
             <button
               onClick={handleDiscoverablePasskeyLogin}
               disabled={loading}
@@ -207,8 +228,8 @@ function Login({ setUser }) {
               <div style={{ flex: 1, height: '1px', background: '#ddd' }}></div>
             </div>
 
-            <div style={{ marginBottom: '1rem' }}>
-              <label htmlFor="username" style={{ fontSize: '0.9rem', color: '#666' }}>
+            <div className="form-group">
+              <label htmlFor="username" style={{ fontSize: '0.9rem', color: '#7f8c8d' }}>
                 Sign in with username
               </label>
               <input
@@ -218,7 +239,6 @@ function Login({ setUser }) {
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter your username"
                 disabled={loading}
-                style={{ width: '100%' }}
               />
             </div>
 
@@ -264,9 +284,7 @@ function Login({ setUser }) {
         ) : mode === 'password' ? (
           // Password Login (Fallback)
           <form onSubmit={handlePasswordLogin}>
-            <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Password Login</h2>
-
-            <div style={{ marginBottom: '1rem' }}>
+            <div className="form-group">
               <label htmlFor="username-pwd">Username</label>
               <input
                 type="text"
@@ -275,11 +293,10 @@ function Login({ setUser }) {
                 onChange={(e) => setUsername(e.target.value)}
                 required
                 disabled={loading}
-                style={{ width: '100%' }}
               />
             </div>
 
-            <div style={{ marginBottom: '1.5rem' }}>
+            <div className="form-group">
               <label htmlFor="password">Password</label>
               <input
                 type="password"
@@ -288,7 +305,6 @@ function Login({ setUser }) {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
-                style={{ width: '100%' }}
               />
             </div>
 
@@ -296,7 +312,6 @@ function Login({ setUser }) {
               type="submit"
               disabled={loading}
               className="btn btn-primary"
-              style={{ width: '100%', marginBottom: '1rem' }}
             >
               {loading ? 'Logging in...' : 'Login'}
             </button>
@@ -317,12 +332,11 @@ function Login({ setUser }) {
         ) : (
           // Activation
           <form onSubmit={handleActivate}>
-            <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Activate Account</h2>
-            <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1rem', textAlign: 'center' }}>
+            <p style={{ color: '#7f8c8d', fontSize: '0.9rem', marginBottom: '1rem', textAlign: 'center' }}>
               Enter the activation code provided by your administrator to set up your passkey
             </p>
 
-            <div style={{ marginBottom: '1.5rem' }}>
+            <div className="form-group">
               <label htmlFor="activation-code">Activation Code</label>
               <input
                 type="text"
@@ -331,7 +345,7 @@ function Login({ setUser }) {
                 onChange={(e) => setActivationCode(e.target.value.toUpperCase())}
                 required
                 disabled={loading}
-                style={{ width: '100%', fontFamily: 'monospace', letterSpacing: '0.1em' }}
+                style={{ fontFamily: 'monospace', letterSpacing: '0.1em' }}
                 placeholder="XXXXXXXX"
                 maxLength={8}
               />
@@ -341,7 +355,6 @@ function Login({ setUser }) {
               type="submit"
               disabled={loading}
               className="btn btn-primary"
-              style={{ width: '100%', marginBottom: '1rem' }}
             >
               {loading ? 'Activating Account...' : 'Activate & Setup Passkey'}
             </button>
