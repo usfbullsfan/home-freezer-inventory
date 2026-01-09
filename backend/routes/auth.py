@@ -291,6 +291,9 @@ def regenerate_activation_code(user_id):
     from flask_jwt_extended import get_jwt
     import secrets
     import string
+    import sqlite3
+    from flask import current_app
+
     claims = get_jwt()
 
     if claims.get('role') != 'admin':
@@ -300,18 +303,34 @@ def regenerate_activation_code(user_id):
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
-    # Generate new activation code
-    activation_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+    try:
+        # Generate new activation code
+        activation_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
 
-    # Set new activation code and mark as not activated
-    user.activation_code = activation_code
-    user.activated = False
-    db.session.commit()
+        # Delete any existing passkeys for this user (they'll need to re-register)
+        db_uri = current_app.config['SQLALCHEMY_DATABASE_URI']
+        if db_uri.startswith('sqlite:///'):
+            db_path = db_uri.replace('sqlite:///', '')
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM passkey_credentials WHERE user_id = ?', (user_id,))
+            cursor.execute('DELETE FROM recovery_codes WHERE user_id = ?', (user_id,))
+            conn.commit()
+            conn.close()
 
-    return jsonify({
-        'message': 'Activation code regenerated successfully',
-        'activation_code': activation_code
-    }), 200
+        # Set new activation code and mark as not activated
+        user.activation_code = activation_code
+        user.activated = False
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Activation code regenerated successfully',
+            'activation_code': activation_code
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f'Error regenerating activation code: {str(e)}')
+        return jsonify({'error': f'Failed to regenerate activation code: {str(e)}'}), 500
 
 
 @auth_bp.route('/quick-login-status', methods=['GET'])
