@@ -227,23 +227,22 @@ function UserManagement({ currentUser }) {
                   >
                     Regenerate Code
                   </button>
-                  {user.id !== currentUser.id && (
-                    <>
-                      <button
-                        className="btn btn-sm"
-                        onClick={() => openResetPasswordModal(user)}
-                        style={{ marginRight: '0.5rem', fontSize: '0.8rem' }}
-                      >
-                        Reset Password
-                      </button>
-                      <button
-                        className="btn btn-sm btn-danger"
-                        onClick={() => handleDeleteUser(user)}
-                        style={{ fontSize: '0.8rem' }}
-                      >
-                        Delete
-                      </button>
-                    </>
+                  {user.id === currentUser.id ? (
+                    <button
+                      className="btn btn-sm"
+                      onClick={() => openResetPasswordModal(user)}
+                      style={{ marginRight: '0.5rem', fontSize: '0.8rem' }}
+                    >
+                      Reset Password
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-sm btn-danger"
+                      onClick={() => handleDeleteUser(user)}
+                      style={{ fontSize: '0.8rem' }}
+                    >
+                      Delete
+                    </button>
                   )}
                 </td>
               </tr>
