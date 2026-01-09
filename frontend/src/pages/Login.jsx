@@ -180,7 +180,7 @@ function Login({ setUser }) {
             style={{ width: '80px', height: '80px', marginBottom: '0.5rem' }}
           />
         </div>
-        <h2>🧊 Freezer Inventory Tracker</h2>
+        <h2>Freezer Inventory Tracker</h2>
         {isDev && (
           <div style={{
             color: '#e67e22',
