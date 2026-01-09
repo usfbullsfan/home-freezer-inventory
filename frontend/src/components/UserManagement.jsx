@@ -9,11 +9,12 @@ function UserManagement({ currentUser }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [showActivationCodeModal, setShowActivationCodeModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [activationCode, setActivationCode] = useState('');
 
   const [newUser, setNewUser] = useState({
     username: '',
-    password: '',
     role: 'user',
   });
 
@@ -50,16 +51,12 @@ function UserManagement({ currentUser }) {
     setError('');
     setSuccess('');
 
-    if (newUser.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
     try {
-      await authAPI.register(newUser.username, newUser.password, newUser.role);
-      setSuccess('User created successfully');
+      const response = await authAPI.register(newUser.username, null, newUser.role);
+      setActivationCode(response.data.activation_code);
       setShowAddModal(false);
-      setNewUser({ username: '', password: '', role: 'user' });
+      setShowActivationCodeModal(true);
+      setNewUser({ username: '', role: 'user' });
       loadUsers();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create user');
@@ -243,6 +240,10 @@ function UserManagement({ currentUser }) {
             </div>
             <form onSubmit={handleAddUser}>
               <div className="modal-body">
+                <p style={{ color: '#7f8c8d', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                  A one-time activation code will be generated for the user to set up their passkey.
+                </p>
+
                 <div className="form-group">
                   <label htmlFor="new-username">Username</label>
                   <input
@@ -252,21 +253,6 @@ function UserManagement({ currentUser }) {
                     onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
                     required
                   />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="new-password">Password</label>
-                  <input
-                    type="password"
-                    id="new-password"
-                    value={newUser.password}
-                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                    required
-                    minLength="6"
-                  />
-                  <small style={{ color: '#7f8c8d', display: 'block', marginTop: '0.25rem' }}>
-                    Must be at least 6 characters
-                  </small>
                 </div>
 
                 <div className="form-group">
@@ -386,6 +372,67 @@ function UserManagement({ currentUser }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Activation Code Modal */}
+      {showActivationCodeModal && (
+        <div className="modal-overlay" onClick={() => setShowActivationCodeModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h3>✅ User Created Successfully</h3>
+              <button className="close-btn" onClick={() => setShowActivationCodeModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: '#7f8c8d', marginBottom: '1rem' }}>
+                Share this activation code with the user. They will use it to set up their passkey.
+                <strong style={{ display: 'block', marginTop: '0.5rem', color: '#e74c3c' }}>
+                  This code will only be shown once!
+                </strong>
+              </p>
+
+              <div style={{
+                background: '#f8f9fa',
+                padding: '1.5rem',
+                borderRadius: '4px',
+                border: '2px solid #3498db',
+                textAlign: 'center',
+                marginBottom: '1rem'
+              }}>
+                <div style={{
+                  fontSize: '2rem',
+                  fontFamily: 'monospace',
+                  letterSpacing: '0.3em',
+                  fontWeight: 'bold',
+                  color: '#2c3e50'
+                }}>
+                  {activationCode}
+                </div>
+              </div>
+
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  navigator.clipboard.writeText(activationCode);
+                  setSuccess('Activation code copied to clipboard!');
+                }}
+                style={{ width: '100%', marginBottom: '0.5rem' }}
+              >
+                📋 Copy to Clipboard
+              </button>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setShowActivationCodeModal(false);
+                  setActivationCode('');
+                }}
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
