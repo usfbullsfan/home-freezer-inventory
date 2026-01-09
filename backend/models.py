@@ -12,6 +12,8 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='user')  # 'admin' or 'user'
+    activation_code = db.Column(db.String(20), unique=True)  # For initial passkey enrollment
+    activated = db.Column(db.Boolean, default=False)  # True once user sets up passkey
     pwa_install_dismissed = db.Column(db.Boolean, default=False)  # True if user dismissed PWA install prompt
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -31,6 +33,7 @@ class User(db.Model):
             'id': self.id,
             'username': self.username,
             'role': self.role,
+            'activated': self.activated,
             'pwa_install_dismissed': self.pwa_install_dismissed,
             'created_at': self.created_at.isoformat()
         }

@@ -20,7 +20,8 @@ case "$TEST_SUITE" in
 esac
 
 echo "================================"
-echo "Freezer Inventory Tracker"
+echo "Freezer Inventory Tracker v1.2"
+echo "Features: Passkey Auth, QR Codes, History Tracking"
 if [ "$TEST_SUITE" = "all" ]; then
     echo "Running All Tests"
 else

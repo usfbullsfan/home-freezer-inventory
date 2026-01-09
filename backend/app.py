@@ -50,12 +50,14 @@ def create_app(test_config=None):
     from routes.categories import categories_bp
     from routes.settings import settings_bp
     from routes.uploads import uploads_bp
+    from routes.passkey import passkey_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(items_bp, url_prefix='/api/items')
     app.register_blueprint(categories_bp, url_prefix='/api/categories')
     app.register_blueprint(settings_bp, url_prefix='/api/settings')
     app.register_blueprint(uploads_bp, url_prefix='/api/uploads')
+    app.register_blueprint(passkey_bp, url_prefix='/api/passkey')
 
     # Health check endpoint
     @app.route('/api/health', methods=['GET'])
