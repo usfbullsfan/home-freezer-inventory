@@ -142,19 +142,27 @@ function UserManagement({ currentUser }) {
   };
 
   const handleRegenerateActivation = async (user) => {
+    console.log('handleRegenerateActivation called for user:', user);
+
     if (!window.confirm(`Regenerate activation code for "${user.username}"? This will invalidate any previous code and they will need to re-activate their account.`)) {
+      console.log('User cancelled confirmation');
       return;
     }
 
+    console.log('Confirmation accepted, making API call...');
     setError('');
     setSuccess('');
 
     try {
+      console.log('Calling regenerateActivationCode API for user ID:', user.id);
       const response = await authAPI.regenerateActivationCode(user.id);
+      console.log('API response:', response);
       setActivationCode(response.data.activation_code);
       setSelectedUser(user);
       setShowRegenerateModal(true);
     } catch (err) {
+      console.error('Error regenerating activation code:', err);
+      console.error('Error response:', err.response);
       setError(err.response?.data?.error || 'Failed to regenerate activation code');
     }
   };
