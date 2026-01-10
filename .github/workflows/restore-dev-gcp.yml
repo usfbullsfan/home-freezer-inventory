@@ -72,6 +72,53 @@ jobs:
           source: "${{ secrets.GCP_USERNAME }}@${{ secrets.GCP_PROD_HOST }}:/tmp/prod_freezer_inventory.db"
           target: "/home/${{ secrets.GCP_USERNAME }}/freezer-inventory-dev/backend/instance/freezer_inventory.db"
 
+      - name: Preserve admin passkey credentials
+        uses: appleboy/ssh-action@v1.2.4
+        with:
+          host: ${{ secrets.GCP_DEV_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          script: |
+            echo "======================================"
+            echo "Preserving admin passkey credentials..."
+            echo "======================================"
+            cd /home/michaelt452/freezer-inventory-dev
+
+            # Get latest backup
+            BACKUP=$(ls -t backups/pre-restore/freezer_inventory_*.db 2>/dev/null | head -1)
+
+            if [ -n "$BACKUP" ]; then
+              echo "Found backup: $BACKUP"
+
+              # Export admin user passkey credentials from backup
+              sqlite3 "$BACKUP" << 'SQL' > /tmp/admin_passkeys.sql
+.mode insert passkey_credentials
+SELECT * FROM passkey_credentials WHERE user_id = (SELECT id FROM user WHERE username = 'admin');
+.mode insert recovery_codes
+SELECT * FROM recovery_codes WHERE user_id = (SELECT id FROM user WHERE username = 'admin');
+SQL
+
+              # Import into new database
+              if [ -s /tmp/admin_passkeys.sql ]; then
+                echo "Restoring admin passkey credentials..."
+                # First, delete any existing admin passkeys from prod database
+                sqlite3 backend/instance/freezer_inventory.db << 'SQL'
+DELETE FROM passkey_credentials WHERE user_id = (SELECT id FROM user WHERE username = 'admin');
+DELETE FROM recovery_codes WHERE user_id = (SELECT id FROM user WHERE username = 'admin');
+SQL
+
+                # Then import the dev admin passkeys
+                sqlite3 backend/instance/freezer_inventory.db < /tmp/admin_passkeys.sql
+                echo "✓ Admin passkey credentials preserved"
+              else
+                echo "⚠ No admin passkey credentials found in backup"
+              fi
+
+              rm -f /tmp/admin_passkeys.sql
+            else
+              echo "⚠ No backup found - skipping passkey preservation"
+            fi
+
       - name: Restore dev environment
         uses: appleboy/ssh-action@v1.2.4
         env:

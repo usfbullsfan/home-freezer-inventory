@@ -21,7 +21,10 @@ esac
 
 echo "================================"
 echo "Freezer Inventory Tracker v1.2"
-echo "Features: Passkey Auth, QR Codes, History Tracking"
+echo "Features: Passkey Auth, Multi-worker Boot ID, Auto-logout"
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+echo "Branch: $CURRENT_BRANCH | Commit: $COMMIT_HASH"
 if [ "$TEST_SUITE" = "all" ]; then
     echo "Running All Tests"
 else

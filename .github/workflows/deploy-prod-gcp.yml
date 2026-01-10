@@ -61,6 +61,12 @@ jobs:
             git reset --hard origin/main
             echo "✓ Code updated"
 
+            # Stop services before updating dependencies
+            echo "Stopping services..."
+            sudo systemctl stop freezer-backend
+            sudo systemctl stop freezer-frontend
+            echo "✓ Services stopped"
+
             # Update backend dependencies
             echo "Updating backend dependencies..."
             cd backend
@@ -72,7 +78,9 @@ jobs:
             # Update frontend dependencies
             echo "Updating frontend dependencies..."
             cd frontend
-            npm ci --quiet
+            # Remove node_modules completely for clean install (avoids permission issues)
+            sudo rm -rf node_modules 2>/dev/null || true
+            sudo npm ci --quiet
             echo "✓ Frontend dependencies updated"
 
             # Build frontend
