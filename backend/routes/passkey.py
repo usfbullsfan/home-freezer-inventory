@@ -46,8 +46,6 @@ def get_expected_origin():
     # Use Origin header first (sent with CORS requests), fall back to Referer
     check_url = origin or referer
 
-    print(f'DEBUG get_expected_origin: origin={origin}, referer={referer}, check_url={check_url}')
-
     # Check if this is a dev request
     if 'dev.thefreezer.xyz' in check_url:
         result = EXPECTED_ORIGIN_DEV
@@ -60,7 +58,6 @@ def get_expected_origin():
         # Default to prod if we can't determine
         result = EXPECTED_ORIGIN_PROD
 
-    print(f'DEBUG get_expected_origin returning: {result}')
     return result
 
 def get_db_connection():
