@@ -35,16 +35,29 @@ EXPECTED_ORIGIN_DEV = "https://dev.thefreezer.xyz"
 EXPECTED_ORIGIN_PROD = "https://thefreezer.xyz"
 
 def get_expected_origin():
-    """Get expected origin based on environment"""
-    hostname = request.host
+    """Get expected origin based on environment
+
+    Uses the Origin header from the browser to determine if this is a dev or prod request.
+    The Origin header contains the actual URL the user is accessing (e.g., https://thefreezer.xyz)
+    """
     origin = request.headers.get('Origin', '')
     referer = request.headers.get('Referer', '')
 
-    print(f'DEBUG get_expected_origin: hostname={hostname}, origin={origin}, referer={referer}')
+    # Use Origin header first (sent with CORS requests), fall back to Referer
+    check_url = origin or referer
 
-    if 'dev' in hostname or 'localhost' in hostname:
+    print(f'DEBUG get_expected_origin: origin={origin}, referer={referer}, check_url={check_url}')
+
+    # Check if this is a dev request
+    if 'dev.thefreezer.xyz' in check_url:
         result = EXPECTED_ORIGIN_DEV
+    elif 'thefreezer.xyz' in check_url:
+        result = EXPECTED_ORIGIN_PROD
+    elif 'localhost' in check_url:
+        # For local development
+        result = check_url.split('?')[0].split('#')[0]  # Clean URL
     else:
+        # Default to prod if we can't determine
         result = EXPECTED_ORIGIN_PROD
 
     print(f'DEBUG get_expected_origin returning: {result}')
