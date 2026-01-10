@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { settingsAPI, authAPI } from '../services/api';
 import UserManagement from '../components/UserManagement';
 import ImportExport from '../components/ImportExport';
+import FeedbackManagement from '../components/FeedbackManagement';
 import api from '../services/api';
 import { isMobileDevice } from '../utils/deviceDetection';
 import { registerPasskey, supportsPasskeys, generateRecoveryCodes } from '../utils/passkey';
@@ -785,6 +786,12 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
               Purge All History
             </button>
           </div>
+        </div>
+      )}
+
+      {user && user.role === 'admin' && (
+        <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
+          <FeedbackManagement />
         </div>
       )}
 
