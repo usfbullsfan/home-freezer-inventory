@@ -159,7 +159,7 @@ def process_feedback():
         return jsonify({'error': 'Processing timeout'}), 500
     except Exception as e:
         print(f'Error processing feedback: {e}')
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error while processing feedback'}), 500
 
 
 @feedback_bp.route('/stats', methods=['GET'])
