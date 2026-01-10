@@ -330,7 +330,7 @@ def regenerate_activation_code(user_id):
     except Exception as e:
         db.session.rollback()
         print(f'Error regenerating activation code: {str(e)}')
-        return jsonify({'error': f'Failed to regenerate activation code: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to regenerate activation code'}), 500
 
 
 @auth_bp.route('/quick-login-status', methods=['GET'])
