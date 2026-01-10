@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from backend.database import get_db_connection
+from database import get_db_connection
 from datetime import datetime
 import subprocess
 import os
