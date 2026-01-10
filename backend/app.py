@@ -4,9 +4,14 @@ from flask_jwt_extended import JWTManager
 from models import db, User, Category, Setting
 from dotenv import load_dotenv
 import os
+import uuid
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Generate unique boot ID when the app starts
+# This invalidates all existing tokens when the backend restarts
+BOOT_ID = str(uuid.uuid4())
 
 def create_app(test_config=None):
     app = Flask(__name__)
@@ -39,10 +44,38 @@ def create_app(test_config=None):
         # Test configuration
         app.config.update(test_config)
 
+    # Store boot ID in app config for access in routes
+    app.config['BOOT_ID'] = BOOT_ID
+
     # Initialize extensions
     db.init_app(app)
     CORS(app)
-    JWTManager(app)
+    jwt = JWTManager(app)
+
+    # Verify boot_id in JWT tokens to invalidate old tokens after restart
+    @jwt.token_verification_loader
+    def verify_token_boot_id(jwt_header, jwt_data):
+        """Verify that the token's boot_id matches the current boot_id"""
+        boot_id_in_token = jwt_data.get('boot_id')
+        # If there's no boot_id in the token (old tokens), reject it
+        # If boot_id doesn't match current boot_id, reject it
+        return boot_id_in_token == BOOT_ID
+
+    @jwt.token_verification_failed_loader
+    def token_verification_failed_callback(jwt_header, jwt_data):
+        return jsonify({'error': 'session_expired', 'message': 'Backend restarted. Please log in again.'}), 401
+
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_data):
+        return jsonify({'error': 'token_expired', 'message': 'Token has expired. Please log in again.'}), 401
+
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error):
+        return jsonify({'error': 'invalid_token', 'message': 'Token is invalid. Please log in again.'}), 401
+
+    @jwt.unauthorized_loader
+    def unauthorized_callback(error):
+        return jsonify({'error': 'missing_token', 'message': 'Authorization token is missing'}), 401
 
     # Register blueprints
     from routes.auth import auth_bp
@@ -160,6 +193,7 @@ if __name__ == '__main__':
     print("\n" + "="*50)
     print("Freezer Inventory Tracker API")
     print("="*50)
+    print(f"Boot ID: {BOOT_ID[:8]}... (all existing sessions invalidated)")
     print("Server running on http://localhost:5001")
     print("Default admin credentials:")
     print("  Username: admin")
