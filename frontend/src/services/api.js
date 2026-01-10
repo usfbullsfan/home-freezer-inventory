@@ -363,4 +363,19 @@ export const settingsAPI = {
   },
 };
 
+// Feedback API
+export const feedbackAPI = {
+  submit: (type, description) =>
+    api.post('/feedback/submit', { type, description }),
+
+  list: () =>
+    api.get('/feedback/list'),
+
+  process: () =>
+    api.post('/feedback/process'),
+
+  getStats: () =>
+    api.get('/feedback/stats'),
+};
+
 export default api;
