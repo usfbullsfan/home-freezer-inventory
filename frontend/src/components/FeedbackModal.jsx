@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import './Modal.css';
 
 function FeedbackModal({ isOpen, onClose }) {
   const [type, setType] = useState('bug');
