@@ -71,15 +71,10 @@ def activate():
     db.session.commit()
 
     # Create token for passkey registration (24 hour expiration)
-    from flask import current_app
     access_token = create_access_token(
         identity=str(user.id),
         expires_delta=timedelta(hours=24),
-        additional_claims={
-            'role': user.role,
-            'username': user.username,
-            'boot_id': current_app.config['BOOT_ID']
-        }
+        additional_claims={'role': user.role, 'username': user.username}
     )
 
     return jsonify({
@@ -105,15 +100,10 @@ def login():
         return jsonify({'error': 'Invalid username or password'}), 401
 
     # Create access token with 24 hour expiration
-    from flask import current_app
     access_token = create_access_token(
         identity=str(user.id),
         expires_delta=timedelta(hours=24),
-        additional_claims={
-            'role': user.role,
-            'username': user.username,
-            'boot_id': current_app.config['BOOT_ID']
-        }
+        additional_claims={'role': user.role, 'username': user.username}
     )
 
     return jsonify({
@@ -416,15 +406,10 @@ def quick_login():
         return jsonify({'error': 'User not found'}), 404
 
     # Create access token (same as regular login)
-    from flask import current_app
     access_token = create_access_token(
         identity=str(user.id),
         expires_delta=timedelta(hours=24),
-        additional_claims={
-            'role': user.role,
-            'username': user.username,
-            'boot_id': current_app.config['BOOT_ID']
-        }
+        additional_claims={'role': user.role, 'username': user.username}
     )
 
     return jsonify({

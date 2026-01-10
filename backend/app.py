@@ -52,21 +52,30 @@ def create_app(test_config=None):
     CORS(app)
     jwt = JWTManager(app)
 
-    # Verify boot_id in JWT tokens to invalidate old tokens after restart
-    @jwt.token_verification_loader
-    def verify_token_boot_id(jwt_header, jwt_data):
-        """Verify that the token's boot_id matches the current boot_id"""
-        boot_id_in_token = jwt_data.get('boot_id')
-        # If there's no boot_id in the token (old tokens), reject it
-        # If boot_id doesn't match current boot_id, reject it
-        return boot_id_in_token == BOOT_ID
+    # Add boot_id to all tokens automatically
+    @jwt.additional_claims_loader
+    def add_claims_to_jwt(identity):
+        return {'boot_id': BOOT_ID}
 
-    @jwt.token_verification_failed_loader
-    def token_verification_failed_callback(jwt_header, jwt_data):
-        return jsonify({'error': 'session_expired', 'message': 'Backend restarted. Please log in again.'}), 401
+    # Use token_in_blocklist_loader to check boot_id mismatch
+    # This treats tokens with wrong boot_id as "revoked"
+    @jwt.token_in_blocklist_loader
+    def check_if_token_revoked(jwt_header, jwt_payload):
+        """Check if token's boot_id matches current boot_id"""
+        token_boot_id = jwt_payload.get('boot_id')
+        # Revoke tokens that don't have boot_id or have mismatched boot_id
+        return token_boot_id != BOOT_ID
+
+    @jwt.revoked_token_loader
+    def revoked_token_callback(jwt_header, jwt_payload):
+        """Handle revoked tokens (wrong boot_id = revoked)"""
+        return jsonify({
+            'error': 'session_expired',
+            'message': 'Backend restarted. Please log in again.'
+        }), 401
 
     @jwt.expired_token_loader
-    def expired_token_callback(jwt_header, jwt_data):
+    def expired_token_callback(jwt_header, jwt_payload):
         return jsonify({'error': 'token_expired', 'message': 'Token has expired. Please log in again.'}), 401
 
     @jwt.invalid_token_loader

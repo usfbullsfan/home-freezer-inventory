@@ -374,15 +374,10 @@ def login_complete():
             return jsonify({'error': 'User not found'}), 404
 
         # Create JWT token
-        from flask import current_app
         access_token = create_access_token(
             identity=str(user.id),
             expires_delta=timedelta(hours=24),
-            additional_claims={
-                'role': user.role,
-                'username': user.username,
-                'boot_id': current_app.config['BOOT_ID']
-            }
+            additional_claims={'role': user.role, 'username': user.username}
         )
 
         return jsonify({
@@ -478,11 +473,9 @@ def use_recovery_code():
 
     # Create temporary token (short expiration - 15 minutes)
     from datetime import timedelta
-    from flask import current_app
     access_token = create_access_token(
         identity=str(user.id),
-        expires_delta=timedelta(minutes=15),
-        additional_claims={'boot_id': current_app.config['BOOT_ID']}
+        expires_delta=timedelta(minutes=15)
     )
 
     return jsonify({'temporaryToken': access_token})
