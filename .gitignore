@@ -16,6 +16,9 @@ build/
 *.sqlite
 *.sqlite3
 
+# Runtime state
+backend/instance/.boot_id
+
 # Node
 node_modules/
 npm-debug.log*

@@ -5,13 +5,37 @@ from models import db, User, Category, Setting
 from dotenv import load_dotenv
 import os
 import uuid
+import time
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Generate unique boot ID when the app starts
 # This invalidates all existing tokens when the backend restarts
-BOOT_ID = str(uuid.uuid4())
+# Stored in a file so all gunicorn workers share the same boot_id
+def get_or_create_boot_id():
+    """Get or create boot ID that persists across gunicorn workers"""
+    boot_id_file = os.path.join(os.path.dirname(__file__), 'instance', '.boot_id')
+
+    # Ensure instance directory exists
+    os.makedirs(os.path.dirname(boot_id_file), exist_ok=True)
+
+    # Check if boot_id file exists and was created recently (within last 5 minutes)
+    # This handles both app restart and ensures stale files are replaced
+    if os.path.exists(boot_id_file):
+        file_age = time.time() - os.path.getmtime(boot_id_file)
+        if file_age < 300:  # 5 minutes
+            with open(boot_id_file, 'r') as f:
+                return f.read().strip()
+
+    # Generate new boot_id and save it
+    boot_id = str(uuid.uuid4())
+    with open(boot_id_file, 'w') as f:
+        f.write(boot_id)
+
+    return boot_id
+
+BOOT_ID = get_or_create_boot_id()
 
 def create_app(test_config=None):
     app = Flask(__name__)
