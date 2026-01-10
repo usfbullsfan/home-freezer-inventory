@@ -1,11 +1,26 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from database import get_db_connection
 from datetime import datetime
 import subprocess
 import os
 
 feedback_bp = Blueprint('feedback', __name__)
+
+
+def get_db_connection():
+    """Get database connection"""
+    import sqlite3
+    from flask import current_app
+
+    # Get database path from Flask app config
+    db_uri = current_app.config['SQLALCHEMY_DATABASE_URI']
+    if db_uri.startswith('sqlite:///'):
+        db_path = db_uri.replace('sqlite:///', '')
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        return conn
+    else:
+        raise ValueError('Feedback routes only support SQLite databases')
 
 
 @feedback_bp.route('/submit', methods=['POST'])
