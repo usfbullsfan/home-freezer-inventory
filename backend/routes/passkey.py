@@ -37,9 +37,18 @@ EXPECTED_ORIGIN_PROD = "https://thefreezer.xyz"
 def get_expected_origin():
     """Get expected origin based on environment"""
     hostname = request.host
+    origin = request.headers.get('Origin', '')
+    referer = request.headers.get('Referer', '')
+
+    print(f'DEBUG get_expected_origin: hostname={hostname}, origin={origin}, referer={referer}')
+
     if 'dev' in hostname or 'localhost' in hostname:
-        return EXPECTED_ORIGIN_DEV
-    return EXPECTED_ORIGIN_PROD
+        result = EXPECTED_ORIGIN_DEV
+    else:
+        result = EXPECTED_ORIGIN_PROD
+
+    print(f'DEBUG get_expected_origin returning: {result}')
+    return result
 
 def get_db_connection():
     """Get database connection"""
