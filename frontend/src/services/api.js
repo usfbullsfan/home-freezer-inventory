@@ -16,6 +16,53 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Handle auth errors and auto-logout
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Check if it's an authentication error
+    if (error.response) {
+      const { status, data } = error.response;
+
+      // Auth errors: 401 Unauthorized or 403 Forbidden
+      if (status === 401 || status === 403) {
+        // Clear stored auth data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+
+        // Redirect to login page if not already there
+        if (!window.location.pathname.includes('/login') &&
+            !window.location.pathname.includes('/activate')) {
+          window.location.href = '/login';
+        }
+      }
+
+      // Also handle 500 errors that might be DB connection issues
+      if (status === 500 && data?.error) {
+        // If the error message suggests a backend issue, clear session
+        const backendErrorPatterns = [
+          'database',
+          'connection',
+          'backend',
+          'server error'
+        ];
+        const errorMessage = (data.error || '').toLowerCase();
+
+        if (backendErrorPatterns.some(pattern => errorMessage.includes(pattern))) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+
+          if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login';
+          }
+        }
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 // Auth API
 export const authAPI = {
   login: (username, password) =>
