@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { feedbackAPI } from '../services/api';
 
 function FeedbackModal({ isOpen, onClose }) {
   const [type, setType] = useState('bug');
@@ -12,6 +13,8 @@ function FeedbackModal({ isOpen, onClose }) {
     setError('');
     setLoading(true);
 
+    console.log('Submitting feedback:', { type, description: description.substring(0, 50) + '...' });
+
     // Validation
     if (!description.trim() || description.trim().length < 10) {
       setError('Please provide at least 10 characters describing the issue or request');
@@ -20,35 +23,21 @@ function FeedbackModal({ isOpen, onClose }) {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/feedback/submit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          type,
-          description: description.trim()
-        })
-      });
+      console.log('Calling feedbackAPI.submit...');
+      const response = await feedbackAPI.submit(type, description.trim());
+      console.log('Feedback submitted successfully:', response.data);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess(true);
-        setTimeout(() => {
-          onClose();
-          // Reset form
-          setDescription('');
-          setType('bug');
-          setSuccess(false);
-        }, 2000);
-      } else {
-        setError(data.error || 'Failed to submit feedback');
-      }
+      setSuccess(true);
+      setTimeout(() => {
+        onClose();
+        // Reset form
+        setDescription('');
+        setType('bug');
+        setSuccess(false);
+      }, 2000);
     } catch (err) {
-      setError('Network error. Please try again.');
+      console.error('Feedback submission error:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to submit feedback. Please try again.');
     }
 
     setLoading(false);
