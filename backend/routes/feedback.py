@@ -37,8 +37,8 @@ def submit_feedback():
     if not feedback_type or feedback_type not in ['bug', 'enhancement']:
         return jsonify({'error': 'Invalid feedback type'}), 400
 
-    if not description or len(description) < 10:
-        return jsonify({'error': 'Description must be at least 10 characters'}), 400
+    if not description:
+        return jsonify({'error': 'Description is required'}), 400
 
     if len(description) > 5000:
         return jsonify({'error': 'Description must be less than 5000 characters'}), 400
@@ -164,10 +164,12 @@ def process_feedback():
                 'output': result.stdout
             })
         else:
+            # Script failed - return both stdout and stderr as they contain error messages
+            error_output = result.stderr or result.stdout or 'Unknown error'
             return jsonify({
                 'success': False,
                 'error': 'Processing failed',
-                'output': result.stderr
+                'details': error_output.strip()
             }), 500
 
     except subprocess.TimeoutExpired:

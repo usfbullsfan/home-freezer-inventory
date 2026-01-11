@@ -53,7 +53,10 @@ function FeedbackManagement() {
         setError(response.data.error || 'Processing failed');
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to process feedback');
+      // Show error with details if available
+      const errorMsg = err.response?.data?.error || 'Failed to process feedback';
+      const details = err.response?.data?.details;
+      setError(details ? `${errorMsg}\n\n${details}` : errorMsg);
     }
 
     setProcessing(false);
@@ -126,7 +129,7 @@ function FeedbackManagement() {
       )}
 
       {error && (
-        <div className="error-message" style={{ marginBottom: '1rem' }}>
+        <div className="error-message" style={{ marginBottom: '1rem', whiteSpace: 'pre-wrap' }}>
           {error}
         </div>
       )}

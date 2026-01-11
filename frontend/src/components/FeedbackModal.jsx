@@ -16,8 +16,8 @@ function FeedbackModal({ isOpen, onClose }) {
     console.log('Submitting feedback:', { type, description: description.substring(0, 50) + '...' });
 
     // Validation
-    if (!description.trim() || description.trim().length < 10) {
-      setError('Please provide at least 10 characters describing the issue or request');
+    if (!description.trim()) {
+      setError('Please provide a description');
       setLoading(false);
       return;
     }
@@ -147,11 +147,10 @@ function FeedbackModal({ isOpen, onClose }) {
                   fontSize: '0.9rem',
                   resize: 'vertical'
                 }}
-                minLength={10}
                 maxLength={5000}
               />
               <small style={{ color: '#999', marginTop: '0.25rem', display: 'block' }}>
-                {description.length}/5000 characters (minimum 10)
+                {description.length}/5000 characters
               </small>
             </div>
           </div>
@@ -167,7 +166,7 @@ function FeedbackModal({ isOpen, onClose }) {
             </button>
             <button
               type="submit"
-              disabled={loading || description.trim().length < 10}
+              disabled={loading || !description.trim()}
               className="btn btn-primary"
             >
               {loading ? 'Submitting...' : 'Submit Feedback'}
