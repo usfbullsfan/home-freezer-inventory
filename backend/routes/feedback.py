@@ -164,10 +164,12 @@ def process_feedback():
                 'output': result.stdout
             })
         else:
+            # Script failed - return both stdout and stderr as they contain error messages
+            error_output = result.stderr or result.stdout or 'Unknown error'
             return jsonify({
                 'success': False,
                 'error': 'Processing failed',
-                'output': result.stderr
+                'details': error_output.strip()
             }), 500
 
     except subprocess.TimeoutExpired:

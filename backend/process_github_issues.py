@@ -144,7 +144,14 @@ def process_pending_feedback():
     # Check gh authentication
     if not check_gh_auth():
         print("❌ GitHub CLI is not authenticated")
-        print("Run: gh auth login")
+        print("")
+        print("To authenticate, run on the server:")
+        print("  gh auth login")
+        print("")
+        print("For automated use (cron/web), create a Personal Access Token:")
+        print("  1. Go to: https://github.com/settings/tokens/new")
+        print("  2. Create token with 'repo' scope")
+        print("  3. Run: echo 'YOUR_TOKEN' | gh auth login --with-token")
         sys.exit(1)
 
     print(f"Processing feedback from: {db_path}")
