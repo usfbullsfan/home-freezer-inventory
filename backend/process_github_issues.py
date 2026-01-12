@@ -56,11 +56,11 @@ def create_github_issue(feedback):
 
     # Determine label and emoji
     if feedback_type == 'bug':
-        label = 'Bug'
+        label = 'bug'
         emoji = '🐛'
         title_prefix = 'Bug'
     else:
-        label = 'Enhancement'
+        label = 'enhancement'
         emoji = '✨'
         title_prefix = 'Enhancement'
 
