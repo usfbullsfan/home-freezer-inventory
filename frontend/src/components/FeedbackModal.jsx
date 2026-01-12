@@ -119,7 +119,7 @@ function FeedbackModal({ isOpen, onClose }) {
                     disabled={loading}
                     style={{ marginRight: '0.5rem' }}
                   />
-                  ✨ Feature Request
+                  ✨ Enhancement
                 </label>
               </div>
             </div>

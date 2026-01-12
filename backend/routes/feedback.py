@@ -154,7 +154,8 @@ def process_feedback():
             ['python3', script_path],
             capture_output=True,
             text=True,
-            timeout=60
+            timeout=60,
+            env=os.environ.copy()
         )
 
         if result.returncode == 0:
