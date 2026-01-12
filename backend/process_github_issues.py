@@ -33,7 +33,7 @@ def check_gh_auth():
     """Check if gh CLI is authenticated"""
     try:
         result = subprocess.run(
-            ['gh', 'auth', 'status'],
+            ['/usr/bin/gh', 'auth', 'status'],
             capture_output=True,
             text=True,
             timeout=10
@@ -92,7 +92,7 @@ def create_github_issue(feedback):
     # Create issue using gh CLI
     try:
         cmd = [
-            'gh', 'issue', 'create',
+            '/usr/bin/gh', 'issue', 'create',
             '--repo', REPO_FULL,
             '--title', f"{emoji} {title}",
             '--body', issue_body,
