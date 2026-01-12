@@ -39,6 +39,9 @@ def check_gh_auth():
             timeout=10
         )
         return result.returncode == 0
+    except FileNotFoundError:
+        # gh command not found - not installed
+        return None
     except Exception as e:
         print(f"Error checking gh auth: {e}")
         return False
@@ -142,7 +145,25 @@ def process_pending_feedback():
         return
 
     # Check gh authentication
-    if not check_gh_auth():
+    gh_status = check_gh_auth()
+    if gh_status is None:
+        # gh not installed
+        print("❌ GitHub CLI is not installed")
+        print("")
+        print("To install GitHub CLI:")
+        print("  Ubuntu/Debian:")
+        print("    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg")
+        print("    echo \"deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main\" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null")
+        print("    sudo apt update")
+        print("    sudo apt install gh")
+        print("")
+        print("  Or see: https://github.com/cli/cli#installation")
+        print("")
+        print("After installation, authenticate with:")
+        print("  gh auth login")
+        sys.exit(1)
+    elif not gh_status:
+        # gh installed but not authenticated
         print("❌ GitHub CLI is not authenticated")
         print("")
         print("To authenticate, run on the server:")
