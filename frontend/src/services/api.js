@@ -96,6 +96,9 @@ export const authAPI = {
   changePassword: (currentPassword, newPassword) =>
     api.post('/auth/change-password', { current_password: currentPassword, new_password: newPassword }),
 
+  useRecoveryCode: (username, code) =>
+    api.post('/passkey/recovery/use', { username, code }),
+
   // Quick login (development only)
   getQuickLoginStatus: () =>
     axios.get('/api/auth/quick-login-status'),
@@ -358,6 +361,21 @@ export const settingsAPI = {
       },
     });
   },
+};
+
+// Feedback API
+export const feedbackAPI = {
+  submit: (type, description) =>
+    api.post('/feedback/submit', { type, description }),
+
+  list: () =>
+    api.get('/feedback/list'),
+
+  process: () =>
+    api.post('/feedback/process'),
+
+  getStats: () =>
+    api.get('/feedback/stats'),
 };
 
 export default api;

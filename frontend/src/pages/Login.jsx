@@ -7,9 +7,10 @@ function Login({ setUser }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [activationCode, setActivationCode] = useState('');
+  const [recoveryCode, setRecoveryCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState('passkey'); // 'passkey', 'password', 'activate'
+  const [mode, setMode] = useState('passkey'); // 'passkey', 'password', 'activate', 'recovery'
   const [recoveryCodes, setRecoveryCodes] = useState(null);
   const [showRecoveryCodes, setShowRecoveryCodes] = useState(false);
 
@@ -120,11 +121,64 @@ function Login({ setUser }) {
       if (codesResult.success) {
         setRecoveryCodes(codesResult.codes);
         setShowRecoveryCodes(true);
+        // Don't call setUser(user) yet - wait for user to save recovery codes
+      } else {
+        // If recovery code generation fails, still log them in but warn
+        console.error('Failed to generate recovery codes');
+        setUser(user);
       }
-
-      setUser(user);
     } catch (err) {
       setError(err.response?.data?.error || 'Activation failed');
+    }
+
+    setLoading(false);
+  };
+
+  const handleRecoveryLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      // Step 1: Use recovery code to get temporary token
+      const response = await authAPI.useRecoveryCode(username, recoveryCode);
+      const { temporaryToken } = response.data;
+
+      // Store temporary token
+      localStorage.setItem('token', temporaryToken);
+
+      // Step 2: Prompt for new passkey name
+      const name = window.prompt('Name your new passkey (e.g., "New iPhone", "Yubikey", "Windows Hello"):', 'My Device');
+
+      // If user cancels, clear token and show error
+      if (name === null) {
+        localStorage.removeItem('token');
+        setError('Passkey registration cancelled. Recovery code has been used.');
+        setLoading(false);
+        return;
+      }
+
+      // Step 3: Register new passkey
+      const trimmedName = name.trim();
+      const passkeyResult = await registerPasskey(username, trimmedName || 'My Device');
+
+      if (!passkeyResult.success) {
+        localStorage.removeItem('token');
+        setError('Passkey registration failed: ' + passkeyResult.error);
+        setLoading(false);
+        return;
+      }
+
+      // Step 4: Login with the new passkey
+      const loginResult = await loginWithPasskey(username);
+
+      if (loginResult.success) {
+        setUser(loginResult.user);
+      } else {
+        setError('Login with new passkey failed. Please try again.');
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Recovery failed');
     }
 
     setLoading(false);
@@ -133,6 +187,9 @@ function Login({ setUser }) {
   const handleSaveRecoveryCodes = () => {
     setShowRecoveryCodes(false);
     setRecoveryCodes(null);
+    // Now complete login by setting user
+    const user = JSON.parse(localStorage.getItem('user'));
+    setUser(user);
   };
 
   if (showRecoveryCodes && recoveryCodes) {
@@ -283,6 +340,18 @@ function Login({ setUser }) {
               </small>
             </div>
 
+            <div style={{ textAlign: 'center', color: '#666', marginBottom: '1rem' }}>
+              <small>
+                Lost your passkey? <button
+                  onClick={() => setMode('recovery')}
+                  className="link-button"
+                  disabled={loading}
+                >
+                  Use Recovery Code
+                </button>
+              </small>
+            </div>
+
             <div style={{ textAlign: 'center', color: '#999', fontSize: '0.9rem' }}>
               <button
                 onClick={() => setMode('password')}
@@ -341,7 +410,7 @@ function Login({ setUser }) {
               </div>
             )}
           </form>
-        ) : (
+        ) : mode === 'activate' ? (
           // Activation
           <form onSubmit={handleActivate}>
             <p style={{ color: '#7f8c8d', fontSize: '0.9rem', marginBottom: '1rem', textAlign: 'center' }}>
@@ -372,6 +441,59 @@ function Login({ setUser }) {
             </button>
 
             <div style={{ textAlign: 'center', color: '#999', fontSize: '0.9rem' }}>
+              <button
+                type="button"
+                onClick={() => setMode('passkey')}
+                className="link-button"
+                disabled={loading}
+              >
+                ← Back to login
+              </button>
+            </div>
+          </form>
+        ) : (
+          // Recovery Code Login
+          <form onSubmit={handleRecoveryLogin}>
+            <p style={{ color: '#7f8c8d', fontSize: '0.9rem', marginBottom: '1rem', textAlign: 'center' }}>
+              Enter your username and a recovery code to set up a new passkey
+            </p>
+
+            <div className="form-group">
+              <label htmlFor="recovery-username">Username</label>
+              <input
+                type="text"
+                id="recovery-username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                disabled={loading}
+                placeholder="Your username"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="recovery-code">Recovery Code</label>
+              <input
+                type="text"
+                id="recovery-code"
+                value={recoveryCode}
+                onChange={(e) => setRecoveryCode(e.target.value)}
+                required
+                disabled={loading}
+                style={{ fontFamily: 'monospace' }}
+                placeholder="Enter one of your recovery codes"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn btn-primary"
+            >
+              {loading ? 'Recovering Account...' : 'Use Recovery Code'}
+            </button>
+
+            <div style={{ textAlign: 'center', color: '#999', fontSize: '0.9rem', marginTop: '1rem' }}>
               <button
                 type="button"
                 onClick={() => setMode('passkey')}

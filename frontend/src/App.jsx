@@ -4,6 +4,7 @@ import './App.css';
 import { clearSession } from './utils/sessionTracking';
 import { isMobileDevice, isDesktopSiteRequested, getLogoPath } from './utils/deviceDetection';
 import api from './services/api';
+import FeedbackModal from './components/FeedbackModal';
 
 // Lazy load route components for better code splitting
 const Login = lazy(() => import('./pages/Login'));
@@ -21,6 +22,7 @@ function AppContent() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [useDesktopInterface, setUseDesktopInterface] = useState(false);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -209,6 +211,48 @@ function AppContent() {
               )}
             </Routes>
           </Suspense>
+
+          {/* Floating Feedback Button */}
+          <button
+            onClick={() => setFeedbackModalOpen(true)}
+            style={{
+              position: 'fixed',
+              bottom: '2rem',
+              right: '2rem',
+              padding: '0.75rem 1.25rem',
+              background: '#3498db',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: 'bold',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              zIndex: 999,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = '#2980b9';
+              e.target.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = '#3498db';
+              e.target.style.transform = 'scale(1)';
+            }}
+            title="Report Bug or Request Feature"
+          >
+            <span style={{ fontSize: '1.1rem' }}>💬</span>
+            <span>Feedback</span>
+          </button>
+
+          {/* Feedback Modal */}
+          <FeedbackModal
+            isOpen={feedbackModalOpen}
+            onClose={() => setFeedbackModalOpen(false)}
+          />
         </div>
       )}
     </>

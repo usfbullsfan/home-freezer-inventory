@@ -13,6 +13,8 @@ PROD_DB="$PROD_DIR/freezer_inventory.db"
 DEV_DB="$DEV_DIR/freezer_inventory_dev.db"
 BACKUP_DIR="$DEV_DIR/backups"
 ADMIN_BACKUP="/tmp/dev_admins_backup.sql"
+PASSKEY_BACKUP="/tmp/dev_admin_passkeys.sql"
+RECOVERY_BACKUP="/tmp/dev_admin_recovery.sql"
 
 echo "=========================================="
 echo "Database Sync: Production → Dev"
@@ -32,9 +34,9 @@ echo "Production DB: $PROD_DB"
 echo "Dev DB:        $DEV_DB"
 echo ""
 
-# Save dev admin users before copying
+# Save dev admin users and their passkey credentials before copying
 if [ -f "$DEV_DB" ]; then
-    echo "💾 Saving dev admin user(s)..."
+    echo "💾 Saving dev admin user(s) and passkey credentials..."
 
     ADMIN_COUNT=$(sqlite3 "$DEV_DB" "SELECT COUNT(*) FROM users WHERE role='admin';" 2>/dev/null || echo "0")
 
@@ -46,10 +48,30 @@ if [ -f "$DEV_DB" ]; then
 SELECT id, username, password_hash, role, created_at FROM users WHERE role='admin';
 EOF
         echo "   Saved $ADMIN_COUNT dev admin user(s)"
+
+        # Export passkey credentials for admin users
+        PASSKEY_COUNT=$(sqlite3 "$DEV_DB" "SELECT COUNT(*) FROM passkey_credentials WHERE user_id IN (SELECT id FROM users WHERE role='admin');" 2>/dev/null || echo "0")
+        if [ "$PASSKEY_COUNT" -gt 0 ]; then
+            sqlite3 "$DEV_DB" <<EOF > "$PASSKEY_BACKUP"
+.mode insert passkey_credentials
+SELECT * FROM passkey_credentials WHERE user_id IN (SELECT id FROM users WHERE role='admin');
+EOF
+            echo "   Saved $PASSKEY_COUNT passkey credential(s)"
+        fi
+
+        # Export recovery codes for admin users
+        RECOVERY_COUNT=$(sqlite3 "$DEV_DB" "SELECT COUNT(*) FROM recovery_codes WHERE user_id IN (SELECT id FROM users WHERE role='admin');" 2>/dev/null || echo "0")
+        if [ "$RECOVERY_COUNT" -gt 0 ]; then
+            sqlite3 "$DEV_DB" <<EOF > "$RECOVERY_BACKUP"
+.mode insert recovery_codes
+SELECT * FROM recovery_codes WHERE user_id IN (SELECT id FROM users WHERE role='admin');
+EOF
+            echo "   Saved $RECOVERY_COUNT recovery code(s)"
+        fi
     else
         echo "   ⚠️  No admin users found in dev database"
         echo "   Admin credentials will be copied from production"
-        rm -f "$ADMIN_BACKUP"
+        rm -f "$ADMIN_BACKUP" "$PASSKEY_BACKUP" "$RECOVERY_BACKUP"
     fi
     echo ""
 fi
@@ -110,7 +132,37 @@ EOF
     RESTORED_COUNT=$(sqlite3 "$DEV_DB" "SELECT COUNT(*) FROM users WHERE role='admin';" 2>/dev/null || echo "0")
     echo "   Restored $RESTORED_COUNT admin user(s)"
 
-    # Clean up backup file
+    # Restore passkey credentials if they were saved
+    if [ -f "$PASSKEY_BACKUP" ] && [ -s "$PASSKEY_BACKUP" ]; then
+        echo "🔐 Restoring admin passkey credentials..."
+
+        # Delete existing admin passkeys from the copied prod database
+        sqlite3 "$DEV_DB" <<EOF
+DELETE FROM passkey_credentials WHERE user_id IN (SELECT id FROM users WHERE role='admin');
+DELETE FROM recovery_codes WHERE user_id IN (SELECT id FROM users WHERE role='admin');
+EOF
+
+        # Import the dev admin passkeys
+        sqlite3 "$DEV_DB" < "$PASSKEY_BACKUP"
+
+        PASSKEY_RESTORED=$(sqlite3 "$DEV_DB" "SELECT COUNT(*) FROM passkey_credentials WHERE user_id IN (SELECT id FROM users WHERE role='admin');" 2>/dev/null || echo "0")
+        echo "   Restored $PASSKEY_RESTORED passkey credential(s)"
+
+        rm -f "$PASSKEY_BACKUP"
+    fi
+
+    # Restore recovery codes if they were saved
+    if [ -f "$RECOVERY_BACKUP" ] && [ -s "$RECOVERY_BACKUP" ]; then
+        # Import the dev admin recovery codes
+        sqlite3 "$DEV_DB" < "$RECOVERY_BACKUP"
+
+        RECOVERY_RESTORED=$(sqlite3 "$DEV_DB" "SELECT COUNT(*) FROM recovery_codes WHERE user_id IN (SELECT id FROM users WHERE role='admin');" 2>/dev/null || echo "0")
+        echo "   Restored $RECOVERY_RESTORED recovery code(s)"
+
+        rm -f "$RECOVERY_BACKUP"
+    fi
+
+    # Clean up backup files
     rm -f "$ADMIN_BACKUP"
     echo ""
 fi
@@ -133,6 +185,6 @@ echo "  Users:      $USER_COUNT"
 echo ""
 echo "=========================================="
 echo "✅ Dev database is now a copy of production"
-echo "   (with dev admin credentials preserved)"
+echo "   (with dev admin credentials & passkeys preserved)"
 echo "   Restart dev backend: sudo systemctl restart freezer-backend-dev"
 echo "=========================================="
