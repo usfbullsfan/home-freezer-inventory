@@ -5,7 +5,6 @@ from models import db, User, Category, Setting
 from dotenv import load_dotenv
 import os
 import uuid
-import time
 
 # Load environment variables from .env file
 load_dotenv()
@@ -14,19 +13,24 @@ load_dotenv()
 # This invalidates all existing tokens when the backend restarts
 # Stored in a file so all gunicorn workers share the same boot_id
 def get_or_create_boot_id():
-    """Get or create boot ID that persists across gunicorn workers"""
+    """Get or create boot ID that persists across gunicorn workers
+
+    The boot_id file should be deleted by deployment scripts before service restart
+    to ensure all tokens are invalidated on actual deployments/restarts.
+
+    We do NOT use time-based expiry because in multi-worker environments,
+    workers can start at different times, and we need all workers to share
+    the same boot_id for the entire service lifetime.
+    """
     boot_id_file = os.path.join(os.path.dirname(__file__), 'instance', '.boot_id')
 
     # Ensure instance directory exists
     os.makedirs(os.path.dirname(boot_id_file), exist_ok=True)
 
-    # Check if boot_id file exists and was created recently (within last 5 minutes)
-    # This handles both app restart and ensures stale files are replaced
+    # If boot_id file exists, use it (all workers must share the same boot_id)
     if os.path.exists(boot_id_file):
-        file_age = time.time() - os.path.getmtime(boot_id_file)
-        if file_age < 300:  # 5 minutes
-            with open(boot_id_file, 'r') as f:
-                return f.read().strip()
+        with open(boot_id_file, 'r') as f:
+            return f.read().strip()
 
     # Generate new boot_id and save it
     boot_id = str(uuid.uuid4())
