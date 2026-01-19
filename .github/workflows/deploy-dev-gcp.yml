@@ -89,6 +89,11 @@ jobs:
             cd ..
             echo "✓ Frontend built"
 
+            # Delete boot_id file to invalidate all sessions on deployment
+            echo "Invalidating existing sessions..."
+            rm -f backend/instance/.boot_id
+            echo "✓ Sessions will be invalidated on restart"
+
             # Restart services
             echo "Restarting services..."
             sudo systemctl restart freezer-backend-dev
