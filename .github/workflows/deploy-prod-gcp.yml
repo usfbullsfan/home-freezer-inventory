@@ -98,24 +98,40 @@ jobs:
             echo "Restarting services..."
             sudo systemctl restart freezer-backend
             sudo systemctl restart freezer-frontend
-            sleep 15
             echo "✓ Services restarted"
 
-            # Health check
+            # Health check with retries
             echo "Running health check..."
-            if curl -f http://localhost:5001/api/health > /dev/null 2>&1; then
-              echo "✓ Backend health check passed"
-            else
-              echo "✗ Backend health check failed!"
-              exit 1
-            fi
 
-            if curl -f http://localhost:3000 > /dev/null 2>&1; then
-              echo "✓ Frontend health check passed"
-            else
-              echo "✗ Frontend health check failed!"
-              exit 1
-            fi
+            # Backend health check (retry up to 30 seconds)
+            for i in {1..6}; do
+              if curl -f http://localhost:5001/api/health > /dev/null 2>&1; then
+                echo "✓ Backend health check passed"
+                break
+              fi
+              if [ $i -eq 6 ]; then
+                echo "✗ Backend health check failed after 30s!"
+                sudo systemctl status freezer-backend --no-pager
+                exit 1
+              fi
+              echo "  Waiting for backend... (attempt $i/6)"
+              sleep 5
+            done
+
+            # Frontend health check (retry up to 30 seconds)
+            for i in {1..6}; do
+              if curl -f http://localhost:3000 > /dev/null 2>&1; then
+                echo "✓ Frontend health check passed"
+                break
+              fi
+              if [ $i -eq 6 ]; then
+                echo "✗ Frontend health check failed after 30s!"
+                sudo systemctl status freezer-frontend --no-pager
+                exit 1
+              fi
+              echo "  Waiting for frontend... (attempt $i/6)"
+              sleep 5
+            done
 
             # Keep only last 10 backups
             cd backups
