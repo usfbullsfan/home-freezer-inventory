@@ -100,6 +100,8 @@ jobs:
             # Delete boot_id file to invalidate all sessions on deployment
             echo "Invalidating existing sessions..."
             rm -f backend/instance/.boot_id
+            # Pre-create boot_id file to avoid race condition with multiple workers
+            python3 -c "import uuid; open('backend/instance/.boot_id', 'w').write(str(uuid.uuid4()))"
             echo "✓ Sessions will be invalidated on restart"
 
             # Restart services
