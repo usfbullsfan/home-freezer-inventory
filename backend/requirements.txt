@@ -7,7 +7,7 @@ python-dotenv==1.2.1
 Werkzeug==3.1.5
 gunicorn==23.0.0
 requests==2.32.5
-reportlab==4.4.7
+reportlab==4.4.9
 psycopg2-binary==2.9.11  # PostgreSQL adapter (optional, for PostgreSQL support)
 
 # Testing dependencies
