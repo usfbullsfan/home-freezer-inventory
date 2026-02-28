@@ -222,6 +222,20 @@ def create_app(test_config=None):
                 db.session.add(enable_images_setting)
                 print("Created system setting: enable_image_fetching = true")
 
+            enable_qr_printing_setting = Setting.query.filter_by(
+                user_id=None,
+                setting_name='enable_qr_printing'
+            ).first()
+
+            if not enable_qr_printing_setting:
+                enable_qr_printing_setting = Setting(
+                    user_id=None,
+                    setting_name='enable_qr_printing',
+                    setting_value='true'
+                )
+                db.session.add(enable_qr_printing_setting)
+                print("Created system setting: enable_qr_printing = true")
+
             db.session.commit()
 
     return app

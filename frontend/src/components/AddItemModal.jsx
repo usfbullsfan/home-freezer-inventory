@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { itemsAPI, categoriesAPI, uploadsAPI } from '../services/api';
 import { addItemToSession } from '../utils/sessionTracking';
+import { toDateInputValue } from '../utils/dateUtils';
 import BarcodeScanner from './BarcodeScanner';
 
 function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) {
@@ -13,7 +14,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
     weight: '',
     weight_unit: 'lb',
     category_id: '',
-    added_date: '',
+    added_date: toDateInputValue(),
     expiration_date: '',
     notes: '',
   });
@@ -21,6 +22,8 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
   const [loading, setLoading] = useState(false);
   const [upcLookupLoading, setUpcLookupLoading] = useState(false);
   const [upcMessage, setUpcMessage] = useState('');
+  const [lastAddedCode, setLastAddedCode] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [upcFieldFocused, setUpcFieldFocused] = useState(false);
@@ -322,28 +325,38 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
       }
 
       if (keepOpen) {
-        // Reset form for next entry, but keep category selected
-        const savedCategoryId = formData.category_id;
-        const savedCategoryExpiration = formData.expiration_date;
+        // Show the code of the item just added
+        if (createdItem && createdItem.qr_code) {
+          setLastAddedCode(createdItem.qr_code);
+        }
 
-        setFormData({
+        // Reset form for next entry, keeping name/source/category/date but clearing weight and item-specific fields
+        setFormData((prev) => ({
           qr_code: '',
           upc: '',
           image_url: '',
-          name: '',
-          source: '',
+          name: prev.name,
+          source: prev.source,
           weight: '',
-          weight_unit: 'lb',
-          category_id: savedCategoryId,
-          added_date: '',
-          expiration_date: savedCategoryExpiration,
+          weight_unit: prev.weight_unit,
+          category_id: prev.category_id,
+          added_date: prev.added_date,
+          expiration_date: prev.expiration_date,
           notes: '',
-        });
+        }));
         setUpcMessage('');
 
         // Trigger a soft refresh to update the items list in the background
         onSave(true);
       } else {
+        // Show the code briefly before closing
+        if (createdItem && createdItem.qr_code) {
+          setLastAddedCode(createdItem.qr_code);
+          setShowSuccess(true);
+          setLoading(false);
+          setTimeout(() => onSave(), 2500);
+          return;
+        }
         onSave();
       }
     } catch (err) {
@@ -441,14 +454,68 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
         </div>
 
         <div className="modal-content">
-          {error && <div className="error-message">{error}</div>}
-          {upcMessage && (
+          {showSuccess && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '2rem',
+              gap: '1rem',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '3rem' }}>✅</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#2c3e50' }}>Item Added!</div>
+              <div style={{ color: '#555' }}>Item Code:</div>
+              <div style={{
+                fontFamily: 'monospace',
+                fontSize: '1.4rem',
+                fontWeight: 'bold',
+                background: '#f0f8ff',
+                border: '2px solid #3498db',
+                borderRadius: '8px',
+                padding: '0.6rem 1.2rem',
+                letterSpacing: '2px',
+                color: '#2980b9',
+              }}>
+                {lastAddedCode}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#888' }}>Closing in a moment…</div>
+            </div>
+          )}
+          {!showSuccess && error && <div className="error-message">{error}</div>}
+          {!showSuccess && lastAddedCode && (
+            <div style={{
+              background: '#eafaf1',
+              border: '1px solid #2ecc71',
+              borderRadius: '6px',
+              padding: '0.6rem 1rem',
+              marginBottom: '0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              fontSize: '0.9rem',
+              color: '#27ae60',
+            }}>
+              <span>✅ Last added — Item Code:</span>
+              <span style={{
+                fontFamily: 'monospace',
+                fontWeight: 'bold',
+                fontSize: '1rem',
+                letterSpacing: '1px',
+                color: '#1e8449',
+              }}>
+                {lastAddedCode}
+              </span>
+            </div>
+          )}
+          {!showSuccess && upcMessage && (
             <div className={upcMessage.includes('already have') || upcMessage.includes('Found product') ? 'success-message' : 'error-message'} style={{ fontSize: '0.9rem' }}>
               {upcMessage}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} id="item-form">
+          {!showSuccess && <form onSubmit={handleSubmit} id="item-form">
           {/* UPC Lookup Section */}
           <div style={{
             background: '#f8f9fa',
@@ -780,10 +847,15 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
               placeholder="Additional notes..."
             />
           </div>
-          </form>
+          </form>}
         </div>
 
         <div className="modal-actions">
+          {showSuccess ? (
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
+              Close
+            </button>
+          ) : (
           <button
             type="button"
             className="btn btn-secondary"
@@ -792,9 +864,10 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
           >
             Cancel
           </button>
+          )}
 
           {/* Quick action buttons for items in freezer */}
-          {item?.id && item.status === 'in_freezer' && (
+          {!showSuccess && item?.id && item.status === 'in_freezer' && (
             <>
               <button
                 type="button"
@@ -826,7 +899,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
           )}
 
           {/* Add + Create More button (only for new items) */}
-          {!item?.id && (
+          {!showSuccess && !item?.id && (
             <button
               type="button"
               className="btn btn-success"
@@ -838,6 +911,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
           )}
 
           {/* Update/Add button */}
+          {!showSuccess && (
           <button
             type="submit"
             form="item-form"
@@ -846,6 +920,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
           >
             {loading ? 'Saving...' : item && item.id ? 'Update Item' : 'Add Item'}
           </button>
+          )}
         </div>
       </div>
 
