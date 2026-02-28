@@ -168,23 +168,27 @@ def parse_product_size(size_str):
         'pk': 'units', 'pack': 'units', 'packs': 'units',
     }
 
-    pattern = (
-        r'(\d+(?:\.\d+)?)\s*'
-        r'(fl\.?\s*oz\.?|oz\.?|ounce[s]?|lb[s]?|pound[s]?|kg|kilogram[s]?'
-        r'|g|gram[s]?|ct|count[s]?|unit[s]?|pc[s]?|piece[s]?|pk|pack[s]?)'
-    )
-    match = re.search(pattern, size_str, re.IGNORECASE)
-    if match:
-        value = float(match.group(1))
-        raw_unit = match.group(2).lower().strip().rstrip('.')
-        # Normalize compound units like "fl oz"
-        normalized = raw_unit.replace(' ', ' ')
-        for key, mapped in unit_map.items():
-            if normalized == key or normalized.startswith(key):
-                return value, mapped
-        return value, 'units'
+    # Use a simple, non-alternating regex to extract just the numeric part.
+    # Unit matching is done with plain string operations below to avoid
+    # polynomial backtracking on the alternation group (CWE-1333 / ReDoS).
+    num_match = re.search(r'(\d+(?:\.\d+)?)', size_str)
+    if not num_match:
+        return None, None
 
-    return None, None
+    value = float(num_match.group(1))
+    remainder = size_str[num_match.end():].strip().lower().rstrip('.')
+
+    # Match the unit via direct string lookup (longest key first so
+    # 'fl oz' beats 'oz', 'grams' beats 'g', etc.).
+    for key in sorted(unit_map, key=len, reverse=True):
+        key_len = len(key)
+        if remainder[:key_len] == key:
+            # Require a word boundary: next char must be non-alpha (or end).
+            tail = remainder[key_len:key_len + 1]
+            if not tail or not tail.isalpha():
+                return value, unit_map[key]
+
+    return value, 'units'
 
 
 def match_api_category_to_local(api_category_str):
