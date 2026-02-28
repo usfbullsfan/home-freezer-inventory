@@ -14,6 +14,7 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
   const [systemSettings, setSystemSettings] = useState({
     enable_image_fetching: 'true',
     no_auth_mode: 'false',
+    enable_qr_printing: 'true',
   });
   const [userSettings, setUserSettings] = useState({
     use_desktop_interface: 'false',
@@ -648,6 +649,26 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
             </label>
             <small style={{ color: '#7f8c8d', marginLeft: '1.5rem', display: 'block', marginTop: '0.25rem' }}>
               When enabled, the system will automatically fetch product images from Pexels when adding items via UPC lookup. Disable this to conserve API quota or bandwidth.
+            </small>
+          </div>
+
+          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={systemSettings.enable_qr_printing === 'true'}
+                onChange={(e) =>
+                  setSystemSettings({
+                    ...systemSettings,
+                    enable_qr_printing: e.target.checked ? 'true' : 'false',
+                  })
+                }
+                style={{ marginRight: '0.5rem', width: 'auto' }}
+              />
+              Enable QR code printing
+            </label>
+            <small style={{ color: '#7f8c8d', marginLeft: '1.5rem', display: 'block', marginTop: '0.25rem' }}>
+              When enabled, users can view QR codes on items, print labels, scan QR codes with the camera, and will see the &ldquo;Print Labels&rdquo; prompt after adding items. QR codes are always generated in the background for item lookup regardless of this setting.
             </small>
           </div>
 

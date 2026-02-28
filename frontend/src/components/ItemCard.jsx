@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { itemsAPI } from '../services/api';
 import { formatLocalDate, daysBetween } from '../utils/dateUtils';
 
-function ItemCard({ item, onEdit, onStatusChange }) {
+function ItemCard({ item, onEdit, onStatusChange, qrPrintingEnabled = true }) {
   const [showQR, setShowQR] = useState(false);
 
   const getStatusClass = () => {
@@ -115,13 +115,15 @@ function ItemCard({ item, onEdit, onStatusChange }) {
       </div>
 
       <div className="item-actions">
-        <button
-          className="btn btn-secondary"
-          onClick={() => setShowQR(!showQR)}
-          style={{ flex: 0.5 }}
-        >
-          Code
-        </button>
+        {qrPrintingEnabled && (
+          <button
+            className="btn btn-secondary"
+            onClick={() => setShowQR(!showQR)}
+            style={{ flex: 0.5 }}
+          >
+            Code
+          </button>
+        )}
         <button
           className="btn btn-primary"
           onClick={onEdit}
@@ -154,7 +156,7 @@ function ItemCard({ item, onEdit, onStatusChange }) {
         )}
       </div>
 
-      {showQR && (
+      {qrPrintingEnabled && showQR && (
         <div className="qr-code-display">
           <p style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
             {item.qr_code}

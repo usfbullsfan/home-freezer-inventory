@@ -7,7 +7,7 @@ import QRInputModal from '../components/QRInputModal';
 import QRScanner from '../components/QRScanner';
 import SessionBanner from '../components/SessionBanner';
 
-function Inventory({ isMobile = false }) {
+function Inventory({ isMobile = false, qrPrintingEnabled = true }) {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -263,7 +263,7 @@ function Inventory({ isMobile = false }) {
 
   return (
     <div className="container">
-      <SessionBanner key={sessionKey} />
+      {qrPrintingEnabled && <SessionBanner key={sessionKey} />}
 
       <div className="inventory-header">
         <div>
@@ -284,9 +284,11 @@ function Inventory({ isMobile = false }) {
             <button className="btn btn-secondary" onClick={() => setShowQRModal(true)}>
               🔍 Locate Item by Code
             </button>
-            <button className="btn btn-secondary" onClick={() => setShowQRScanner(true)}>
-              📷 Scan QR Code
-            </button>
+            {qrPrintingEnabled && (
+              <button className="btn btn-secondary" onClick={() => setShowQRScanner(true)}>
+                📷 Scan QR Code
+              </button>
+            )}
             <button className="btn btn-success" onClick={handleAddItem}>
               ➕ Add Item
             </button>
@@ -388,6 +390,7 @@ function Inventory({ isMobile = false }) {
               item={item}
               onEdit={() => handleEditItem(item)}
               onStatusChange={(status) => handleStatusChange(item.id, status)}
+              qrPrintingEnabled={qrPrintingEnabled}
             />
           ))}
         </div>
