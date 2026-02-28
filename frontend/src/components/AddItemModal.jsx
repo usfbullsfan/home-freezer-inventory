@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { itemsAPI, categoriesAPI, uploadsAPI } from '../services/api';
 import { addItemToSession } from '../utils/sessionTracking';
+import { toDateInputValue } from '../utils/dateUtils';
 import BarcodeScanner from './BarcodeScanner';
 
 function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) {
@@ -13,7 +14,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
     weight: '',
     weight_unit: 'lb',
     category_id: '',
-    added_date: '',
+    added_date: toDateInputValue(),
     expiration_date: '',
     notes: '',
   });
