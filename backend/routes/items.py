@@ -153,6 +153,8 @@ def parse_product_size(size_str):
     """
     if not size_str:
         return None, None
+    # Truncate to a safe length to prevent ReDoS on malformed API data
+    size_str = size_str[:100]
 
     unit_map = {
         'fl oz': 'oz', 'fl. oz': 'oz', 'fl. oz.': 'oz', 'floz': 'oz',
