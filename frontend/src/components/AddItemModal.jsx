@@ -323,23 +323,20 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
       }
 
       if (keepOpen) {
-        // Reset form for next entry, but keep category selected
-        const savedCategoryId = formData.category_id;
-        const savedCategoryExpiration = formData.expiration_date;
-
-        setFormData({
+        // Reset form for next entry, keeping name/source/category/date but clearing weight and item-specific fields
+        setFormData((prev) => ({
           qr_code: '',
           upc: '',
           image_url: '',
-          name: '',
-          source: '',
+          name: prev.name,
+          source: prev.source,
           weight: '',
-          weight_unit: 'lb',
-          category_id: savedCategoryId,
-          added_date: '',
-          expiration_date: savedCategoryExpiration,
+          weight_unit: prev.weight_unit,
+          category_id: prev.category_id,
+          added_date: prev.added_date,
+          expiration_date: prev.expiration_date,
           notes: '',
-        });
+        }));
         setUpcMessage('');
 
         // Trigger a soft refresh to update the items list in the background
