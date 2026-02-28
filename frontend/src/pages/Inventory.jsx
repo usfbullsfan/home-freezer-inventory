@@ -306,11 +306,9 @@ function Inventory({ isMobile = false, qrEnabled = true }) {
         </div>
         {!isMobile && (
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            {qrEnabled && (
-              <button className="btn btn-secondary" onClick={() => setShowQRModal(true)}>
-                🔍 Locate Item by Code
-              </button>
-            )}
+            <button className="btn btn-secondary" onClick={() => setShowQRModal(true)}>
+              🔍 Locate Item by Code
+            </button>
             {qrEnabled && (
               <button className="btn btn-secondary" onClick={() => setShowQRScanner(true)}>
                 📷 Scan QR Code
@@ -441,7 +439,7 @@ function Inventory({ isMobile = false, qrEnabled = true }) {
         />
       )}
 
-      {qrEnabled && showQRModal && (
+      {showQRModal && (
         <QRInputModal
           onClose={() => {
             setShowQRModal(false);
