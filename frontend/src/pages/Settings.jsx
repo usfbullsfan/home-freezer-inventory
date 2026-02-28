@@ -207,8 +207,7 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
 
     try {
       await settingsAPI.updateSystemSettings(systemSettings);
-      setSystemSuccess('System settings saved successfully');
-      setTimeout(() => setSystemSuccess(''), 3000);
+      window.location.reload();
     } catch (err) {
       setSystemError('Failed to save system settings');
     }
