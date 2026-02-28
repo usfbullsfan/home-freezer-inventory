@@ -7,6 +7,53 @@ import api from '../services/api';
 import { isMobileDevice } from '../utils/deviceDetection';
 import { registerPasskey, supportsPasskeys, generateRecoveryCodes } from '../utils/passkey';
 
+function SettingsSection({ title, badge = null, defaultOpen = false, children }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  return (
+    <div style={{ background: 'white', borderRadius: '8px', marginTop: '1.5rem', overflow: 'hidden', border: '1px solid #e9ecef' }}>
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          padding: '1rem 1.5rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          cursor: 'pointer',
+          background: isOpen ? '#f8f9fa' : 'white',
+          borderBottom: isOpen ? '1px solid #e9ecef' : 'none',
+          userSelect: 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <h3 style={{ margin: 0, fontSize: '1.05rem' }}>{title}</h3>
+          {badge && (
+            <span style={{
+              fontSize: '0.7rem',
+              background: '#6c757d',
+              color: 'white',
+              padding: '0.15rem 0.45rem',
+              borderRadius: '3px',
+              fontWeight: '600',
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+            }}>
+              {badge}
+            </span>
+          )}
+        </div>
+        <span style={{ color: '#adb5bd', fontSize: '0.85rem', fontWeight: 'bold' }}>
+          {isOpen ? '▲' : '▼'}
+        </span>
+      </div>
+      {isOpen && (
+        <div style={{ padding: '1.5rem' }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Settings({ user, isMobile = false, setUseDesktopInterface }) {
   const [settings, setSettings] = useState({
     track_history: 'true',
@@ -395,19 +442,15 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
       {error && <div className="error-message">{error}</div>}
       {success && <div className="success-message">{success}</div>}
 
-      <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
-        <h3 style={{ marginBottom: '1.5rem' }}>General Settings</h3>
-
+      {/* ── General ──────────────────────────────────────────────── */}
+      <SettingsSection title="General" defaultOpen={true}>
         <div className="form-group">
           <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
             <input
               type="checkbox"
               checked={settings.track_history === 'true'}
               onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  track_history: e.target.checked ? 'true' : 'false',
-                })
+                setSettings({ ...settings, track_history: e.target.checked ? 'true' : 'false' })
               }
               style={{ marginRight: '0.5rem', width: 'auto' }}
             />
@@ -435,17 +478,14 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
           </div>
         )}
 
-        <button
-          className="btn btn-primary"
-          onClick={handleSaveSettings}
-          style={{ marginTop: '1.5rem' }}
-        >
+        <button className="btn btn-primary" onClick={handleSaveSettings} style={{ marginTop: '1.5rem' }}>
           Save Settings
         </button>
-      </div>
+      </SettingsSection>
 
-      <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
-        <h3 style={{ marginBottom: '1.5rem' }}>Change Password</h3>
+      {/* ── Security ─────────────────────────────────────────────── */}
+      <SettingsSection title="Security">
+        <h4 style={{ marginTop: 0, marginBottom: '1rem' }}>Change Password</h4>
 
         {passwordError && <div className="error-message">{passwordError}</div>}
         {passwordSuccess && <div className="success-message">{passwordSuccess}</div>}
@@ -461,7 +501,6 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
               required
             />
           </div>
-
           <div className="form-group">
             <label htmlFor="new_password">New Password</label>
             <input
@@ -476,7 +515,6 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
               Must be at least 6 characters
             </small>
           </div>
-
           <div className="form-group">
             <label htmlFor="confirm_password">Confirm New Password</label>
             <input
@@ -488,210 +526,194 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
               minLength="6"
             />
           </div>
-
           <button type="submit" className="btn btn-primary">
             Change Password
           </button>
         </form>
-      </div>
 
-      {supportsPasskeys() && (
-        <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
-          <h3 style={{ marginBottom: '1.5rem' }}>Passkey Authentication</h3>
+        {supportsPasskeys() && (
+          <>
+            <hr style={{ margin: '1.75rem 0', borderColor: '#e9ecef' }} />
+            <h4 style={{ marginTop: 0, marginBottom: '1rem' }}>Passkey Authentication</h4>
 
-          {passkeyError && <div className="error-message">{passkeyError}</div>}
-          {passkeySuccess && <div className="success-message">{passkeySuccess}</div>}
+            {passkeyError && <div className="error-message">{passkeyError}</div>}
+            {passkeySuccess && <div className="success-message">{passkeySuccess}</div>}
 
-          {showRecoveryCodes && recoveryCodes ? (
-            <div style={{
-              background: '#fff3cd',
-              border: '1px solid #ffc107',
-              padding: '1.5rem',
-              borderRadius: '4px',
-              marginBottom: '1rem'
-            }}>
-              <h4 style={{ marginBottom: '1rem', color: '#856404' }}>⚠️ Save Your Recovery Codes</h4>
-              <p style={{ color: '#856404', marginBottom: '1rem' }}>
-                These codes can be used to access your account if you lose your passkey.
-                <strong> Save them somewhere safe - they won't be shown again!</strong>
-              </p>
-
+            {showRecoveryCodes && recoveryCodes ? (
               <div style={{
-                background: 'white',
-                padding: '1rem',
+                background: '#fff3cd',
+                border: '1px solid #ffc107',
+                padding: '1.5rem',
                 borderRadius: '4px',
-                fontFamily: 'monospace',
-                fontSize: '14px',
-                marginBottom: '1rem',
-                border: '1px solid #ddd'
+                marginBottom: '1rem'
               }}>
-                {recoveryCodes.map((code, idx) => (
-                  <div key={idx} style={{ padding: '0.25rem 0' }}>
-                    {idx + 1}. {code}
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={handleSaveRecoveryCodes}
-                className="btn btn-primary"
-              >
-                I've Saved These Codes
-              </button>
-            </div>
-          ) : (
-            <>
-              <p style={{ color: '#7f8c8d', marginBottom: '1.5rem' }}>
-                Passkeys enable passwordless login using Face ID, Touch ID, Windows Hello, or a security key.
-                They're more secure than passwords and easier to use.
-              </p>
-
-              {passkeysLoading ? (
-                <div style={{ color: '#7f8c8d', marginBottom: '1rem' }}>Loading passkeys...</div>
-              ) : passkeys.length > 0 ? (
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <h4 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Your Passkeys</h4>
-                  <div style={{
-                    background: '#f8f9fa',
-                    border: '1px solid #e9ecef',
-                    borderRadius: '4px',
-                    overflow: 'hidden'
-                  }}>
-                    {passkeys.map((passkey, idx) => (
-                      <div
-                        key={passkey.id}
-                        style={{
-                          padding: '1rem',
-                          borderBottom: idx < passkeys.length - 1 ? '1px solid #e9ecef' : 'none',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center'
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>
-                            🔐 {passkey.name}
-                          </div>
-                          <div style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>
-                            Created: {new Date(passkey.created_at).toLocaleString()}
-                            {passkey.last_used_at && (
-                              <span style={{ marginLeft: '1rem' }}>
-                                Last used: {new Date(passkey.last_used_at).toLocaleString()}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleDeletePasskey(passkey.id)}
-                          className="btn btn-danger"
-                          style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              <button
-                onClick={handleRegisterPasskey}
-                disabled={passkeyLoading}
-                className="btn btn-primary"
-              >
-                {passkeyLoading ? '🔐 Registering...' : '🔐 Add Passkey'}
-              </button>
-
-              <div style={{
-                marginTop: '1rem',
-                padding: '1rem',
-                background: '#f8f9fa',
-                borderRadius: '4px',
-                border: '1px solid #e9ecef',
-                fontSize: '0.9rem',
-                color: '#7f8c8d'
-              }}>
-                <strong style={{ display: 'block', marginBottom: '0.5rem', color: '#495057' }}>
-                  What is a passkey?
-                </strong>
-                <p style={{ margin: 0 }}>
-                  Passkeys use biometric authentication (fingerprint, face recognition) or a PIN to securely log you in
-                  without typing a password. They're stored on your device and can't be phished or stolen in data breaches.
+                <h4 style={{ marginBottom: '1rem', color: '#856404' }}>⚠️ Save Your Recovery Codes</h4>
+                <p style={{ color: '#856404', marginBottom: '1rem' }}>
+                  These codes can be used to access your account if you lose your passkey.
+                  <strong> Save them somewhere safe — they won't be shown again!</strong>
                 </p>
+                <div style={{
+                  background: 'white',
+                  padding: '1rem',
+                  borderRadius: '4px',
+                  fontFamily: 'monospace',
+                  fontSize: '14px',
+                  marginBottom: '1rem',
+                  border: '1px solid #ddd'
+                }}>
+                  {recoveryCodes.map((code, idx) => (
+                    <div key={idx} style={{ padding: '0.25rem 0' }}>{idx + 1}. {code}</div>
+                  ))}
+                </div>
+                <button onClick={handleSaveRecoveryCodes} className="btn btn-primary">
+                  I've Saved These Codes
+                </button>
               </div>
-            </>
-          )}
-        </div>
-      )}
+            ) : (
+              <>
+                <p style={{ color: '#7f8c8d', marginBottom: '1.5rem' }}>
+                  Passkeys enable passwordless login using Face ID, Touch ID, Windows Hello, or a security key.
+                  They're more secure than passwords and easier to use.
+                </p>
 
+                {passkeysLoading ? (
+                  <div style={{ color: '#7f8c8d', marginBottom: '1rem' }}>Loading passkeys...</div>
+                ) : passkeys.length > 0 ? (
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h4 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Your Passkeys</h4>
+                    <div style={{
+                      background: '#f8f9fa',
+                      border: '1px solid #e9ecef',
+                      borderRadius: '4px',
+                      overflow: 'hidden'
+                    }}>
+                      {passkeys.map((passkey, idx) => (
+                        <div
+                          key={passkey.id}
+                          style={{
+                            padding: '1rem',
+                            borderBottom: idx < passkeys.length - 1 ? '1px solid #e9ecef' : 'none',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>🔐 {passkey.name}</div>
+                            <div style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>
+                              Created: {new Date(passkey.created_at).toLocaleString()}
+                              {passkey.last_used_at && (
+                                <span style={{ marginLeft: '1rem' }}>
+                                  Last used: {new Date(passkey.last_used_at).toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleDeletePasskey(passkey.id)}
+                            className="btn btn-danger"
+                            style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <button onClick={handleRegisterPasskey} disabled={passkeyLoading} className="btn btn-primary">
+                  {passkeyLoading ? '🔐 Registering...' : '🔐 Add Passkey'}
+                </button>
+
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '1rem',
+                  background: '#f8f9fa',
+                  borderRadius: '4px',
+                  border: '1px solid #e9ecef',
+                  fontSize: '0.9rem',
+                  color: '#7f8c8d'
+                }}>
+                  <strong style={{ display: 'block', marginBottom: '0.5rem', color: '#495057' }}>
+                    What is a passkey?
+                  </strong>
+                  <p style={{ margin: 0 }}>
+                    Passkeys use biometric authentication (fingerprint, face recognition) or a PIN to securely
+                    log you in without typing a password. They're stored on your device and can't be phished
+                    or stolen in data breaches.
+                  </p>
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </SettingsSection>
+
+      {/* ── Admin sections ───────────────────────────────────────── */}
       {user && user.role === 'admin' && (
-        <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
-          <h3 style={{ marginBottom: '1.5rem' }}>System Settings (Admin)</h3>
+        <>
+          <SettingsSection title="System Settings" badge="Admin">
+            {systemError && <div className="error-message">{systemError}</div>}
+            {systemSuccess && <div className="success-message">{systemSuccess}</div>}
 
-          {systemError && <div className="error-message">{systemError}</div>}
-          {systemSuccess && <div className="success-message">{systemSuccess}</div>}
-
-          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={systemSettings.enable_image_fetching === 'true'}
-                onChange={(e) =>
-                  setSystemSettings({
-                    ...systemSettings,
-                    enable_image_fetching: e.target.checked ? 'true' : 'false',
-                  })
-                }
-                style={{ marginRight: '0.5rem', width: 'auto' }}
-              />
-              Enable automatic product image fetching
-            </label>
-            <small style={{ color: '#7f8c8d', marginLeft: '1.5rem', display: 'block', marginTop: '0.25rem' }}>
-              When enabled, the system will automatically fetch product images from Pexels when adding items via UPC lookup. Disable this to conserve API quota or bandwidth.
-            </small>
-          </div>
-
-          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={systemSettings.enable_qr_printing === 'true'}
-                onChange={(e) =>
-                  setSystemSettings({
-                    ...systemSettings,
-                    enable_qr_printing: e.target.checked ? 'true' : 'false',
-                  })
-                }
-                style={{ marginRight: '0.5rem', width: 'auto' }}
-              />
-              Enable QR code printing
-            </label>
-            <small style={{ color: '#7f8c8d', marginLeft: '1.5rem', display: 'block', marginTop: '0.25rem' }}>
-              When enabled, users can view QR codes on items, print labels, scan QR codes with the camera, and will see the &ldquo;Print Labels&rdquo; prompt after adding items. QR codes are always generated in the background for item lookup regardless of this setting.
-            </small>
-          </div>
-
-          {isDev && (
             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
-                  checked={systemSettings.no_auth_mode === 'true'}
+                  checked={systemSettings.enable_image_fetching === 'true'}
                   onChange={(e) =>
                     setSystemSettings({
                       ...systemSettings,
-                      no_auth_mode: e.target.checked ? 'true' : 'false',
+                      enable_image_fetching: e.target.checked ? 'true' : 'false',
                     })
                   }
                   style={{ marginRight: '0.5rem', width: 'auto' }}
                 />
-                Enable no-auth mode (Development Only)
+                Enable automatic product image fetching
               </label>
               <small style={{ color: '#7f8c8d', marginLeft: '1.5rem', display: 'block', marginTop: '0.25rem' }}>
-                When enabled, quick login buttons will appear on the login page, allowing you to log in as any user without a password. This is only available in development mode.
+                When enabled, the system will automatically fetch product images from Pexels when adding items via UPC lookup. Disable this to conserve API quota or bandwidth.
               </small>
-              <div
-                style={{
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={systemSettings.enable_qr_printing === 'true'}
+                  onChange={(e) =>
+                    setSystemSettings({
+                      ...systemSettings,
+                      enable_qr_printing: e.target.checked ? 'true' : 'false',
+                    })
+                  }
+                  style={{ marginRight: '0.5rem', width: 'auto' }}
+                />
+                Enable QR code printing
+              </label>
+              <small style={{ color: '#7f8c8d', marginLeft: '1.5rem', display: 'block', marginTop: '0.25rem' }}>
+                When enabled, users can view QR codes on items, print labels, scan QR codes with the camera, and will see the &ldquo;Print Labels&rdquo; prompt after adding items. QR codes are always generated in the background for item lookup regardless of this setting.
+              </small>
+            </div>
+
+            {isDev && (
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={systemSettings.no_auth_mode === 'true'}
+                    onChange={(e) =>
+                      setSystemSettings({ ...systemSettings, no_auth_mode: e.target.checked ? 'true' : 'false' })
+                    }
+                    style={{ marginRight: '0.5rem', width: 'auto' }}
+                  />
+                  Enable no-auth mode (Development Only)
+                </label>
+                <small style={{ color: '#7f8c8d', marginLeft: '1.5rem', display: 'block', marginTop: '0.25rem' }}>
+                  When enabled, quick login buttons will appear on the login page for any user without a password. Development environments only.
+                </small>
+                <div style={{
                   background: '#fff3cd',
                   border: '1px solid #ffc107',
                   padding: '0.75rem',
@@ -699,129 +721,97 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
                   marginTop: '0.5rem',
                   marginLeft: '1.5rem',
                   fontSize: '0.875rem',
-                }}
-              >
-                ⚠️ <strong>Security Warning:</strong> This feature is only for development environments. Never enable in production!
-              </div>
-            </div>
-          )}
-
-          <button
-            className="btn btn-primary"
-            onClick={handleSaveSystemSettings}
-          >
-            Save System Settings
-          </button>
-        </div>
-      )}
-
-      {user && user.role === 'admin' && (
-        <UserManagement currentUser={user} />
-      )}
-
-      {user && user.role === 'admin' && (
-        <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
-          <h3 style={{ marginBottom: '1.5rem' }}>Backup & Restore</h3>
-
-          {backupError && <div className="error-message">{backupError}</div>}
-          {backupSuccess && <div className="success-message">{backupSuccess}</div>}
-
-          {backupInfo && (
-            <div style={{
-              background: '#f8f9fa',
-              padding: '1rem',
-              borderRadius: '4px',
-              marginBottom: '1.5rem',
-              border: '1px solid #e9ecef'
-            }}>
-              <h4 style={{ marginBottom: '0.75rem', fontSize: '1rem' }}>Current Database Information</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.5rem', fontSize: '0.9rem' }}>
-                <strong>Size:</strong>
-                <span>{backupInfo.file_size}</span>
-                <strong>Last Modified:</strong>
-                <span>{new Date(backupInfo.last_modified).toLocaleString()}</span>
-                <strong>Total Items:</strong>
-                <span>{backupInfo.total_items} ({backupInfo.active_items} active)</span>
-                <strong>Categories:</strong>
-                <span>{backupInfo.total_categories}</span>
-                <strong>Users:</strong>
-                <span>{backupInfo.total_users}</span>
-              </div>
-            </div>
-          )}
-
-          <div style={{ marginBottom: '2rem' }}>
-            <h4 style={{ marginBottom: '0.5rem' }}>Download Backup</h4>
-            <p style={{ color: '#7f8c8d', marginBottom: '1rem' }}>
-              Download a complete backup of your freezer inventory database. Save this file in a safe location.
-            </p>
-            <button
-              className="btn btn-primary"
-              onClick={handleDownloadBackup}
-              disabled={backupLoading}
-            >
-              {backupLoading ? 'Downloading...' : 'Download Backup'}
-            </button>
-          </div>
-
-          <div>
-            <h4 style={{ marginBottom: '0.5rem' }}>Restore from Backup</h4>
-            <p style={{ color: '#7f8c8d', marginBottom: '1rem' }}>
-              Upload a previously saved backup file to restore your database. Your current database will be backed up automatically before restoring.
-            </p>
-            <div style={{ marginBottom: '1rem' }}>
-              <input
-                type="file"
-                accept=".db"
-                onChange={handleFileSelect}
-                style={{ marginBottom: '0.5rem' }}
-              />
-              {restoreFile && (
-                <div style={{ color: '#27ae60', fontSize: '0.9rem' }}>
-                  Selected: {restoreFile.name} ({(restoreFile.size / 1024).toFixed(2)} KB)
+                }}>
+                  ⚠️ <strong>Security Warning:</strong> Never enable in production!
                 </div>
-              )}
-            </div>
-            <button
-              className="btn btn-primary"
-              onClick={handleRestoreBackup}
-              disabled={backupLoading || !restoreFile}
-            >
-              {backupLoading ? 'Restoring...' : 'Restore Backup'}
+              </div>
+            )}
+
+            <button className="btn btn-primary" onClick={handleSaveSystemSettings}>
+              Save System Settings
             </button>
-          </div>
-        </div>
-      )}
+          </SettingsSection>
 
-      {user && user.role === 'admin' && (
-        <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
-          <h3 style={{ marginBottom: '1rem', color: '#e74c3c' }}>Danger Zone</h3>
+          <SettingsSection title="User Management" badge="Admin">
+            <UserManagement currentUser={user} />
+          </SettingsSection>
 
-          <div style={{ marginBottom: '1rem' }}>
-            <h4 style={{ marginBottom: '0.5rem' }}>Purge History</h4>
+          <SettingsSection title="Backup & Restore" badge="Admin">
+            {backupError && <div className="error-message">{backupError}</div>}
+            {backupSuccess && <div className="success-message">{backupSuccess}</div>}
+
+            {backupInfo && (
+              <div style={{
+                background: '#f8f9fa',
+                padding: '1rem',
+                borderRadius: '4px',
+                marginBottom: '1.5rem',
+                border: '1px solid #e9ecef'
+              }}>
+                <h4 style={{ marginBottom: '0.75rem', fontSize: '1rem' }}>Current Database Information</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.5rem', fontSize: '0.9rem' }}>
+                  <strong>Size:</strong><span>{backupInfo.file_size}</span>
+                  <strong>Last Modified:</strong><span>{new Date(backupInfo.last_modified).toLocaleString()}</span>
+                  <strong>Total Items:</strong><span>{backupInfo.total_items} ({backupInfo.active_items} active)</span>
+                  <strong>Categories:</strong><span>{backupInfo.total_categories}</span>
+                  <strong>Users:</strong><span>{backupInfo.total_users}</span>
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginBottom: '2rem' }}>
+              <h4 style={{ marginBottom: '0.5rem' }}>Download Backup</h4>
+              <p style={{ color: '#7f8c8d', marginBottom: '1rem' }}>
+                Download a complete backup of your freezer inventory database. Save this file in a safe location.
+              </p>
+              <button className="btn btn-primary" onClick={handleDownloadBackup} disabled={backupLoading}>
+                {backupLoading ? 'Downloading...' : 'Download Backup'}
+              </button>
+            </div>
+
+            <div>
+              <h4 style={{ marginBottom: '0.5rem' }}>Restore from Backup</h4>
+              <p style={{ color: '#7f8c8d', marginBottom: '1rem' }}>
+                Upload a previously saved backup file to restore your database. Your current database will be backed up automatically before restoring.
+              </p>
+              <div style={{ marginBottom: '1rem' }}>
+                <input type="file" accept=".db" onChange={handleFileSelect} style={{ marginBottom: '0.5rem' }} />
+                {restoreFile && (
+                  <div style={{ color: '#27ae60', fontSize: '0.9rem' }}>
+                    Selected: {restoreFile.name} ({(restoreFile.size / 1024).toFixed(2)} KB)
+                  </div>
+                )}
+              </div>
+              <button className="btn btn-primary" onClick={handleRestoreBackup} disabled={backupLoading || !restoreFile}>
+                {backupLoading ? 'Restoring...' : 'Restore Backup'}
+              </button>
+            </div>
+          </SettingsSection>
+
+          <SettingsSection title="Danger Zone" badge="Admin">
+            <h4 style={{ marginTop: 0, marginBottom: '0.5rem', color: '#e74c3c' }}>Purge History</h4>
             <p style={{ color: '#7f8c8d', marginBottom: '1rem' }}>
               Permanently delete all consumed and thrown out items from the database. This action cannot be undone.
             </p>
             <button className="btn btn-danger" onClick={handlePurgeHistory}>
               Purge All History
             </button>
-          </div>
-        </div>
+          </SettingsSection>
+
+          <SettingsSection title="Feedback" badge="Admin">
+            <FeedbackManagement />
+          </SettingsSection>
+        </>
       )}
 
-      {user && user.role === 'admin' && (
-        <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
-          <FeedbackManagement />
-        </div>
-      )}
-
-      <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
+      {/* ── Import / Export ──────────────────────────────────────── */}
+      <SettingsSection title="Import / Export">
         <ImportExport />
-      </div>
+      </SettingsSection>
 
-      <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', marginTop: '2rem' }}>
-        <h3 style={{ marginBottom: '1rem' }}>About</h3>
-        <p style={{ color: '#7f8c8d' }}>
+      {/* ── About ────────────────────────────────────────────────── */}
+      <SettingsSection title="About">
+        <p style={{ color: '#7f8c8d', margin: 0 }}>
           <strong>Freezer Inventory Tracker</strong>
         </p>
         <p style={{ color: '#7f8c8d', marginTop: '0.5rem' }}>
@@ -840,12 +830,10 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.5rem 1rem', color: '#7f8c8d' }}>
               <strong>Version:</strong>
               <span>v{versionInfo.version}</span>
-
               {isDev && (
                 <>
                   <strong>Commit:</strong>
                   <span style={{ fontFamily: 'monospace' }}>{versionInfo.commitShort}</span>
-
                   <strong>Branch:</strong>
                   <span style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
                     {versionInfo.branch.length > 40
@@ -854,13 +842,12 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
                   </span>
                 </>
               )}
-
               <strong>Build Date:</strong>
               <span>{new Date(versionInfo.buildDate).toLocaleString()}</span>
             </div>
           </div>
         )}
-      </div>
+      </SettingsSection>
     </div>
   );
 }

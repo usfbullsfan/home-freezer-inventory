@@ -247,6 +247,31 @@ function Inventory({ isMobile = false, qrPrintingEnabled = true }) {
     }
   };
 
+  // Returns context-appropriate labels for the sort order dropdown
+  const getSortOrderLabels = (sortByValue) => {
+    switch (sortByValue) {
+      case 'expiration_date':
+        return { asc: 'Soonest First', desc: 'Latest First' };
+      case 'name':
+        return { asc: 'A \u2192 Z', desc: 'Z \u2192 A' };
+      default:
+        return { asc: 'Oldest First', desc: 'Newest First' };
+    }
+  };
+
+  const handleSortByChange = (e) => {
+    const newSortBy = e.target.value;
+    setSortBy(newSortBy);
+    // Reset to the most useful default order for each sort type
+    if (newSortBy === 'expiration_date') {
+      setSortOrder('asc'); // soonest expiring first
+    } else if (newSortBy === 'name') {
+      setSortOrder('asc'); // A → Z
+    } else {
+      setSortOrder('desc'); // newest added first
+    }
+  };
+
   // Analyze items for warnings
   const expiringSoonCount = items.filter(item => {
     if (item.status !== 'in_freezer' || !item.expiration_date) return false;
@@ -357,7 +382,7 @@ function Inventory({ isMobile = false, qrPrintingEnabled = true }) {
         <div className="filter-row">
           <div className="form-group">
             <label>Sort By</label>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+            <select value={sortBy} onChange={handleSortByChange}>
               <option value="added_date">Date Added</option>
               <option value="expiration_date">Expiration Date</option>
               <option value="name">Name</option>
@@ -366,8 +391,8 @@ function Inventory({ isMobile = false, qrPrintingEnabled = true }) {
           <div className="form-group">
             <label>Order</label>
             <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
-              <option value="desc">Newest First</option>
-              <option value="asc">Oldest First</option>
+              <option value="desc">{getSortOrderLabels(sortBy).desc}</option>
+              <option value="asc">{getSortOrderLabels(sortBy).asc}</option>
             </select>
           </div>
         </div>

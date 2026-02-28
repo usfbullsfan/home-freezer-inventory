@@ -35,6 +35,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
   const [categoryError, setCategoryError] = useState('');
   const [selectedCategoryFile, setSelectedCategoryFile] = useState(null);
   const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
+  const [suggestedCategory, setSuggestedCategory] = useState('');
 
   useEffect(() => {
     if (item) {
@@ -270,13 +271,46 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
       if (result.found && result.data) {
         // Auto-fill form fields with UPC lookup data
         // Note: Don't populate 'source' - that's for store names (Costco, etc), not brands
-        setFormData(prev => ({
-          ...prev,
-          name: result.data.name || prev.name,
-          notes: result.data.notes || prev.notes,
-          category_id: result.data.category_id || prev.category_id,
-          image_url: result.data.image_url || prev.image_url,
-        }));
+        setFormData(prev => {
+          const updates = {
+            name: result.data.name || prev.name,
+            notes: result.data.notes || prev.notes,
+            image_url: result.data.image_url || prev.image_url,
+          };
+
+          // Populate size if the API returned one and the field is still empty
+          if (result.data.weight != null && !prev.weight) {
+            updates.weight = result.data.weight;
+          }
+          if (result.data.weight_unit && result.data.weight != null) {
+            updates.weight_unit = result.data.weight_unit;
+          }
+
+          // Set category if the API matched one, and recalculate expiration date
+          const matchedCategoryId = result.data.category_id
+            ? String(result.data.category_id)
+            : prev.category_id;
+          updates.category_id = matchedCategoryId;
+
+          if (result.data.category_id) {
+            const matchedCat = categories.find(c => c.id === result.data.category_id);
+            if (matchedCat && matchedCat.default_expiration_days) {
+              const expDate = new Date();
+              expDate.setHours(0, 0, 0, 0);
+              expDate.setDate(expDate.getDate() + matchedCat.default_expiration_days);
+              updates.expiration_date = expDate.toISOString().split('T')[0];
+            }
+          }
+
+          return { ...prev, ...updates };
+        });
+
+        // Show category suggestion when no local match was found
+        if (!result.data.category_id && result.data.suggested_category) {
+          setSuggestedCategory(result.data.suggested_category);
+        } else {
+          setSuggestedCategory('');
+        }
       }
     } catch (err) {
       setError('Failed to lookup UPC. Please try again or enter details manually.');
@@ -591,6 +625,55 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
             <small style={{ color: '#6c757d', display: 'block', marginTop: '0.5rem', fontSize: '0.8rem' }}>
               Scan or enter the barcode to auto-fill product details
             </small>
+
+            {suggestedCategory && (
+              <div style={{
+                background: '#fff8e1',
+                border: '1px solid #ffc107',
+                borderRadius: '4px',
+                padding: '0.6rem 0.9rem',
+                marginTop: '0.6rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.5rem',
+                fontSize: '0.85rem',
+              }}>
+                <span>
+                  <strong>Suggested category:</strong> {suggestedCategory} — no match found in your categories.
+                </span>
+                <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setNewCategoryData(prev => ({ ...prev, name: suggestedCategory }));
+                      setShowCreateCategory(true);
+                      setSuggestedCategory('');
+                    }}
+                    style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem' }}
+                  >
+                    Create
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSuggestedCategory('')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#6c757d',
+                      padding: '0.25rem 0.4rem',
+                      fontSize: '0.9rem',
+                      lineHeight: 1,
+                    }}
+                    title="Dismiss"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Product Image Section */}
