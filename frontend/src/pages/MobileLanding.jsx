@@ -7,7 +7,7 @@ import './MobileLanding.css';
  * Simple, touch-friendly landing page for mobile users
  * Shows three main action buttons
  */
-const MobileLanding = ({ qrPrintingEnabled = true }) => {
+const MobileLanding = ({ qrEnabled = true }) => {
   const navigate = useNavigate();
 
   const actions = [
@@ -27,7 +27,7 @@ const MobileLanding = ({ qrPrintingEnabled = true }) => {
       action: () => navigate('/inventory'),
       color: '#2196f3'
     },
-    ...(qrPrintingEnabled ? [{
+    ...(qrEnabled ? [{
       id: 'scan',
       title: 'Scan QR Code',
       description: 'Locate an item by scanning its code',
