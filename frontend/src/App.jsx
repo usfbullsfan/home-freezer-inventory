@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation, us
 import './App.css';
 import { clearSession } from './utils/sessionTracking';
 import { isMobileDevice, isDesktopSiteRequested, getLogoPath } from './utils/deviceDetection';
-import api, { settingsAPI } from './services/api';
+import api from './services/api';
 import FeedbackModal from './components/FeedbackModal';
 
 // Lazy load route components for better code splitting
@@ -22,8 +22,8 @@ function AppContent() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [useDesktopInterface, setUseDesktopInterface] = useState(false);
-  const [qrPrintingEnabled, setQrPrintingEnabled] = useState(true);
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [qrEnabled, setQrEnabled] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -57,6 +57,15 @@ function AppContent() {
     }
   }, [location, user]);
 
+  // Fetch public feature flags whenever the logged-in user changes
+  useEffect(() => {
+    if (user) {
+      api.get('/settings/features')
+        .then(r => setQrEnabled(r.data.enable_qr_labels !== 'false'))
+        .catch(() => setQrEnabled(true));
+    }
+  }, [user]);
+
   // Check mobile status and user preferences
   useEffect(() => {
     const checkMobileAndPreferences = async () => {
@@ -68,22 +77,15 @@ function AppContent() {
       // Only update if changed
       setIsMobile(prev => prev === newIsMobile ? prev : newIsMobile);
 
-      // If user is logged in, check their desktop interface preference and system settings
+      // If user is logged in, check their desktop interface preference
       if (user) {
         try {
-          const [userResponse, systemResponse] = await Promise.all([
-            api.get('/settings/user'),
-            settingsAPI.getSystemSettings(),
-          ]);
-
-          const settings = userResponse.data;
+          const response = await api.get('/settings/user');
+          const settings = response.data;
           const desktopPref = settings.find(s => s.setting_name === 'use_desktop_interface');
+
           const shouldUseDesktop = desktopPref && desktopPref.setting_value === 'true';
           setUseDesktopInterface(prev => prev === shouldUseDesktop ? prev : shouldUseDesktop);
-
-          const systemSettings = systemResponse.data;
-          const qrEnabled = systemSettings.enable_qr_printing !== 'false';
-          setQrPrintingEnabled(qrEnabled);
         } catch (error) {
           console.error('Error fetching user preferences:', error);
         }
@@ -168,9 +170,7 @@ function AppContent() {
                       <summary>Manage</summary>
                       <div className="navbar-submenu-items">
                         <Link to="/categories" onClick={() => setMobileMenuOpen(false)}>Categories</Link>
-                        {qrPrintingEnabled && (
-                          <Link to="/print-labels" onClick={() => setMobileMenuOpen(false)}>Print Labels</Link>
-                        )}
+                        {qrEnabled && <Link to="/print-labels" onClick={() => setMobileMenuOpen(false)}>Print Labels</Link>}
                       </div>
                     </details>
                     <Link to="/settings" className="navbar-settings-link" onClick={() => setMobileMenuOpen(false)}>⚙️ Settings</Link>
@@ -180,9 +180,7 @@ function AppContent() {
                   <>
                     <Link to="/" onClick={() => setMobileMenuOpen(false)}>Inventory</Link>
                     <Link to="/categories" onClick={() => setMobileMenuOpen(false)}>Categories</Link>
-                    {qrPrintingEnabled && (
-                      <Link to="/print-labels" onClick={() => setMobileMenuOpen(false)}>Print Labels</Link>
-                    )}
+                    {qrEnabled && <Link to="/print-labels" onClick={() => setMobileMenuOpen(false)}>Print Labels</Link>}
                     <Link to="/settings" onClick={() => setMobileMenuOpen(false)}>Settings</Link>
                   </>
                 )}
@@ -201,9 +199,9 @@ function AppContent() {
               {showMobileInterface ? (
                 // Mobile routes
                 <>
-                  <Route path="/home" element={<MobileLanding qrPrintingEnabled={qrPrintingEnabled} />} />
+                  <Route path="/home" element={<MobileLanding qrEnabled={qrEnabled} />} />
                   <Route path="/" element={<Navigate to="/home" replace />} />
-                  <Route path="/inventory" element={<Inventory isMobile={true} qrPrintingEnabled={qrPrintingEnabled} />} />
+                  <Route path="/inventory" element={<Inventory isMobile={true} qrEnabled={qrEnabled} />} />
                   <Route path="/item/:qrCode" element={<QRRedirect />} />
                   <Route path="/categories" element={<Categories />} />
                   <Route path="/print-labels" element={<PrintLabels />} />
@@ -213,7 +211,7 @@ function AppContent() {
               ) : (
                 // Desktop routes (unchanged)
                 <>
-                  <Route path="/" element={<Inventory qrPrintingEnabled={qrPrintingEnabled} />} />
+                  <Route path="/" element={<Inventory qrEnabled={qrEnabled} />} />
                   <Route path="/item/:qrCode" element={<QRRedirect />} />
                   <Route path="/categories" element={<Categories />} />
                   <Route path="/print-labels" element={<PrintLabels />} />

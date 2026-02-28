@@ -7,7 +7,7 @@ import QRInputModal from '../components/QRInputModal';
 import QRScanner from '../components/QRScanner';
 import SessionBanner from '../components/SessionBanner';
 
-function Inventory({ isMobile = false, qrPrintingEnabled = true }) {
+function Inventory({ isMobile = false, qrEnabled = true }) {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -288,7 +288,7 @@ function Inventory({ isMobile = false, qrPrintingEnabled = true }) {
 
   return (
     <div className="container">
-      {qrPrintingEnabled && <SessionBanner key={sessionKey} />}
+      <SessionBanner key={sessionKey} qrEnabled={qrEnabled} />
 
       <div className="inventory-header">
         <div>
@@ -306,10 +306,12 @@ function Inventory({ isMobile = false, qrPrintingEnabled = true }) {
         </div>
         {!isMobile && (
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            <button className="btn btn-secondary" onClick={() => setShowQRModal(true)}>
-              🔍 Locate Item by Code
-            </button>
-            {qrPrintingEnabled && (
+            {qrEnabled && (
+              <button className="btn btn-secondary" onClick={() => setShowQRModal(true)}>
+                🔍 Locate Item by Code
+              </button>
+            )}
+            {qrEnabled && (
               <button className="btn btn-secondary" onClick={() => setShowQRScanner(true)}>
                 📷 Scan QR Code
               </button>
@@ -415,7 +417,7 @@ function Inventory({ isMobile = false, qrPrintingEnabled = true }) {
               item={item}
               onEdit={() => handleEditItem(item)}
               onStatusChange={(status) => handleStatusChange(item.id, status)}
-              qrPrintingEnabled={qrPrintingEnabled}
+              qrEnabled={qrEnabled}
             />
           ))}
         </div>
@@ -425,6 +427,7 @@ function Inventory({ isMobile = false, qrPrintingEnabled = true }) {
         <AddItemModal
           item={editingItem}
           categories={categories}
+          qrEnabled={qrEnabled}
           onClose={() => {
             setShowAddModal(false);
             setEditingItem(null);
@@ -438,7 +441,7 @@ function Inventory({ isMobile = false, qrPrintingEnabled = true }) {
         />
       )}
 
-      {showQRModal && (
+      {qrEnabled && showQRModal && (
         <QRInputModal
           onClose={() => {
             setShowQRModal(false);
@@ -451,7 +454,7 @@ function Inventory({ isMobile = false, qrPrintingEnabled = true }) {
         />
       )}
 
-      {showQRScanner && (
+      {qrEnabled && showQRScanner && (
         <QRScanner
           onClose={() => {
             setShowQRScanner(false);

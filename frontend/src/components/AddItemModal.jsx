@@ -4,7 +4,7 @@ import { addItemToSession } from '../utils/sessionTracking';
 import { toDateInputValue } from '../utils/dateUtils';
 import BarcodeScanner from './BarcodeScanner';
 
-function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) {
+function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qrEnabled = true }) {
   const [formData, setFormData] = useState({
     qr_code: '',
     upc: '',
@@ -352,8 +352,8 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated }) 
         const response = await itemsAPI.createItem(submitData);
         createdItem = response.data;
 
-        // Add to session for print prompt
-        if (createdItem && createdItem.id) {
+        // Add to session for print prompt (only when QR printing is enabled)
+        if (qrEnabled && createdItem && createdItem.id) {
           addItemToSession(createdItem.id);
         }
       }
