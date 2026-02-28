@@ -661,23 +661,6 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
-                  checked={(systemSettings.enable_qr_labels ?? 'true') === 'true'}
-                  onChange={(e) =>
-                    setSystemSettings({ ...systemSettings, enable_qr_labels: e.target.checked ? 'true' : 'false' })
-                  }
-                  style={{ marginRight: '0.5rem', width: 'auto' }}
-                />
-                Enable QR code label printing
-              </label>
-              <small style={{ color: '#7f8c8d', marginLeft: '1.5rem', display: 'block', marginTop: '0.25rem' }}>
-                When enabled, users see QR code buttons on items, the Print Labels page, and the label prompt after adding items. Disable to hide all QR-related UI.
-              </small>
-            </div>
-
-            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
                   checked={systemSettings.enable_image_fetching === 'true'}
                   onChange={(e) =>
                     setSystemSettings({
