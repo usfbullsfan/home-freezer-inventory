@@ -146,8 +146,25 @@ def get_system_settings():
         settings_dict['enable_image_fetching'] = 'true'
     if 'no_auth_mode' not in settings_dict:
         settings_dict['no_auth_mode'] = 'false'
+    if 'enable_qr_labels' not in settings_dict:
+        settings_dict['enable_qr_labels'] = 'true'
 
     return jsonify(settings_dict), 200
+
+
+@settings_bp.route('/features', methods=['GET'])
+@jwt_required()
+def get_feature_settings():
+    """Get public feature flags for all authenticated users.
+
+    Returns non-sensitive system settings that control UI visibility.
+    No admin role required.
+    """
+    settings = Setting.query.filter_by(user_id=None).all()
+    settings_dict = {s.setting_name: s.setting_value for s in settings}
+    return jsonify({
+        'enable_qr_labels': settings_dict.get('enable_qr_labels', 'true'),
+    }), 200
 
 
 @settings_bp.route('/system', methods=['PUT'])

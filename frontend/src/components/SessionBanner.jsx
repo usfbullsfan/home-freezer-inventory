@@ -2,11 +2,11 @@ import { useNavigate } from 'react-router-dom';
 import { getSessionItemCount, getSessionItemIds, clearSession } from '../utils/sessionTracking';
 import './SessionBanner.css';
 
-function SessionBanner() {
+function SessionBanner({ qrEnabled = true }) {
   const navigate = useNavigate();
   const itemCount = getSessionItemCount();
 
-  if (itemCount === 0) {
+  if (itemCount === 0 || !qrEnabled) {
     return null;
   }
 

@@ -10,6 +10,7 @@ import base64
 import csv
 import json as json_lib
 import logging
+import re
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas as pdf_canvas
@@ -143,6 +144,117 @@ def fetch_product_image(product_name, category_name=None):
 
     except requests.RequestException:
         return None
+
+
+def parse_product_size(size_str):
+    """Parse a size string like '21 oz', '1.5 lb', '12 count' into (value, unit).
+
+    Returns (float_value, unit_string) or (None, None) if unparseable.
+    """
+    if not size_str:
+        return None, None
+    # Truncate to a safe length to prevent ReDoS on malformed API data
+    size_str = size_str[:100]
+
+    unit_map = {
+        'fl oz': 'oz', 'fl. oz': 'oz', 'fl. oz.': 'oz', 'floz': 'oz',
+        'oz': 'oz', 'ounce': 'oz', 'ounces': 'oz',
+        'lb': 'lb', 'lbs': 'lb', 'pound': 'lb', 'pounds': 'lb',
+        'kg': 'kg', 'kilogram': 'kg', 'kilograms': 'kg',
+        'g': 'g', 'gram': 'g', 'grams': 'g',
+        'ct': 'units', 'count': 'units', 'counts': 'units',
+        'unit': 'units', 'units': 'units',
+        'pc': 'units', 'pcs': 'units', 'piece': 'units', 'pieces': 'units',
+        'pk': 'units', 'pack': 'units', 'packs': 'units',
+    }
+
+    pattern = (
+        r'(\d+(?:\.\d+)?)\s*'
+        r'(fl\.?\s*oz\.?|oz\.?|ounce[s]?|lb[s]?|pound[s]?|kg|kilogram[s]?'
+        r'|g|gram[s]?|ct|count[s]?|unit[s]?|pc[s]?|piece[s]?|pk|pack[s]?)'
+    )
+    match = re.search(pattern, size_str, re.IGNORECASE)
+    if match:
+        value = float(match.group(1))
+        raw_unit = match.group(2).lower().strip().rstrip('.')
+        # Normalize compound units like "fl oz"
+        normalized = raw_unit.replace(' ', ' ')
+        for key, mapped in unit_map.items():
+            if normalized == key or normalized.startswith(key):
+                return value, mapped
+        return value, 'units'
+
+    return None, None
+
+
+def match_api_category_to_local(api_category_str):
+    """Try to match an API category string to a local Category record.
+
+    Returns (category_id, suggested_name).
+    category_id is None when no match is found; suggested_name is the
+    cleaned string to offer as a "create category" suggestion.
+    """
+    if not api_category_str:
+        return None, None
+
+    # Extract the most specific segment from hierarchical strings like
+    # "Food And Beverages > Meat, Poultry & Seafood > Beef"
+    for sep in ('>', '/'):
+        if sep in api_category_str:
+            api_category_str = api_category_str.split(sep)[-1].strip()
+
+    cleaned = api_category_str.strip()
+    cleaned_lower = cleaned.lower()
+
+    local_categories = Category.query.order_by(Category.name).all()
+    if not local_categories:
+        return None, cleaned or None
+
+    # Exact match (case-insensitive)
+    for cat in local_categories:
+        if cat.name.lower() == cleaned_lower:
+            return cat.id, None
+
+    # Partial containment match
+    for cat in local_categories:
+        cat_lower = cat.name.lower()
+        if cat_lower in cleaned_lower or cleaned_lower in cat_lower:
+            return cat.id, None
+
+    # Keyword-based fallback mapping
+    keyword_map = [
+        (['ground beef', 'beef, ground'], 'beef, ground'),
+        (['beef, steak', 'steak'], 'beef, steak'),
+        (['beef, roast', 'roast beef'], 'beef, roast'),
+        (['beef'], 'beef'),
+        (['ground pork', 'pork, ground'], 'pork, ground'),
+        (['pork chop', 'pork, chop'], 'pork, chops'),
+        (['pork roast', 'pork, roast'], 'pork, roast'),
+        (['pork', 'ham', 'bacon'], 'pork'),
+        (['ground chicken', 'chicken, ground'], 'chicken, ground'),
+        (['chicken', 'poultry'], 'chicken'),
+        (['turkey'], 'turkey'),
+        (['fish', 'seafood', 'salmon', 'tuna', 'shrimp', 'crab', 'lobster'], 'fish'),
+        (['vegetable', 'veggie'], 'vegetables'),
+        (['fruit', 'berry'], 'fruits'),
+        (['ice cream', 'frozen dessert', 'gelato', 'sorbet'], 'ice cream'),
+        (['appetizer', 'snack', 'chip', 'cracker', 'pretzel'], 'appetizers'),
+        (['entree', 'frozen meal', 'frozen dinner', 'dinner', 'meal kit'], 'entrees'),
+        (['staple', 'condiment', 'sauce', 'marinade', 'stock', 'broth', 'soup'], 'staples'),
+        (['leftover'], 'leftovers'),
+    ]
+
+    full_api_lower = api_category_str.lower()
+    for keywords, target_cat_name in keyword_map:
+        for kw in keywords:
+            if kw in cleaned_lower or kw in full_api_lower:
+                for cat in local_categories:
+                    if target_cat_name in cat.name.lower():
+                        return cat.id, None
+                break  # keyword matched but no local category for it
+
+    # No match — suggest the cleaned name
+    return None, cleaned.title() if cleaned else None
 
 
 @items_bp.route('/', methods=['GET'])
@@ -685,10 +797,16 @@ def lookup_upc(upc):
                 brand = product_data.get('brand', '')
                 category = product_data.get('category', '')
 
+                # Parse size
+                size_str = product_data.get('size', '') or product_data.get('weight', '')
+                weight_value, weight_unit = parse_product_size(size_str)
+
+                # Match category to a local category
+                category_id, suggested_category = match_api_category_to_local(category)
+
                 # Get product image from UPC Item DB
                 image_url = None
                 if product_data.get('images'):
-                    # Use first image from array
                     image_url = product_data['images'][0]
 
                 # If no image from UPC Item DB, try Pexels
@@ -702,6 +820,10 @@ def lookup_upc(upc):
                         'name': product_name,
                         'brand': brand,
                         'category': category,
+                        'category_id': category_id,
+                        'suggested_category': suggested_category,
+                        'weight': weight_value,
+                        'weight_unit': weight_unit,
                         'notes': '',
                         'upc': upc,
                         'image_url': image_url
@@ -751,6 +873,13 @@ def lookup_upc(upc):
             brand = product_data.get('brand', '')
             category = product_data.get('category', '')
 
+            # Parse size
+            size_str = product_data.get('size', '') or product_data.get('weight', '')
+            weight_value, weight_unit = parse_product_size(size_str)
+
+            # Match category to a local category
+            category_id, suggested_category = match_api_category_to_local(category)
+
             # Try to get product image
             # Priority: 1. UPC API image, 2. Pexels search
             image_url = product_data.get('images', [None])[0] if product_data.get('images') else None
@@ -766,6 +895,10 @@ def lookup_upc(upc):
                     'name': product_name,
                     'brand': brand,
                     'category': category,
+                    'category_id': category_id,
+                    'suggested_category': suggested_category,
+                    'weight': weight_value,
+                    'weight_unit': weight_unit,
                     'notes': '',
                     'upc': upc,
                     'image_url': image_url
