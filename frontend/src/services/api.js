@@ -363,6 +363,12 @@ export const settingsAPI = {
   },
 };
 
+// Dashboard API
+export const dashboardAPI = {
+  getStats: () =>
+    api.get('/dashboard/stats'),
+};
+
 // Feedback API
 export const feedbackAPI = {
   submit: (type, description) =>

@@ -1,0 +1,183 @@
+.dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.dashboard-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: #2c3e50;
+}
+
+.dashboard-loading,
+.dashboard-error {
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.1rem;
+  color: #666;
+}
+
+.dashboard-error {
+  color: #e74c3c;
+}
+
+/* ---- Summary cards ---- */
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.25rem 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-top: 4px solid #ccc;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 0.4rem;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stat-subtitle {
+  font-size: 0.75rem;
+  color: #999;
+  margin-top: 0.2rem;
+}
+
+/* ---- Sections ---- */
+.dashboard-section {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 1.25rem 0;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid #ecf0f1;
+}
+
+/* ---- Charts ---- */
+.chart-row {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.chart-container {
+  flex: 1;
+  min-width: 280px;
+}
+
+.chart-pie {
+  max-width: 400px;
+}
+
+.chart-bar-category {
+  flex: 2;
+}
+
+/* ---- Oldest items table ---- */
+.oldest-items-table-wrap {
+  overflow-x: auto;
+}
+
+.oldest-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.oldest-items-table th,
+.oldest-items-table td {
+  padding: 0.65rem 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.oldest-items-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #555;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.oldest-items-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.oldest-items-table tbody tr.age-warn {
+  background: #fffbe6;
+}
+
+.oldest-items-table tbody tr.age-old {
+  background: #fff1f0;
+}
+
+.days-badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.days-badge.age-warn {
+  background: #fff8e1;
+  color: #f57f17;
+}
+
+.days-badge.age-old {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.empty-state {
+  color: #999;
+  text-align: center;
+  padding: 2rem;
+}
+
+/* ---- Mobile ---- */
+@media (max-width: 640px) {
+  .dashboard {
+    padding: 1rem;
+  }
+
+  .stat-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .chart-row {
+    flex-direction: column;
+  }
+
+  .chart-pie {
+    max-width: 100%;
+  }
+}

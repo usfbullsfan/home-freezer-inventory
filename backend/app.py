@@ -122,6 +122,7 @@ def create_app(test_config=None):
     from routes.uploads import uploads_bp
     from routes.passkey import passkey_bp
     from routes.feedback import feedback_bp
+    from routes.dashboard import dashboard_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(items_bp, url_prefix='/api/items')
@@ -130,6 +131,7 @@ def create_app(test_config=None):
     app.register_blueprint(uploads_bp, url_prefix='/api/uploads')
     app.register_blueprint(passkey_bp, url_prefix='/api/passkey')
     app.register_blueprint(feedback_bp, url_prefix='/api/feedback')
+    app.register_blueprint(dashboard_bp, url_prefix='/api/dashboard')
 
     # Health check endpoint
     @app.route('/api/health', methods=['GET'])
