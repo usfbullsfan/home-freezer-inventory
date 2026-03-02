@@ -43,6 +43,10 @@ jobs:
           username: ${{ secrets.GCP_USERNAME }}
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
           envs: UPC_API_KEY,PEXELS_API_KEY
+          # timeout: SSH dial+handshake timeout. Fail fast if the server is
+          # unresponsive instead of hanging for 29+ minutes (which previously
+          # triggered fail2ban bans from repeated retry attempts).
+          timeout: 30s
           command_timeout: 10m
           script: |
             set -e
@@ -128,6 +132,7 @@ jobs:
           host: ${{ secrets.GCP_DEV_HOST }}
           username: ${{ secrets.GCP_USERNAME }}
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          timeout: 30s
           command_timeout: 5m
           script: |
             set -e
@@ -184,6 +189,7 @@ jobs:
           host: ${{ secrets.GCP_DEV_HOST }}
           username: ${{ secrets.GCP_USERNAME }}
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          timeout: 30s
           script: |
             echo "======================================"
             echo "✗ GCP Development Deployment Failed!"
