@@ -19,7 +19,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Deploy to GCP Dev
+      # Build on the fast GitHub Actions runner instead of the small GCP VM.
+      # The runner has more CPU/RAM; vite build with 779+ modules was consistently
+      # timing out on the server (7+ minutes).
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Deploy backend & prepare dist directory
         uses: appleboy/ssh-action@v1.2.5
         env:
           UPC_API_KEY: ${{ secrets.UPC_API_KEY }}
@@ -29,7 +43,7 @@ jobs:
           username: ${{ secrets.GCP_USERNAME }}
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
           envs: UPC_API_KEY,PEXELS_API_KEY
-          command_timeout: 25m
+          command_timeout: 10m
           script: |
             set -e
 
@@ -37,7 +51,6 @@ jobs:
             echo "Starting GCP Development Deployment"
             echo "======================================"
 
-            # Navigate to app directory
             cd /home/michaelt452/freezer-inventory-dev
 
             # Create .env file with API keys
@@ -86,19 +99,11 @@ jobs:
             cd ..
             echo "✓ Database migrations complete"
 
-            # Update frontend dependencies
-            echo "Updating frontend dependencies..."
-            cd frontend
-            # Remove node_modules completely for clean install (avoids permission issues)
-            sudo rm -rf node_modules 2>/dev/null || true
-            sudo npm ci --quiet
-            echo "✓ Frontend dependencies updated"
-
-            # Build frontend
-            echo "Building frontend..."
-            npm run build
-            cd ..
-            echo "✓ Frontend built"
+            # Clear stale dist so the SCP upload replaces it cleanly
+            echo "Clearing old frontend dist..."
+            rm -rf frontend/dist
+            mkdir -p frontend/dist
+            echo "✓ Ready for dist upload"
 
             # Delete boot_id file to invalidate all sessions on deployment
             echo "Invalidating existing sessions..."
@@ -107,16 +112,33 @@ jobs:
             python3 -c "import uuid; open('backend/instance/.boot_id', 'w').write(str(uuid.uuid4()))"
             echo "✓ Sessions will be invalidated on restart"
 
-            # Restart services
+      - name: Upload frontend dist to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.GCP_DEV_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          source: "frontend/dist"
+          target: "/home/michaelt452/freezer-inventory-dev/frontend"
+          strip_components: 1
+
+      - name: Restart services & health check
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.GCP_DEV_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          command_timeout: 5m
+          script: |
+            set -e
+
             echo "Restarting services..."
             sudo systemctl restart freezer-backend-dev
             sudo systemctl restart freezer-frontend-dev
             echo "✓ Services restarted"
 
-            # Health check with retries
-            echo "Running health check..."
-
             # Backend health check (retry up to 30 seconds)
+            echo "Running health check..."
             for i in {1..6}; do
               if curl -f http://localhost:5002/api/health > /dev/null 2>&1; then
                 echo "✓ Backend health check passed"
@@ -147,7 +169,7 @@ jobs:
             done
 
             # Keep only last 10 backups
-            cd backups
+            cd /home/michaelt452/freezer-inventory-dev/backups
             ls -t freezer_inventory_*.db 2>/dev/null | tail -n +11 | xargs -r rm
             cd ..
 
