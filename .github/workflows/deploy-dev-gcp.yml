@@ -29,6 +29,7 @@ jobs:
           username: ${{ secrets.GCP_USERNAME }}
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
           envs: UPC_API_KEY,PEXELS_API_KEY
+          command_timeout: 25m
           script: |
             set -e
 
@@ -62,9 +63,11 @@ jobs:
             echo "✓ Code updated"
 
             # Stop services before updating dependencies
+            # Use timeout so a hung service can never block the deployment indefinitely.
+            # If graceful stop takes >30s, force-kill via systemctl kill.
             echo "Stopping services..."
-            sudo systemctl stop freezer-backend-dev
-            sudo systemctl stop freezer-frontend-dev
+            sudo timeout 30 systemctl stop freezer-backend-dev 2>/dev/null || sudo systemctl kill freezer-backend-dev 2>/dev/null || true
+            sudo timeout 30 systemctl stop freezer-frontend-dev 2>/dev/null || sudo systemctl kill freezer-frontend-dev 2>/dev/null || true
             echo "✓ Services stopped"
 
             # Update backend dependencies
