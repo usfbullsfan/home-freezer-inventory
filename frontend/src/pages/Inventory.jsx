@@ -415,7 +415,6 @@ function Inventory({ isMobile = false, qrEnabled = true }) {
               item={item}
               onEdit={() => handleEditItem(item)}
               onStatusChange={(status) => handleStatusChange(item.id, status)}
-              qrEnabled={qrEnabled}
             />
           ))}
         </div>
