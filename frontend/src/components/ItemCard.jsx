@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { itemsAPI } from '../services/api';
 import { formatLocalDate, daysBetween } from '../utils/dateUtils';
 
-function ItemCard({ item, onEdit, onStatusChange }) {
+function ItemCard({ item, onEdit, onStatusChange, qrEnabled = true }) {
   const [showQR, setShowQR] = useState(false);
 
   const getStatusClass = () => {
@@ -159,13 +159,17 @@ function ItemCard({ item, onEdit, onStatusChange }) {
           <p style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
             {item.qr_code}
           </p>
-          <img
-            src={itemsAPI.getQRImage(item.qr_code)}
-            alt={`QR Code for ${item.name}`}
-          />
-          <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#7f8c8d' }}>
-            Write this code on your bag or scan the QR code to quickly access this item
-          </p>
+          {qrEnabled && (
+            <>
+              <img
+                src={itemsAPI.getQRImage(item.qr_code)}
+                alt={`QR Code for ${item.name}`}
+              />
+              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#7f8c8d' }}>
+                Write this code on your bag or scan the QR code to quickly access this item
+              </p>
+            </>
+          )}
         </div>
       )}
     </div>
