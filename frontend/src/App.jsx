@@ -167,7 +167,7 @@ function AppContent() {
                 {showMobileInterface ? (
                   // Mobile menu structure
                   <div className="mobile-menu-buttons">
-                    <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>
+                    <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>Statistics</Link>
                     <details className="navbar-submenu">
                       <summary>Manage</summary>
                       <div className="navbar-submenu-items">
@@ -181,7 +181,7 @@ function AppContent() {
                   // Desktop menu structure (unchanged)
                   <>
                     <Link to="/" onClick={() => setMobileMenuOpen(false)}>Inventory</Link>
-                    <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>
+                    <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>Statistics</Link>
                     <Link to="/categories" onClick={() => setMobileMenuOpen(false)}>Categories</Link>
                     {qrEnabled && <Link to="/print-labels" onClick={() => setMobileMenuOpen(false)}>Print Labels</Link>}
                     <Link to="/settings" onClick={() => setMobileMenuOpen(false)}>Settings</Link>
