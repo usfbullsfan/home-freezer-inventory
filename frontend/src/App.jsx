@@ -14,6 +14,7 @@ const PrintLabels = lazy(() => import('./pages/PrintLabels'));
 const Settings = lazy(() => import('./pages/Settings'));
 const QRRedirect = lazy(() => import('./pages/QRRedirect'));
 const MobileLanding = lazy(() => import('./pages/MobileLanding'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
 const InstallPrompt = lazy(() => import('./components/InstallPrompt'));
 
 function AppContent() {
@@ -166,6 +167,7 @@ function AppContent() {
                 {showMobileInterface ? (
                   // Mobile menu structure
                   <div className="mobile-menu-buttons">
+                    <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>Statistics</Link>
                     <details className="navbar-submenu">
                       <summary>Manage</summary>
                       <div className="navbar-submenu-items">
@@ -179,6 +181,7 @@ function AppContent() {
                   // Desktop menu structure (unchanged)
                   <>
                     <Link to="/" onClick={() => setMobileMenuOpen(false)}>Inventory</Link>
+                    <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>Statistics</Link>
                     <Link to="/categories" onClick={() => setMobileMenuOpen(false)}>Categories</Link>
                     {qrEnabled && <Link to="/print-labels" onClick={() => setMobileMenuOpen(false)}>Print Labels</Link>}
                     <Link to="/settings" onClick={() => setMobileMenuOpen(false)}>Settings</Link>
@@ -203,6 +206,7 @@ function AppContent() {
                   <Route path="/" element={<Navigate to="/home" replace />} />
                   <Route path="/inventory" element={<Inventory isMobile={true} qrEnabled={qrEnabled} />} />
                   <Route path="/item/:qrCode" element={<QRRedirect />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/categories" element={<Categories />} />
                   <Route path="/print-labels" element={<PrintLabels />} />
                   <Route path="/settings" element={<Settings user={user} isMobile={true} setUseDesktopInterface={setUseDesktopInterface} />} />
@@ -213,6 +217,7 @@ function AppContent() {
                 <>
                   <Route path="/" element={<Inventory qrEnabled={qrEnabled} />} />
                   <Route path="/item/:qrCode" element={<QRRedirect />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/categories" element={<Categories />} />
                   <Route path="/print-labels" element={<PrintLabels />} />
                   <Route path="/settings" element={<Settings user={user} />} />

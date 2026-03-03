@@ -115,15 +115,13 @@ function ItemCard({ item, onEdit, onStatusChange, qrEnabled = true }) {
       </div>
 
       <div className="item-actions">
-        {qrEnabled && (
-          <button
-            className="btn btn-secondary"
-            onClick={() => setShowQR(!showQR)}
-            style={{ flex: 0.5 }}
-          >
-            Code
-          </button>
-        )}
+        <button
+          className="btn btn-secondary"
+          onClick={() => setShowQR(!showQR)}
+          style={{ flex: 0.5 }}
+        >
+          Code
+        </button>
         <button
           className="btn btn-primary"
           onClick={onEdit}
@@ -156,18 +154,22 @@ function ItemCard({ item, onEdit, onStatusChange, qrEnabled = true }) {
         )}
       </div>
 
-      {qrEnabled && showQR && (
+      {showQR && (
         <div className="qr-code-display">
           <p style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
             {item.qr_code}
           </p>
-          <img
-            src={itemsAPI.getQRImage(item.qr_code)}
-            alt={`QR Code for ${item.name}`}
-          />
-          <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#7f8c8d' }}>
-            Write this code on your bag or scan the QR code to quickly access this item
-          </p>
+          {qrEnabled && (
+            <>
+              <img
+                src={itemsAPI.getQRImage(item.qr_code)}
+                alt={`QR Code for ${item.name}`}
+              />
+              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#7f8c8d' }}>
+                Write this code on your bag or scan the QR code to quickly access this item
+              </p>
+            </>
+          )}
         </div>
       )}
     </div>
