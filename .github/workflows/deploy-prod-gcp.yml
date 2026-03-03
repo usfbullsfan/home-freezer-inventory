@@ -43,6 +43,7 @@ jobs:
           username: ${{ secrets.GCP_USERNAME }}
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
           envs: UPC_API_KEY,PEXELS_API_KEY
+          timeout: 30s
           command_timeout: 10m
           script: |
             set -e
@@ -128,6 +129,7 @@ jobs:
           host: ${{ secrets.GCP_PROD_HOST }}
           username: ${{ secrets.GCP_USERNAME }}
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          timeout: 30s
           command_timeout: 5m
           script: |
             set -e
@@ -184,6 +186,7 @@ jobs:
           host: ${{ secrets.GCP_PROD_HOST }}
           username: ${{ secrets.GCP_USERNAME }}
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          timeout: 30s
           script: |
             echo "======================================"
             echo "✗ GCP Production Deployment Failed!"
