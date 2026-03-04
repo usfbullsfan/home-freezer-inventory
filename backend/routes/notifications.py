@@ -8,6 +8,7 @@ Routes (all require JWT):
   PUT  /api/notifications/email/me       – update current user's notification email
 """
 
+import logging
 import os
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
@@ -88,7 +89,8 @@ def send_test_email():
         return jsonify({'message': f'Test email sent to {recipient}'}), 200
 
     except RuntimeError as exc:
-        return jsonify({'error': str(exc)}), 500
+        logging.exception('Failed to send test email: %s', exc)
+        return jsonify({'error': 'Failed to send test email. Check server logs for details.'}), 500
 
 
 @notifications_bp.route('/email/me', methods=['GET'])
