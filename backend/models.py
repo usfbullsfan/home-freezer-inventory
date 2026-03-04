@@ -16,6 +16,9 @@ class User(db.Model):
     activated = db.Column(db.Boolean, default=False)  # True once user sets up passkey
     pwa_install_dismissed = db.Column(db.Boolean, default=False)  # True if user dismissed PWA install prompt
     email = db.Column(db.String(255))  # Optional email address for notifications
+    email_verified = db.Column(db.Boolean, default=False)
+    email_verification_token = db.Column(db.String(6))
+    email_verification_expires = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -37,6 +40,7 @@ class User(db.Model):
             'activated': self.activated,
             'pwa_install_dismissed': self.pwa_install_dismissed,
             'email': self.email,
+            'email_verified': bool(self.email_verified),
             'created_at': self.created_at.isoformat()
         }
 

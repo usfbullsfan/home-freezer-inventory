@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { settingsAPI, authAPI } from '../services/api';
+import { settingsAPI, authAPI, notificationsAPI } from '../services/api';
 import UserManagement from '../components/UserManagement';
 import ImportExport from '../components/ImportExport';
 import FeedbackManagement from '../components/FeedbackManagement';
@@ -100,6 +100,25 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
   const [passkeys, setPasskeys] = useState([]);
   const [passkeysLoading, setPasskeysLoading] = useState(false);
 
+  // Email notification state
+  const [myEmail, setMyEmail] = useState('');
+  const [myEmailVerified, setMyEmailVerified] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [emailSuccess, setEmailSuccess] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verifyError, setVerifyError] = useState('');
+  const [verifySuccess, setVerifySuccess] = useState('');
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [emailConfigured, setEmailConfigured] = useState(false);
+
+  // Admin test email state
+  const [testEmailTo, setTestEmailTo] = useState('');
+  const [testEmailError, setTestEmailError] = useState('');
+  const [testEmailSuccess, setTestEmailSuccess] = useState('');
+  const [testEmailLoading, setTestEmailLoading] = useState(false);
+
   // Version info
   const [versionInfo, setVersionInfo] = useState(null);
 
@@ -107,6 +126,8 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
     loadSettings();
     loadUserSettings();
     loadVersionInfo();
+    loadMyEmail();
+    loadEmailStatus();
     if (supportsPasskeys()) {
       loadPasskeys();
     }
@@ -427,6 +448,92 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
     setRecoveryCodes(null);
   };
 
+  const loadEmailStatus = async () => {
+    try {
+      const res = await notificationsAPI.getStatus();
+      setEmailConfigured(res.data.configured);
+    } catch {
+      setEmailConfigured(false);
+    }
+  };
+
+  const loadMyEmail = async () => {
+    try {
+      const res = await notificationsAPI.getMyEmail();
+      setMyEmail(res.data.email || '');
+      setEmailInput(res.data.email || '');
+      setMyEmailVerified(res.data.email_verified || false);
+    } catch {
+      // ignore – non-critical
+    }
+  };
+
+  const handleSaveEmail = async () => {
+    setEmailError('');
+    setEmailSuccess('');
+    setEmailLoading(true);
+    try {
+      const res = await notificationsAPI.updateMyEmail(emailInput.trim());
+      setMyEmail(res.data.email || '');
+      setMyEmailVerified(res.data.email_verified || false);
+      setVerificationCode('');
+      setVerifyError('');
+      setVerifySuccess('');
+      if (res.data.verification_required) {
+        setEmailSuccess(`Verification code sent to ${res.data.email}`);
+      } else if (!res.data.email) {
+        setEmailSuccess('Email address removed.');
+      } else {
+        setEmailSuccess(res.data.message || 'Email updated.');
+      }
+    } catch (err) {
+      setEmailError(err.response?.data?.error || 'Failed to save email address.');
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    setVerifyError('');
+    setVerifySuccess('');
+    setVerifyLoading(true);
+    try {
+      await notificationsAPI.verifyEmail(verificationCode.trim());
+      setMyEmailVerified(true);
+      setVerifySuccess('Email verified!');
+      setVerificationCode('');
+    } catch (err) {
+      setVerifyError(err.response?.data?.error || 'Verification failed.');
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setVerifyError('');
+    setVerifySuccess('');
+    try {
+      await notificationsAPI.resendVerification();
+      setVerifySuccess(`New code sent to ${myEmail}`);
+    } catch (err) {
+      setVerifyError(err.response?.data?.error || 'Failed to resend code.');
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    setTestEmailError('');
+    setTestEmailSuccess('');
+    setTestEmailLoading(true);
+    try {
+      const res = await notificationsAPI.sendTestEmail(testEmailTo.trim() || null);
+      setTestEmailSuccess(res.data.message || 'Test email sent.');
+    } catch (err) {
+      setTestEmailError(err.response?.data?.error || 'Failed to send test email.');
+    } finally {
+      setTestEmailLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container">
@@ -650,6 +757,125 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
         )}
       </SettingsSection>
 
+      {/* ── Email Notifications ──────────────────────────────────── */}
+      <SettingsSection title="Email Notifications">
+        {!emailConfigured && (
+          <div style={{
+            padding: '0.75rem 1rem',
+            background: '#fff3cd',
+            border: '1px solid #ffc107',
+            borderRadius: '4px',
+            marginBottom: '1rem',
+            fontSize: '0.9rem',
+            color: '#856404',
+          }}>
+            Email notifications are not configured on this server.
+            {user && user.role === 'admin' && ' Use the Email Test section below to configure and verify.'}
+          </div>
+        )}
+
+        {emailError && <div className="error-message">{emailError}</div>}
+        {emailSuccess && <div className="success-message">{emailSuccess}</div>}
+
+        <div className="form-group">
+          <label htmlFor="notification_email">Notification email address</label>
+          <small style={{ color: '#7f8c8d', display: 'block', marginBottom: '0.5rem' }}>
+            Receive alerts (e.g. items expiring soon) at this address.
+            Your email must be verified before notifications are sent.
+          </small>
+
+          {myEmail && (
+            <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.9rem', color: '#495057' }}>{myEmail}</span>
+              {myEmailVerified ? (
+                <span style={{
+                  fontSize: '0.75rem', background: '#d4edda', color: '#155724',
+                  padding: '0.15rem 0.5rem', borderRadius: '3px', fontWeight: '600',
+                }}>Verified</span>
+              ) : (
+                <span style={{
+                  fontSize: '0.75rem', background: '#fff3cd', color: '#856404',
+                  padding: '0.15rem 0.5rem', borderRadius: '3px', fontWeight: '600',
+                }}>Not verified</span>
+              )}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <input
+              type="email"
+              id="notification_email"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              placeholder="you@example.com"
+              style={{ flex: 1 }}
+              disabled={!emailConfigured}
+            />
+            <button
+              className="btn btn-primary"
+              onClick={handleSaveEmail}
+              disabled={emailLoading || !emailConfigured}
+            >
+              {emailLoading ? 'Saving…' : 'Save'}
+            </button>
+            {myEmail && (
+              <button
+                className="btn btn-secondary"
+                onClick={() => { setEmailInput(''); }}
+                style={{ whiteSpace: 'nowrap' }}
+                disabled={emailLoading || !emailConfigured}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Verification code entry */}
+        {myEmail && !myEmailVerified && (
+          <div style={{
+            marginTop: '1.25rem',
+            padding: '1rem',
+            background: '#f8f9fa',
+            border: '1px solid #e9ecef',
+            borderRadius: '6px',
+          }}>
+            <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem' }}>Verify your email</h4>
+            <p style={{ margin: '0 0 0.75rem', fontSize: '0.875rem', color: '#7f8c8d' }}>
+              Enter the 6-digit code sent to <strong>{myEmail}</strong>.
+            </p>
+
+            {verifyError && <div className="error-message" style={{ marginBottom: '0.75rem' }}>{verifyError}</div>}
+            {verifySuccess && <div className="success-message" style={{ marginBottom: '0.75rem' }}>{verifySuccess}</div>}
+
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="123456"
+                maxLength={6}
+                style={{ width: '8rem', fontFamily: 'monospace', fontSize: '1.25rem', letterSpacing: '0.2em', textAlign: 'center' }}
+              />
+              <button
+                className="btn btn-primary"
+                onClick={handleVerifyCode}
+                disabled={verifyLoading || verificationCode.length !== 6}
+              >
+                {verifyLoading ? 'Verifying…' : 'Verify'}
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={handleResendCode}
+                style={{ fontSize: '0.85rem' }}
+              >
+                Resend code
+              </button>
+            </div>
+          </div>
+        )}
+      </SettingsSection>
+
       {/* ── Admin sections ───────────────────────────────────────── */}
       {user && user.role === 'admin' && (
         <>
@@ -730,6 +956,36 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
             <button className="btn btn-primary" onClick={handleSaveSystemSettings}>
               Save System Settings
             </button>
+          </SettingsSection>
+
+          <SettingsSection title="Email Test" badge="Admin">
+            <p style={{ color: '#7f8c8d', marginBottom: '1rem', fontSize: '0.9rem' }}>
+              Send a test email to verify that Resend is configured correctly.
+              {!emailConfigured && (
+                <span style={{ color: '#dc3545', fontWeight: '600' }}> Email is not currently configured.</span>
+              )}
+            </p>
+            {testEmailError && <div className="error-message">{testEmailError}</div>}
+            {testEmailSuccess && <div className="success-message">{testEmailSuccess}</div>}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <input
+                type="email"
+                value={testEmailTo}
+                onChange={(e) => setTestEmailTo(e.target.value)}
+                placeholder={myEmail || 'recipient@example.com'}
+                style={{ flex: 1, minWidth: '200px' }}
+              />
+              <button
+                className="btn btn-primary"
+                onClick={handleSendTestEmail}
+                disabled={testEmailLoading || !emailConfigured}
+              >
+                {testEmailLoading ? 'Sending…' : 'Send Test Email'}
+              </button>
+            </div>
+            <small style={{ color: '#7f8c8d', marginTop: '0.5rem', display: 'block' }}>
+              Leave blank to send to your own email address.
+            </small>
           </SettingsSection>
 
           <SettingsSection title="User Management" badge="Admin">
