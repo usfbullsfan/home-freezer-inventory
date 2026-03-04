@@ -38,18 +38,14 @@ jobs:
         env:
           UPC_API_KEY: ${{ secrets.UPC_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
-          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
-          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM_ADDRESS: ${{ secrets.EMAIL_FROM_ADDRESS }}
           EMAIL_FROM_NAME: ${{ secrets.EMAIL_FROM_NAME }}
         with:
           host: ${{ secrets.GCP_PROD_HOST }}
           username: ${{ secrets.GCP_USERNAME }}
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
-          envs: UPC_API_KEY,PEXELS_API_KEY,SMTP_SERVER,SMTP_PORT,SMTP_USE_TLS,SMTP_USERNAME,SMTP_PASSWORD,EMAIL_FROM_ADDRESS,EMAIL_FROM_NAME
+          envs: UPC_API_KEY,PEXELS_API_KEY,RESEND_API_KEY,EMAIL_FROM_ADDRESS,EMAIL_FROM_NAME
           timeout: 30s
           command_timeout: 10m
           script: |
@@ -66,11 +62,7 @@ jobs:
             cat > backend/.env << EOF
             UPC_API_KEY=${UPC_API_KEY}
             PEXELS_API_KEY=${PEXELS_API_KEY}
-            SMTP_SERVER=${SMTP_SERVER}
-            SMTP_PORT=${SMTP_PORT:-587}
-            SMTP_USE_TLS=${SMTP_USE_TLS:-true}
-            SMTP_USERNAME=${SMTP_USERNAME}
-            SMTP_PASSWORD=${SMTP_PASSWORD}
+            RESEND_API_KEY=${RESEND_API_KEY}
             EMAIL_FROM_ADDRESS=${EMAIL_FROM_ADDRESS}
             EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-Freezer Inventory}
             EOF

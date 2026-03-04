@@ -1,81 +1,38 @@
-"""Email utility for sending notifications via SMTP.
+"""Email utility for sending notifications via Resend.
 
-Supports three connection modes, controlled by environment variables:
+Required environment variables:
+  RESEND_API_KEY     - API key from https://resend.com (starts with re_)
+  EMAIL_FROM_ADDRESS - Verified sender address (must match a domain
+                       verified in the Resend dashboard)
 
-  Mode 1 – STARTTLS (port 587, external relay like Gmail):
-    SMTP_USE_TLS=true   (default)
-
-  Mode 2 – SSL wrapper (port 465):
-    SMTP_USE_TLS=false
-    SMTP_USE_SSL=true
-
-  Mode 3 – Plain SMTP, no encryption (localhost Postfix on port 25):
-    SMTP_USE_TLS=false
-    SMTP_USE_SSL=false  (default when SMTP_USE_TLS is false)
-
-Required variables for all modes:
-  SMTP_SERVER        - Hostname (e.g. localhost, smtp.gmail.com)
-  EMAIL_FROM_ADDRESS - Sender address shown in the From header
-
-Optional variables:
-  SMTP_PORT         - Port number (default: 25 for plain, 587 for TLS, 465 for SSL)
-  SMTP_USERNAME     - Login username (not needed for localhost)
-  SMTP_PASSWORD     - Login password  (not needed for localhost)
-  SMTP_USE_TLS      - 'true' to use STARTTLS (default: true unless SMTP_SERVER=localhost)
-  SMTP_USE_SSL      - 'true' to use SSL wrapper (default: false)
-  EMAIL_FROM_NAME   - Sender display name (default: Freezer Inventory)
+Optional:
+  EMAIL_FROM_NAME    - Sender display name (default: Freezer Inventory)
 """
 
 import os
-import smtplib
 import logging
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import resend
 
 logger = logging.getLogger(__name__)
 
 
-def _get_smtp_config():
-    """Return SMTP config dict from environment variables."""
-    server = os.environ.get('SMTP_SERVER', '')
-    use_ssl = os.environ.get('SMTP_USE_SSL', 'false').lower() == 'true'
-
-    # Default use_tls to False for localhost (no TLS needed), True otherwise
-    default_tls = 'false' if server in ('localhost', '127.0.0.1', '::1') else 'true'
-    use_tls = os.environ.get('SMTP_USE_TLS', default_tls).lower() == 'true'
-
-    # Default port based on connection mode
-    if use_ssl:
-        default_port = 465
-    elif use_tls:
-        default_port = 587
-    else:
-        default_port = 25
-
+def _get_config():
+    """Return Resend config dict from environment variables."""
     return {
-        'server': server,
-        'port': int(os.environ.get('SMTP_PORT', str(default_port))),
-        'username': os.environ.get('SMTP_USERNAME', ''),
-        'password': os.environ.get('SMTP_PASSWORD', ''),
-        'use_tls': use_tls,
-        'use_ssl': use_ssl,
+        'api_key': os.environ.get('RESEND_API_KEY', ''),
         'from_address': os.environ.get('EMAIL_FROM_ADDRESS', ''),
         'from_name': os.environ.get('EMAIL_FROM_NAME', 'Freezer Inventory'),
     }
 
 
 def is_email_configured():
-    """Return True when the minimum required SMTP variables are set.
-
-    For localhost Postfix, only SMTP_SERVER and EMAIL_FROM_ADDRESS are needed
-    (no credentials required).
-    """
-    cfg = _get_smtp_config()
-    return bool(cfg['server'] and cfg['from_address'])
+    """Return True when the minimum required variables are set."""
+    cfg = _get_config()
+    return bool(cfg['api_key'] and cfg['from_address'])
 
 
 def send_email(to_addresses, subject, text_body, html_body=None):
-    """Send an email via SMTP.
+    """Send an email via the Resend API.
 
     Args:
         to_addresses: str or list of str – recipient address(es).
@@ -87,12 +44,12 @@ def send_email(to_addresses, subject, text_body, html_body=None):
         True on success.
 
     Raises:
-        RuntimeError: when SMTP is not configured or the send fails.
+        RuntimeError: when Resend is not configured or the send fails.
     """
-    cfg = _get_smtp_config()
+    cfg = _get_config()
 
-    if not cfg['server']:
-        raise RuntimeError('SMTP_SERVER is not configured')
+    if not cfg['api_key']:
+        raise RuntimeError('RESEND_API_KEY is not configured')
     if not cfg['from_address']:
         raise RuntimeError('EMAIL_FROM_ADDRESS is not configured')
 
@@ -105,33 +62,19 @@ def send_email(to_addresses, subject, text_body, html_body=None):
         else cfg['from_address']
     )
 
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = subject
-    msg['From'] = from_header
-    msg['To'] = ', '.join(to_addresses)
+    resend.api_key = cfg['api_key']
 
-    msg.attach(MIMEText(text_body, 'plain'))
+    params: resend.Emails.SendParams = {
+        'from': from_header,
+        'to': to_addresses,
+        'subject': subject,
+        'text': text_body,
+    }
     if html_body:
-        msg.attach(MIMEText(html_body, 'html'))
+        params['html'] = html_body
 
     try:
-        if cfg['use_ssl']:
-            # Mode 2: SSL wrapper (port 465)
-            smtp = smtplib.SMTP_SSL(cfg['server'], cfg['port'], timeout=15)
-        elif cfg['use_tls']:
-            # Mode 1: STARTTLS (port 587)
-            smtp = smtplib.SMTP(cfg['server'], cfg['port'], timeout=15)
-            smtp.starttls()
-        else:
-            # Mode 3: plain SMTP – used for localhost Postfix (port 25)
-            smtp = smtplib.SMTP(cfg['server'], cfg['port'], timeout=15)
-
-        if cfg['username'] and cfg['password']:
-            smtp.login(cfg['username'], cfg['password'])
-
-        smtp.sendmail(cfg['from_address'], to_addresses, msg.as_string())
-        smtp.quit()
-
+        resend.Emails.send(params)
         logger.info('Email sent to %s | subject: %s', ', '.join(to_addresses), subject)
         return True
 
