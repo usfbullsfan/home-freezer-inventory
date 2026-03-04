@@ -89,3 +89,43 @@ def send_email(to_addresses, subject, text_body, html_body=None):
     except Exception as exc:
         logger.exception('Failed to send email to %s', ', '.join(to_addresses))
         raise RuntimeError(f'Email delivery failed: {exc}') from exc
+
+
+def send_verification_email(to_address, code):
+    """Send a 6-digit verification code to the given address."""
+    return send_email(
+        to_addresses=to_address,
+        subject='Verify your email – Freezer Inventory',
+        text_body=(
+            f'Your email verification code is: {code}\n\n'
+            'Enter this code in the app to confirm your email address.\n'
+            'The code expires in 30 minutes.'
+        ),
+        html_body=(
+            '<p>Your email verification code is:</p>'
+            f'<h2 style="font-family:monospace;letter-spacing:0.3em;font-size:2rem;">{code}</h2>'
+            '<p>Enter this code in the app to confirm your email address.<br>'
+            'The code expires in 30 minutes.</p>'
+        ),
+    )
+
+
+def send_verification_email(to_address, code):
+    """Send a 6-digit verification code to the given address."""
+    return send_email(
+        to_addresses=to_address,
+        subject='Verify your email – Freezer Inventory',
+        text_body=(
+            f'Your email verification code is: {code}\n\n'
+            'Enter this code in the app to confirm your email address.\n'
+            'The code expires in 30 minutes.\n\n'
+            'If you did not request this, you can ignore this message.'
+        ),
+        html_body=(
+            '<p>Your email verification code is:</p>'
+            f'<h2 style="letter-spacing:0.25em;font-family:monospace;font-size:2rem">{code}</h2>'
+            '<p>Enter this code in the app to confirm your email address.<br>'
+            'The code expires in <strong>30 minutes</strong>.</p>'
+            '<p style="color:#888;font-size:0.9em">If you did not request this, you can ignore this message.</p>'
+        ),
+    )
