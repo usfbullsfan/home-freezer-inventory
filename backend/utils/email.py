@@ -11,9 +11,15 @@ Optional:
 
 import os
 import logging
-import resend
 
 logger = logging.getLogger(__name__)
+
+try:
+    import resend
+    _RESEND_AVAILABLE = True
+except ImportError:
+    resend = None  # type: ignore[assignment]
+    _RESEND_AVAILABLE = False
 
 
 def _get_config():
@@ -48,6 +54,8 @@ def send_email(to_addresses, subject, text_body, html_body=None):
     """
     cfg = _get_config()
 
+    if not _RESEND_AVAILABLE:
+        raise RuntimeError('resend package is not installed. Run: pip install "resend>=2.0.0"')
     if not cfg['api_key']:
         raise RuntimeError('RESEND_API_KEY is not configured')
     if not cfg['from_address']:
