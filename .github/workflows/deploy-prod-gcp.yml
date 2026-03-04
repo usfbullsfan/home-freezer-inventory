@@ -38,11 +38,14 @@ jobs:
         env:
           UPC_API_KEY: ${{ secrets.UPC_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM_ADDRESS: ${{ vars.EMAIL_FROM_ADDRESS }}
+          EMAIL_FROM_NAME: ${{ vars.EMAIL_FROM_NAME }}
         with:
           host: ${{ secrets.GCP_PROD_HOST }}
           username: ${{ secrets.GCP_USERNAME }}
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
-          envs: UPC_API_KEY,PEXELS_API_KEY
+          envs: UPC_API_KEY,PEXELS_API_KEY,RESEND_API_KEY,EMAIL_FROM_ADDRESS,EMAIL_FROM_NAME
           timeout: 30s
           command_timeout: 10m
           script: |
@@ -54,11 +57,14 @@ jobs:
 
             cd /home/michaelt452/freezer-inventory
 
-            # Create .env file with API keys
+            # Create .env file with API keys and email config
             echo "Creating .env file..."
             cat > backend/.env << EOF
             UPC_API_KEY=${UPC_API_KEY}
             PEXELS_API_KEY=${PEXELS_API_KEY}
+            RESEND_API_KEY=${RESEND_API_KEY}
+            EMAIL_FROM_ADDRESS=${EMAIL_FROM_ADDRESS}
+            EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-Freezer Inventory}
             EOF
             echo "✓ Environment variables configured"
 
@@ -97,6 +103,7 @@ jobs:
             cd backend
             source venv/bin/activate
             python3 run_feedback_migration.py || echo "⚠️  Migration already applied or not needed"
+            python3 migrations/run_email_migration.py || echo "⚠️  Email migration already applied or not needed"
             cd ..
             echo "✓ Database migrations complete"
 
