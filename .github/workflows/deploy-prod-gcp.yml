@@ -156,6 +156,8 @@ jobs:
               if [ $i -eq 6 ]; then
                 echo "✗ Backend health check failed after 30s!"
                 sudo systemctl status freezer-backend --no-pager
+                echo "--- Recent logs ---"
+                sudo journalctl -u freezer-backend -n 50 --no-pager
                 exit 1
               fi
               echo "  Waiting for backend... (attempt $i/6)"
