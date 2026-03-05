@@ -90,26 +90,6 @@ def send_email(to_addresses, subject, text_body, html_body=None):
         logger.exception('Failed to send email to %s', ', '.join(to_addresses))
         raise RuntimeError(f'Email delivery failed: {exc}') from exc
 
-
-def send_verification_email(to_address, code):
-    """Send a 6-digit verification code to the given address."""
-    return send_email(
-        to_addresses=to_address,
-        subject='Verify your email – Freezer Inventory',
-        text_body=(
-            f'Your email verification code is: {code}\n\n'
-            'Enter this code in the app to confirm your email address.\n'
-            'The code expires in 30 minutes.'
-        ),
-        html_body=(
-            '<p>Your email verification code is:</p>'
-            f'<h2 style="font-family:monospace;letter-spacing:0.3em;font-size:2rem;">{code}</h2>'
-            '<p>Enter this code in the app to confirm your email address.<br>'
-            'The code expires in 30 minutes.</p>'
-        ),
-    )
-
-
 def send_verification_email(to_address, code):
     """Send a 6-digit verification code to the given address."""
     return send_email(
