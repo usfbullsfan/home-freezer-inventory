@@ -405,8 +405,8 @@ export const notificationsAPI = {
   getSettings: () =>
     api.get('/notifications/email/settings'),
 
-  sendTestEmail: (to) =>
-    api.post('/notifications/email/test', to ? { to } : {}),
+  sendTestEmail: () =>
+    api.post('/notifications/email/test'),
 };
 
 export default api;

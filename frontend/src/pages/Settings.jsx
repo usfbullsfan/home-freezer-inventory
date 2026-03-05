@@ -114,7 +114,6 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
   const [emailConfigured, setEmailConfigured] = useState(false);
 
   // Admin test email state
-  const [testEmailTo, setTestEmailTo] = useState('');
   const [testEmailError, setTestEmailError] = useState('');
   const [testEmailSuccess, setTestEmailSuccess] = useState('');
   const [testEmailLoading, setTestEmailLoading] = useState(false);
@@ -525,7 +524,7 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
     setTestEmailSuccess('');
     setTestEmailLoading(true);
     try {
-      const res = await notificationsAPI.sendTestEmail(testEmailTo.trim() || null);
+      const res = await notificationsAPI.sendTestEmail();
       setTestEmailSuccess(res.data.message || 'Test email sent.');
     } catch (err) {
       setTestEmailError(err.response?.data?.error || 'Failed to send test email.');
@@ -770,7 +769,6 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
             color: '#856404',
           }}>
             Email notifications are not configured on this server.
-            {user && user.role === 'admin' && ' Use the Email Test section below to configure and verify.'}
           </div>
         )}
 
@@ -874,6 +872,30 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
             </div>
           </div>
         )}
+
+        {/* Admin test email */}
+        {user && user.role === 'admin' && emailConfigured && (
+          <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #e9ecef' }}>
+            <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.95rem' }}>Send test email</h4>
+            <p style={{ margin: '0 0 0.75rem', fontSize: '0.875rem', color: '#7f8c8d' }}>
+              Verify Resend is configured correctly. The test email will be sent to your verified address.
+            </p>
+            {testEmailError && <div className="error-message" style={{ marginBottom: '0.75rem' }}>{testEmailError}</div>}
+            {testEmailSuccess && <div className="success-message" style={{ marginBottom: '0.75rem' }}>{testEmailSuccess}</div>}
+            <button
+              className="btn btn-secondary"
+              onClick={handleSendTestEmail}
+              disabled={testEmailLoading || !myEmailVerified}
+            >
+              {testEmailLoading ? 'Sending…' : 'Send Test Email'}
+            </button>
+            {!myEmailVerified && (
+              <small style={{ color: '#856404', marginLeft: '0.75rem' }}>
+                Verify your email address above to enable this.
+              </small>
+            )}
+          </div>
+        )}
       </SettingsSection>
 
       {/* ── Admin sections ───────────────────────────────────────── */}
@@ -956,36 +978,6 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
             <button className="btn btn-primary" onClick={handleSaveSystemSettings}>
               Save System Settings
             </button>
-          </SettingsSection>
-
-          <SettingsSection title="Email Test" badge="Admin">
-            <p style={{ color: '#7f8c8d', marginBottom: '1rem', fontSize: '0.9rem' }}>
-              Send a test email to verify that Resend is configured correctly.
-              {!emailConfigured && (
-                <span style={{ color: '#dc3545', fontWeight: '600' }}> Email is not currently configured.</span>
-              )}
-            </p>
-            {testEmailError && <div className="error-message">{testEmailError}</div>}
-            {testEmailSuccess && <div className="success-message">{testEmailSuccess}</div>}
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <input
-                type="email"
-                value={testEmailTo}
-                onChange={(e) => setTestEmailTo(e.target.value)}
-                placeholder={myEmail || 'recipient@example.com'}
-                style={{ flex: 1, minWidth: '200px' }}
-              />
-              <button
-                className="btn btn-primary"
-                onClick={handleSendTestEmail}
-                disabled={testEmailLoading || !emailConfigured}
-              >
-                {testEmailLoading ? 'Sending…' : 'Send Test Email'}
-              </button>
-            </div>
-            <small style={{ color: '#7f8c8d', marginTop: '0.5rem', display: 'block' }}>
-              Leave blank to send to your own email address.
-            </small>
           </SettingsSection>
 
           <SettingsSection title="User Management" badge="Admin">

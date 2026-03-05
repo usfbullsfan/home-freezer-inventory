@@ -66,19 +66,20 @@ def send_test_email():
                      'EMAIL_FROM_ADDRESS environment variables.'
         }), 400
 
-    data = request.get_json() or {}
-    recipient = data.get('to')
+    current_user_id = int(get_jwt_identity())
+    user = User.query.get(current_user_id)
 
-    if not recipient:
-        current_user_id = int(get_jwt_identity())
-        user = User.query.get(current_user_id)
-        recipient = user.email if user else None
-
-    if not recipient:
+    if not user or not user.email:
         return jsonify({
-            'error': 'No recipient address. Provide "to" in the request body or '
-                     'set your email address in your profile first.'
+            'error': 'No verified email address found. Add and verify your email in the Email Notifications section first.'
         }), 400
+
+    if not user.email_verified:
+        return jsonify({
+            'error': 'Your email address is not verified. Please verify it in the Email Notifications section first.'
+        }), 400
+
+    recipient = user.email
 
     try:
         send_email(
