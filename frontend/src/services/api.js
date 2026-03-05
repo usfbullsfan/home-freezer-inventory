@@ -384,4 +384,29 @@ export const feedbackAPI = {
     api.get('/feedback/stats'),
 };
 
+// Notifications / email API
+export const notificationsAPI = {
+  getStatus: () =>
+    api.get('/notifications/email/status'),
+
+  getMyEmail: () =>
+    api.get('/notifications/email/me'),
+
+  updateMyEmail: (email) =>
+    api.put('/notifications/email/me', { email }),
+
+  verifyEmail: (code) =>
+    api.post('/notifications/email/verify', { code }),
+
+  resendVerification: () =>
+    api.post('/notifications/email/resend-verification'),
+
+  // Admin only
+  getSettings: () =>
+    api.get('/notifications/email/settings'),
+
+  sendTestEmail: () =>
+    api.post('/notifications/email/test'),
+};
+
 export default api;
