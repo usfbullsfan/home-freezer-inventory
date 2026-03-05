@@ -3,7 +3,7 @@
 Routes (all require JWT):
   GET  /api/notifications/email/status            – is email configured? (any role)
   GET  /api/notifications/email/settings          – get email settings (admin only)
-  POST /api/notifications/email/test              – send a test email (admin only)
+  POST /api/notifications/email/test              – send a test email to own verified address (any role)
   GET  /api/notifications/email/me                – get current user's notification email
   PUT  /api/notifications/email/me                – update current user's notification email
   POST /api/notifications/email/verify            – verify the 6-digit code
@@ -55,11 +55,7 @@ def get_email_settings():
 @notifications_bp.route('/email/test', methods=['POST'])
 @jwt_required()
 def send_test_email():
-    """Send a test email to verify email configuration (admin only)."""
-    claims = get_jwt()
-    if claims.get('role') != 'admin':
-        return jsonify({'error': 'Admin access required'}), 403
-
+    """Send a test email to the current user's verified address."""
     if not is_email_configured():
         return jsonify({
             'error': 'Email is not configured. Set RESEND_API_KEY and '

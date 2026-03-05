@@ -113,7 +113,7 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [emailConfigured, setEmailConfigured] = useState(false);
 
-  // Admin test email state
+  // Test email state
   const [testEmailError, setTestEmailError] = useState('');
   const [testEmailSuccess, setTestEmailSuccess] = useState('');
   const [testEmailLoading, setTestEmailLoading] = useState(false);
@@ -873,8 +873,8 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
           </div>
         )}
 
-        {/* Admin test email */}
-        {user && user.role === 'admin' && emailConfigured && (
+        {/* Test email */}
+        {emailConfigured && (
           <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #e9ecef' }}>
             <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.95rem' }}>Send test email</h4>
             <p style={{ margin: '0 0 0.75rem', fontSize: '0.875rem', color: '#7f8c8d' }}>
