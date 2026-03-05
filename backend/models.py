@@ -140,6 +140,35 @@ class Setting(db.Model):
         }
 
 
+class LowStockAlert(db.Model):
+    __tablename__ = 'low_stock_alerts'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    item_name = db.Column(db.String(200), nullable=False)
+    threshold = db.Column(db.Integer, nullable=False, default=2)
+    enabled = db.Column(db.Boolean, default=True)
+    last_sent_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='low_stock_alerts')
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'item_name', name='_user_item_alert_uc'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'item_name': self.item_name,
+            'threshold': self.threshold,
+            'enabled': self.enabled,
+            'last_sent_at': self.last_sent_at.isoformat() if self.last_sent_at else None,
+            'created_at': self.created_at.isoformat(),
+        }
+
+
 def generate_qr_code():
     """Generate a unique alphanumeric code identifier (e.g., ABC123)"""
     import random
