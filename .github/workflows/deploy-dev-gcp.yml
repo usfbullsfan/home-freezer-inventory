@@ -91,6 +91,8 @@ jobs:
             echo "Stopping services..."
             sudo timeout 30 systemctl stop freezer-backend-dev 2>/dev/null || sudo systemctl kill freezer-backend-dev 2>/dev/null || true
             sudo timeout 30 systemctl stop freezer-frontend-dev 2>/dev/null || sudo systemctl kill freezer-frontend-dev 2>/dev/null || true
+            # Remove stale gunicorn control socket so the new process can create it cleanly
+            sudo rm -f backend/gunicorn.ctl 2>/dev/null || true
             echo "✓ Services stopped"
 
             # Update backend dependencies
@@ -115,6 +117,7 @@ jobs:
             python3 run_feedback_migration.py || echo "⚠️  Migration already applied or not needed"
             python3 migrations/run_email_migration.py || echo "⚠️  Email migration already applied or not needed"
             python3 migrations/run_email_verification_migration.py || echo "⚠️  Email verification migration already applied or not needed"
+            python3 migrations/run_low_stock_alerts_migration.py || echo "⚠️  Low-stock migration already applied or not needed"
             cd ..
             echo "✓ Database migrations complete"
 
@@ -177,7 +180,7 @@ jobs:
                 echo "✗ Backend health check failed after 30s!"
                 sudo systemctl status freezer-backend-dev --no-pager
                 echo "--- Recent logs ---"
-                sudo journalctl -u freezer-backend-dev -n 50 --no-pager
+                journalctl -u freezer-backend-dev -n 50 --no-pager 2>/dev/null || sudo journalctl -u freezer-backend-dev -n 50 --no-pager 2>/dev/null || true
                 exit 1
               fi
               echo "  Waiting for backend... (attempt $i/6)"
@@ -194,7 +197,7 @@ jobs:
                 echo "✗ Frontend health check failed after 30s!"
                 sudo systemctl status freezer-frontend-dev --no-pager
                 echo "--- Recent logs ---"
-                sudo journalctl -u freezer-frontend-dev -n 50 --no-pager
+                journalctl -u freezer-frontend-dev -n 50 --no-pager 2>/dev/null || sudo journalctl -u freezer-frontend-dev -n 50 --no-pager 2>/dev/null || true
                 exit 1
               fi
               echo "  Waiting for frontend... (attempt $i/6)"
