@@ -55,7 +55,8 @@ function EmailNotifications() {
       try {
         const res = await notificationsAPI.getLowStockAlerts();
         setAlerts(res.data);
-      } catch {
+      } catch (err) {
+        console.error('getLowStockAlerts failed:', err?.response?.status, err?.response?.data, err?.message);
         setAlertsError('Failed to load alerts.');
       } finally {
         setAlertsLoading(false);
