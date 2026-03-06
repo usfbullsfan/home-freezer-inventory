@@ -98,6 +98,13 @@ jobs:
             cd ..
             echo "✓ Backend dependencies updated"
 
+            # Update frontend dependencies
+            echo "Updating frontend dependencies..."
+            cd frontend
+            npm install --silent
+            cd ..
+            echo "✓ Frontend dependencies updated"
+
             # Run database migrations
             echo "Running database migrations..."
             cd backend
@@ -182,6 +189,8 @@ jobs:
               if [ $i -eq 6 ]; then
                 echo "✗ Frontend health check failed after 30s!"
                 sudo systemctl status freezer-frontend --no-pager
+                echo "--- Recent logs ---"
+                sudo journalctl -u freezer-frontend -n 50 --no-pager
                 exit 1
               fi
               echo "  Waiting for frontend... (attempt $i/6)"
