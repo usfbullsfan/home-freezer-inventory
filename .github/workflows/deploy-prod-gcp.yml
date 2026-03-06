@@ -137,6 +137,7 @@ jobs:
           source: "frontend/dist"
           target: "/home/michaelt452/freezer-inventory/frontend"
           strip_components: 1
+          overwrite: true
 
       - name: Restart services & health check
         uses: appleboy/ssh-action@v1.2.5
