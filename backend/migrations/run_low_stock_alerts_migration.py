@@ -10,6 +10,14 @@ Run from the backend directory:
 import os
 import sys
 
+# Load .env file so DATABASE_URL and DATABASE_PATH are picked up automatically,
+# matching the same behaviour as app.py (which calls load_dotenv() on startup).
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+except ImportError:
+    pass  # dotenv not installed; fall back to environment variables only
+
 # ── Detect database type ───────────────────────────────────────────────────────
 
 database_url = os.environ.get('DATABASE_URL', '')
@@ -66,11 +74,16 @@ if database_url:
 
 import sqlite3
 
-db_path = os.environ.get('DATABASE_PATH', 'instance/freezer_inventory.db')
+# Mirror app.py's path logic exactly:
+#   DATABASE_PATH is the filename only (e.g. "freezer_inventory_dev.db").
+#   The full path is always <backend>/instance/<DATABASE_PATH>.
+_basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+_db_filename = os.environ.get('DATABASE_PATH', 'freezer_inventory.db')
+db_path = os.path.join(_basedir, 'instance', _db_filename)
 
 if not os.path.exists(db_path):
     print(f'❌ Database not found at: {db_path}')
-    print('Run this script from the backend directory, or set DATABASE_PATH.')
+    print('Run this script from the backend directory, or set DATABASE_PATH in .env.')
     sys.exit(1)
 
 print(f'Running low_stock_alerts migration on SQLite: {db_path}\n')
