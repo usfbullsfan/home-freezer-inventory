@@ -131,6 +131,8 @@ jobs:
             echo "Clearing old frontend dist..."
             sudo chown -R "$(whoami)":"$(whoami)" frontend/dist 2>/dev/null || true
             sudo chown -R "$(whoami)":"$(whoami)" frontend/public 2>/dev/null || true
+            # Make public writable by any service user so generate-version.js can write version.json
+            chmod -R a+w frontend/public 2>/dev/null || true
             rm -rf frontend/dist 2>/dev/null || true
             mkdir -p frontend/dist
             echo "✓ Ready for dist upload"
@@ -196,8 +198,12 @@ jobs:
               if [ $i -eq 6 ]; then
                 echo "✗ Frontend health check failed after 30s!"
                 sudo systemctl status freezer-frontend-dev --no-pager
+                echo "--- Service file ---"
+                cat /etc/systemd/system/freezer-frontend-dev.service 2>/dev/null || true
                 echo "--- Recent logs ---"
                 journalctl -u freezer-frontend-dev -n 50 --no-pager 2>/dev/null || sudo journalctl -u freezer-frontend-dev -n 50 --no-pager 2>/dev/null || true
+                echo "--- Manual run (5s timeout) ---"
+                cd /home/michaelt452/freezer-inventory-dev/frontend && timeout 5 node scripts/generate-version.js 2>&1 || true
                 exit 1
               fi
               echo "  Waiting for frontend... (attempt $i/6)"
