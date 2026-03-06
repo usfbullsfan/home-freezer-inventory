@@ -107,6 +107,8 @@ jobs:
             echo "Updating frontend dependencies..."
             cd frontend
             npm install --silent
+            # Fix ownership: service runs as michaelt452 but npm install runs as gh-deploy
+            sudo chown -R michaelt452:michaelt452 node_modules 2>/dev/null || true
             cd ..
             echo "✓ Frontend dependencies updated"
 
