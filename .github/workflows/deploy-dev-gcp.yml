@@ -111,9 +111,16 @@ jobs:
             cd ..
             echo "✓ Database migrations complete"
 
-            # Clear stale dist so the SCP upload replaces it cleanly
+            # Clear stale dist so the SCP upload replaces it cleanly.
+            # Fix ownership of any root-owned files from prior deployments, then
+            # remove the directory. Both are best-effort; if they fail (e.g. no
+            # passwordless sudo configured yet), SCP will still overwrite same-named
+            # files and new hashed filenames will be added alongside old ones.
+            # Run `sudo chown -R michaelt452:michaelt452 frontend/dist` on the server
+            # once to permanently resolve ownership and enable clean removal each deploy.
             echo "Clearing old frontend dist..."
-            sudo rm -rf frontend/dist
+            sudo chown -R "$(whoami)":"$(whoami)" frontend/dist 2>/dev/null || true
+            rm -rf frontend/dist 2>/dev/null || true
             mkdir -p frontend/dist
             echo "✓ Ready for dist upload"
 
