@@ -93,6 +93,5 @@ try {
   console.log(`  Environment: ${isDev ? 'Development' : 'Production'}`);
   console.log(`  App Name: ${manifest.short_name}`);
 } catch (error) {
-  console.error('Error writing files:', error);
-  process.exit(1);
+  console.warn('Warning: Could not write version/manifest files:', error.message);
 }

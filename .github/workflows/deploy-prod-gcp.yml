@@ -124,6 +124,7 @@ jobs:
             # once to permanently resolve ownership and enable clean removal each deploy.
             echo "Clearing old frontend dist..."
             sudo chown -R "$(whoami)":"$(whoami)" frontend/dist 2>/dev/null || true
+            sudo chown -R "$(whoami)":"$(whoami)" frontend/public 2>/dev/null || true
             rm -rf frontend/dist 2>/dev/null || true
             mkdir -p frontend/dist
             echo "✓ Ready for dist upload"
