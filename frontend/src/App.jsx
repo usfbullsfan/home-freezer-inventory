@@ -15,6 +15,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const QRRedirect = lazy(() => import('./pages/QRRedirect'));
 const MobileLanding = lazy(() => import('./pages/MobileLanding'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const EmailNotifications = lazy(() => import('./pages/EmailNotifications'));
 const InstallPrompt = lazy(() => import('./components/InstallPrompt'));
 
 function AppContent() {
@@ -175,6 +176,7 @@ function AppContent() {
                         {qrEnabled && <Link to="/print-labels" onClick={() => setMobileMenuOpen(false)}>Print Labels</Link>}
                       </div>
                     </details>
+                    <Link to="/notifications" onClick={() => setMobileMenuOpen(false)}>Notifications</Link>
                     <Link to="/settings" className="navbar-settings-link" onClick={() => setMobileMenuOpen(false)}>⚙️ Settings</Link>
                   </div>
                 ) : (
@@ -184,6 +186,7 @@ function AppContent() {
                     <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>Statistics</Link>
                     <Link to="/categories" onClick={() => setMobileMenuOpen(false)}>Categories</Link>
                     {qrEnabled && <Link to="/print-labels" onClick={() => setMobileMenuOpen(false)}>Print Labels</Link>}
+                    <Link to="/notifications" onClick={() => setMobileMenuOpen(false)}>Notifications</Link>
                     <Link to="/settings" onClick={() => setMobileMenuOpen(false)}>Settings</Link>
                   </>
                 )}
@@ -209,6 +212,7 @@ function AppContent() {
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/categories" element={<Categories />} />
                   <Route path="/print-labels" element={<PrintLabels />} />
+                  <Route path="/notifications" element={<EmailNotifications />} />
                   <Route path="/settings" element={<Settings user={user} isMobile={true} setUseDesktopInterface={setUseDesktopInterface} />} />
                   <Route path="*" element={<Navigate to="/home" />} />
                 </>
@@ -220,6 +224,7 @@ function AppContent() {
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/categories" element={<Categories />} />
                   <Route path="/print-labels" element={<PrintLabels />} />
+                  <Route path="/notifications" element={<EmailNotifications />} />
                   <Route path="/settings" element={<Settings user={user} />} />
                   <Route path="*" element={<Navigate to="/" />} />
                 </>

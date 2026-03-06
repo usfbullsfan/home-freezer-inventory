@@ -407,6 +407,19 @@ export const notificationsAPI = {
 
   sendTestEmail: () =>
     api.post('/notifications/email/test'),
+
+  // Low-stock alerts
+  getLowStockAlerts: () =>
+    api.get('/notifications/low-stock'),
+
+  createLowStockAlert: (item_name, threshold) =>
+    api.post('/notifications/low-stock', { item_name, threshold }),
+
+  updateLowStockAlert: (id, data) =>
+    api.put(`/notifications/low-stock/${id}`, data),
+
+  deleteLowStockAlert: (id) =>
+    api.delete(`/notifications/low-stock/${id}`),
 };
 
 export default api;
