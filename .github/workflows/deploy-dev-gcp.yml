@@ -96,7 +96,8 @@ jobs:
             # Remove SQLite WAL/SHM lock files left by a killed gunicorn worker.
             # If a worker held a write lock when it was SIGKILL'd these files survive
             # and cause the next worker's db.create_all() to block indefinitely.
-            rm -f backend/instance/*.db-wal backend/instance/*.db-shm 2>/dev/null || true
+            rm -f backend/instance/*.db-wal backend/instance/*.db-shm 2>/dev/null || \
+              sudo rm -f backend/instance/*.db-wal backend/instance/*.db-shm 2>/dev/null || true
             echo "✓ Services stopped"
 
             # Update backend dependencies
