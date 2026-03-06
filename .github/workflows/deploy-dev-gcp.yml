@@ -180,7 +180,7 @@ jobs:
               fi
               if [ $i -eq 6 ]; then
                 echo "✗ Backend health check failed after 30s!"
-                sudo systemctl status freezer-backend-dev --no-pager
+                sudo systemctl status freezer-backend-dev --no-pager || true
                 echo "--- Recent logs ---"
                 journalctl -u freezer-backend-dev -n 50 --no-pager 2>/dev/null || sudo journalctl -u freezer-backend-dev -n 50 --no-pager 2>/dev/null || true
                 exit 1
@@ -197,13 +197,13 @@ jobs:
               fi
               if [ $i -eq 6 ]; then
                 echo "✗ Frontend health check failed after 30s!"
-                sudo systemctl status freezer-frontend-dev --no-pager
+                sudo systemctl status freezer-frontend-dev --no-pager || true
                 echo "--- Service file ---"
                 cat /etc/systemd/system/freezer-frontend-dev.service 2>/dev/null || true
                 echo "--- Recent logs ---"
                 journalctl -u freezer-frontend-dev -n 50 --no-pager 2>/dev/null || sudo journalctl -u freezer-frontend-dev -n 50 --no-pager 2>/dev/null || true
-                echo "--- Manual run (5s timeout) ---"
-                cd /home/michaelt452/freezer-inventory-dev/frontend && timeout 5 node scripts/generate-version.js 2>&1 || true
+                echo "--- Vite dry-run (8s timeout) ---"
+                cd /home/michaelt452/freezer-inventory-dev/frontend && timeout 8 node_modules/.bin/vite --port 3002 --host 0.0.0.0 2>&1 | head -40 || true
                 exit 1
               fi
               echo "  Waiting for frontend... (attempt $i/6)"
