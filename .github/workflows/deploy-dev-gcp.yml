@@ -113,7 +113,7 @@ jobs:
 
             # Clear stale dist so the SCP upload replaces it cleanly
             echo "Clearing old frontend dist..."
-            rm -rf frontend/dist
+            sudo rm -rf frontend/dist
             mkdir -p frontend/dist
             echo "✓ Ready for dist upload"
 
