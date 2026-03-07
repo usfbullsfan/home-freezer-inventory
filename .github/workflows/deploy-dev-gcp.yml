@@ -127,6 +127,7 @@ jobs:
             python3 migrations/run_email_migration.py || echo "⚠️  Email migration already applied or not needed"
             python3 migrations/run_email_verification_migration.py || echo "⚠️  Email verification migration already applied or not needed"
             python3 migrations/run_low_stock_alerts_migration.py || echo "⚠️  Low-stock migration already applied or not needed"
+            python3 migrations/run_passkey_migration.py || echo "⚠️  Passkey migration already applied or not needed"
             cd ..
             echo "✓ Database migrations complete"
 
