@@ -83,11 +83,6 @@ jobs:
             echo "Pulling latest code from dev..."
             git fetch origin
             git reset --hard origin/dev
-            # gunicorn 22+ creates a gunicorn.ctl control socket in the working
-            # directory on startup. backend/ is owned by gh-deploy after git reset,
-            # so the service user can't create it. chmod o+w follows the same pattern
-            # used for instance/ and node_modules throughout this script.
-            chmod o+w backend
             echo "✓ Code updated"
 
             # Stop services before updating dependencies
@@ -101,9 +96,18 @@ jobs:
             # Remove SQLite WAL/SHM lock files left by a killed gunicorn worker.
             # If a worker held a write lock when it was SIGKILL'd these files survive
             # and cause the next worker's db.create_all() to block indefinitely.
-            rm -f backend/instance/*.db-wal backend/instance/*.db-shm 2>/dev/null || \
-              sudo rm -f backend/instance/*.db-wal backend/instance/*.db-shm 2>/dev/null || true
+            sudo rm -f backend/instance/*.db-wal backend/instance/*.db-shm 2>/dev/null || true
             echo "✓ Services stopped"
+
+            # Ensure both services run as gh-deploy (same user as this deploy script).
+            # If setup was run as a different user the service files may have the wrong
+            # User= entry, causing permission errors since all files are owned by gh-deploy.
+            echo "Ensuring service user is gh-deploy..."
+            for svc in freezer-backend-dev freezer-frontend-dev; do
+              sudo sed -i "s/^User=.*/User=gh-deploy/" /etc/systemd/system/$svc.service 2>/dev/null || true
+            done
+            sudo systemctl daemon-reload
+            echo "✓ Service user verified"
 
             # Update backend dependencies
             echo "Updating backend dependencies..."
@@ -117,10 +121,6 @@ jobs:
             echo "Updating frontend dependencies..."
             cd frontend
             npm install --silent
-            # Delete vite's temp dir so the service (michaelt452) can recreate it as its own user.
-            # node_modules is owned by gh-deploy, so michaelt452 can't create subdirs without o+w.
-            rm -rf node_modules/.vite-temp 2>/dev/null || true
-            chmod o+w node_modules
             cd ..
             echo "✓ Frontend dependencies updated"
 
@@ -133,29 +133,11 @@ jobs:
             python3 migrations/run_email_verification_migration.py || echo "⚠️  Email verification migration already applied or not needed"
             python3 migrations/run_low_stock_alerts_migration.py || echo "⚠️  Low-stock migration already applied or not needed"
             python3 migrations/run_passkey_migration.py || echo "⚠️  Passkey migration already applied or not needed"
-            # Fix ownership: migrations run as gh-deploy but gunicorn runs as michaelt452.
-            # Any SQLite journal/WAL files created during migration must be owned by the
-            # service user, otherwise gunicorn gets "attempt to write a readonly database".
-            sudo chown michaelt452:michaelt452 instance/*.db 2>/dev/null || true
             sudo rm -f instance/*.db-journal instance/*.db-wal instance/*.db-shm 2>/dev/null || true
-            # Ensure the instance directory is writable by michaelt452 (the service user).
-            # SQLite must create journal/lock files in the same directory as the DB.
-            sudo chmod o+w instance/ 2>/dev/null || true
             cd ..
             echo "✓ Database migrations complete"
 
-            # Clear stale dist so the SCP upload replaces it cleanly.
-            # Fix ownership of any root-owned files from prior deployments, then
-            # remove the directory. Both are best-effort; if they fail (e.g. no
-            # passwordless sudo configured yet), SCP will still overwrite same-named
-            # files and new hashed filenames will be added alongside old ones.
-            # Run `sudo chown -R michaelt452:michaelt452 frontend/dist` on the server
-            # once to permanently resolve ownership and enable clean removal each deploy.
             echo "Clearing old frontend dist..."
-            sudo chown -R "$(whoami)":"$(whoami)" frontend/dist 2>/dev/null || true
-            sudo chown -R "$(whoami)":"$(whoami)" frontend/public 2>/dev/null || true
-            # Make public writable by any service user so generate-version.js can write version.json
-            chmod -R a+w frontend/public 2>/dev/null || true
             rm -rf frontend/dist 2>/dev/null || true
             mkdir -p frontend/dist
             echo "✓ Ready for dist upload"
