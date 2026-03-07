@@ -99,17 +99,6 @@ jobs:
             sudo rm -f backend/instance/*.db-wal backend/instance/*.db-shm 2>/dev/null || true
             echo "✓ Services stopped"
 
-            # Ensure both services run as gh-deploy (same user as this deploy script).
-            # Use a drop-in override (same tee pattern setup uses) rather than sed -i,
-            # since gh-deploy's sudoers may not allow arbitrary sed on system files.
-            echo "Ensuring service user is gh-deploy..."
-            for svc in freezer-backend-dev freezer-frontend-dev; do
-              sudo mkdir -p /etc/systemd/system/$svc.service.d
-              printf '[Service]\nUser=gh-deploy\n' | sudo tee /etc/systemd/system/$svc.service.d/user.conf > /dev/null 2>&1 || true
-            done
-            sudo systemctl daemon-reload
-            echo "✓ Service user verified"
-
             # Update backend dependencies
             echo "Updating backend dependencies..."
             cd backend
