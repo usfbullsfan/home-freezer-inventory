@@ -407,12 +407,11 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qr
         // Trigger a soft refresh to update the items list in the background
         onSave(true);
       } else {
-        // Show the code briefly before closing
+        // Show the code and wait for the user to dismiss
         if (createdItem && createdItem.qr_code) {
           setLastAddedCode(createdItem.qr_code);
           setShowSuccess(true);
           setLoading(false);
-          setTimeout(() => onSave(), 2500);
           return;
         }
         onSave();
@@ -538,7 +537,12 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qr
               }}>
                 {lastAddedCode}
               </div>
-              <div style={{ fontSize: '0.85rem', color: '#888' }}>Closing in a moment…</div>
+              <button
+                className="btn btn-primary"
+                onClick={() => onSave()}
+              >
+                Done
+              </button>
             </div>
           )}
           {!showSuccess && error && <div className="error-message">{error}</div>}
