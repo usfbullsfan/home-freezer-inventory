@@ -133,6 +133,9 @@ jobs:
             # service user, otherwise gunicorn gets "attempt to write a readonly database".
             sudo chown michaelt452:michaelt452 instance/*.db 2>/dev/null || true
             sudo rm -f instance/*.db-journal instance/*.db-wal instance/*.db-shm 2>/dev/null || true
+            # Ensure the instance directory is writable by michaelt452 (the service user).
+            # SQLite must create journal/lock files in the same directory as the DB.
+            sudo chmod o+w instance/ 2>/dev/null || true
             cd ..
             echo "✓ Database migrations complete"
 
