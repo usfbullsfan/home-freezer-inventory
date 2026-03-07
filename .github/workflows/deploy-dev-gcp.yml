@@ -190,25 +190,30 @@ jobs:
             set -e
 
             echo "Restarting services..."
+            # Remove stale SQLite WAL/SHM files one final time right before restart.
+            # Migrations may have left WAL files; if the gunicorn worker starts while
+            # a WAL file is present it can block indefinitely in db.create_all().
+            sudo rm -f /home/michaelt452/freezer-inventory-dev/backend/instance/*.db-wal \
+                       /home/michaelt452/freezer-inventory-dev/backend/instance/*.db-shm 2>/dev/null || true
             sudo systemctl restart freezer-backend-dev
             sudo systemctl restart freezer-frontend-dev
             echo "✓ Services restarted"
 
-            # Backend health check (retry up to 60 seconds)
+            # Backend health check (retry up to 120 seconds)
             echo "Running health check..."
-            for i in {1..12}; do
+            for i in {1..24}; do
               if curl -f --max-time 5 http://localhost:5002/api/health > /dev/null 2>&1; then
                 echo "✓ Backend health check passed"
                 break
               fi
-              if [ $i -eq 12 ]; then
-                echo "✗ Backend health check failed after 60s!"
+              if [ $i -eq 24 ]; then
+                echo "✗ Backend health check failed after 120s!"
                 sudo systemctl status freezer-backend-dev --no-pager || true
                 echo "--- Recent logs ---"
                 journalctl -u freezer-backend-dev -n 50 --no-pager 2>/dev/null || sudo journalctl -u freezer-backend-dev -n 50 --no-pager 2>/dev/null || true
                 exit 1
               fi
-              echo "  Waiting for backend... (attempt $i/12)"
+              echo "  Waiting for backend... (attempt $i/24)"
               sleep 5
             done
 
