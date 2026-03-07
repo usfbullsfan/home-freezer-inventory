@@ -117,9 +117,9 @@ jobs:
             echo "Updating frontend dependencies..."
             cd frontend
             npm install --silent
-            # Delete vite's temp dir so the service (michaelt452) can recreate it as its own user.
-            # node_modules is owned by gh-deploy, so michaelt452 can't create subdirs without o+w.
-            rm -rf node_modules/.vite-temp 2>/dev/null || true
+            # Delete vite's cache dirs so the service (michaelt452) can recreate them as its own user.
+            # These may be owned by root/gh-deploy from prior runs, hence sudo.
+            sudo rm -rf node_modules/.vite node_modules/.vite-temp 2>/dev/null || true
             chmod o+w node_modules
             cd ..
             echo "✓ Frontend dependencies updated"
