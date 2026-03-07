@@ -100,11 +100,12 @@ jobs:
             echo "✓ Services stopped"
 
             # Ensure both services run as gh-deploy (same user as this deploy script).
-            # If setup was run as a different user the service files may have the wrong
-            # User= entry, causing permission errors since all files are owned by gh-deploy.
+            # Use a drop-in override (same tee pattern setup uses) rather than sed -i,
+            # since gh-deploy's sudoers may not allow arbitrary sed on system files.
             echo "Ensuring service user is gh-deploy..."
             for svc in freezer-backend-dev freezer-frontend-dev; do
-              sudo sed -i "s/^User=.*/User=gh-deploy/" /etc/systemd/system/$svc.service 2>/dev/null || true
+              sudo mkdir -p /etc/systemd/system/$svc.service.d
+              printf '[Service]\nUser=gh-deploy\n' | sudo tee /etc/systemd/system/$svc.service.d/user.conf > /dev/null 2>&1 || true
             done
             sudo systemctl daemon-reload
             echo "✓ Service user verified"
@@ -121,6 +122,13 @@ jobs:
             echo "Updating frontend dependencies..."
             cd frontend
             npm install --silent
+            # Purge vite's cache dirs. They may be owned by a different user from a
+            # previous run; the service user must be able to delete/recreate them.
+            sudo rm -rf node_modules/.vite node_modules/.vite-temp 2>/dev/null || true
+            # Open node_modules and public so the service user can write into them
+            # (create new .vite dirs, write manifest.json via generate-version.js).
+            chmod o+w node_modules
+            chmod o+w public
             cd ..
             echo "✓ Frontend dependencies updated"
 
