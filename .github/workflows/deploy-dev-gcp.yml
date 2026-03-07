@@ -83,11 +83,11 @@ jobs:
             echo "Pulling latest code from dev..."
             git fetch origin
             git reset --hard origin/dev
-            # gunicorn 22+ creates gunicorn.ctl in the working directory.
-            # After git reset (which runs as gh-deploy), backend/ is owned by
-            # gh-deploy. Fix ownership so the service user (michaelt452) can
-            # create that socket when gunicorn starts.
-            sudo chown michaelt452:michaelt452 backend
+            # gunicorn 22+ creates a gunicorn.ctl control socket in the working
+            # directory on startup. backend/ is owned by gh-deploy after git reset,
+            # so the service user can't create it. chmod o+w follows the same pattern
+            # used for instance/ and node_modules throughout this script.
+            chmod o+w backend
             echo "✓ Code updated"
 
             # Stop services before updating dependencies
