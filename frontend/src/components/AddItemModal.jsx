@@ -3,6 +3,7 @@ import { itemsAPI, categoriesAPI, uploadsAPI } from '../services/api';
 import { addItemToSession } from '../utils/sessionTracking';
 import { toDateInputValue } from '../utils/dateUtils';
 import BarcodeScanner from './BarcodeScanner';
+import Autocomplete from './Autocomplete';
 
 function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qrEnabled = true }) {
   const [formData, setFormData] = useState({
@@ -36,6 +37,29 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qr
   const [selectedCategoryFile, setSelectedCategoryFile] = useState(null);
   const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
   const [suggestedCategory, setSuggestedCategory] = useState('');
+  const [nameSuggestions, setNameSuggestions] = useState([]);
+  const [sourceSuggestions, setSourceSuggestions] = useState([]);
+
+  // Fetch distinct names + sources for autocomplete on mount.
+  // Prefer the lightweight /items/names endpoint; fall back to extracting
+  // unique values from the full item list (works with any API version).
+  useEffect(() => {
+    const load = async () => {
+      try {
+        if (typeof itemsAPI.getItemNames === 'function') {
+          const res = await itemsAPI.getItemNames('all');
+          setNameSuggestions(res.data.names || []);
+          setSourceSuggestions(res.data.sources || []);
+        } else {
+          const res = await itemsAPI.getItems();
+          const items = Array.isArray(res.data) ? res.data : [];
+          setNameSuggestions([...new Set(items.map(i => i.name).filter(Boolean))].sort());
+          setSourceSuggestions([...new Set(items.map(i => i.source).filter(Boolean))].sort());
+        }
+      } catch (_) {}
+    };
+    load();
+  }, []);
 
   useEffect(() => {
     if (item) {
@@ -383,12 +407,11 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qr
         // Trigger a soft refresh to update the items list in the background
         onSave(true);
       } else {
-        // Show the code briefly before closing
+        // Show the code and wait for the user to dismiss
         if (createdItem && createdItem.qr_code) {
           setLastAddedCode(createdItem.qr_code);
           setShowSuccess(true);
           setLoading(false);
-          setTimeout(() => onSave(), 2500);
           return;
         }
         onSave();
@@ -514,7 +537,6 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qr
               }}>
                 {lastAddedCode}
               </div>
-              <div style={{ fontSize: '0.85rem', color: '#888' }}>Closing in a moment…</div>
             </div>
           )}
           {!showSuccess && error && <div className="error-message">{error}</div>}
@@ -706,12 +728,12 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qr
 
           <div className="form-group">
             <label htmlFor="name">Item Name *</label>
-            <input
-              type="text"
+            <Autocomplete
               id="name"
               name="name"
               value={formData.name}
-              onChange={handleChange}
+              onChange={(v) => setFormData((prev) => ({ ...prev, name: v }))}
+              suggestions={nameSuggestions}
               required
               placeholder="e.g., Prime Ribeye Steak"
             />
@@ -720,12 +742,12 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qr
           <div className="form-row form-row-2">
             <div className="form-group">
               <label htmlFor="source">Source</label>
-              <input
-                type="text"
+              <Autocomplete
                 id="source"
                 name="source"
                 value={formData.source}
-                onChange={handleChange}
+                onChange={(v) => setFormData((prev) => ({ ...prev, source: v }))}
+                suggestions={sourceSuggestions}
                 placeholder="e.g., Costco"
               />
             </div>

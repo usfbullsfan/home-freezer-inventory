@@ -261,6 +261,39 @@ def match_api_category_to_local(api_category_str):
     return None, cleaned.title() if cleaned else None
 
 
+@items_bp.route('/names', methods=['GET'])
+@jwt_required()
+def get_item_names():
+    """Return distinct item names and sources for autocomplete.
+
+    Query params:
+      status – filter by item status (default: 'in_freezer', pass 'all' to include history)
+    """
+    status = request.args.get('status', 'in_freezer')
+    query = db.session.query(Item.name, Item.source)
+    if status != 'all':
+        query = query.filter(Item.status == status)
+    rows = query.all()
+
+    # Deduplicate case-insensitively, preserving the first casing seen
+    names_seen: dict = {}
+    sources_seen: dict = {}
+    for name, source in rows:
+        if name:
+            key = name.lower()
+            if key not in names_seen:
+                names_seen[key] = name
+        if source:
+            key = source.lower()
+            if key not in sources_seen:
+                sources_seen[key] = source
+
+    return jsonify({
+        'names': sorted(names_seen.values(), key=lambda x: x.lower()),
+        'sources': sorted(sources_seen.values(), key=lambda x: x.lower()),
+    }), 200
+
+
 @items_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_items():
@@ -470,15 +503,25 @@ def update_item(item_id):
         item.expiration_date = datetime.fromisoformat(data['expiration_date']) if data['expiration_date'] else None
     if 'notes' in data:
         item.notes = data['notes']
+    new_status = None
     if 'status' in data:
         # Validate status
         if data['status'] not in ['in_freezer', 'consumed', 'thrown_out']:
             return jsonify({'error': 'Invalid status'}), 400
-        item.status = data['status']
+        new_status = data['status']
+        item.status = new_status
     if 'removed_date' in data:
         item.removed_date = datetime.fromisoformat(data['removed_date']) if data['removed_date'] else None
 
+    item_name_for_alert = item.name
     db.session.commit()
+
+    if new_status in ['consumed', 'thrown_out']:
+        try:
+            from routes.notifications import check_and_send_low_stock_alerts
+            check_and_send_low_stock_alerts(item_name_for_alert)
+        except Exception:
+            pass
 
     return jsonify(item.to_dict()), 200
 
@@ -505,7 +548,15 @@ def update_item_status(item_id):
     else:
         item.removed_date = None
 
+    item_name_for_alert = item.name
     db.session.commit()
+
+    if new_status in ['consumed', 'thrown_out']:
+        try:
+            from routes.notifications import check_and_send_low_stock_alerts
+            check_and_send_low_stock_alerts(item_name_for_alert)
+        except Exception:
+            pass
 
     return jsonify(item.to_dict()), 200
 

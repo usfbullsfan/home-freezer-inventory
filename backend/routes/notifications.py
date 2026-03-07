@@ -8,6 +8,11 @@ Routes (all require JWT):
   PUT  /api/notifications/email/me                – update current user's notification email
   POST /api/notifications/email/verify            – verify the 6-digit code
   POST /api/notifications/email/resend-verification – resend verification code
+
+  GET    /api/notifications/low-stock             – list current user's low-stock alerts
+  POST   /api/notifications/low-stock             – create a low-stock alert
+  PUT    /api/notifications/low-stock/<id>        – update threshold / enabled
+  DELETE /api/notifications/low-stock/<id>        – delete an alert
 """
 
 import logging
@@ -17,7 +22,8 @@ from datetime import datetime, timedelta
 
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from models import db, User
+from sqlalchemy import func
+from models import db, User, Item, LowStockAlert
 from utils.email import is_email_configured, send_email, send_verification_email
 
 notifications_bp = Blueprint('notifications', __name__)
@@ -131,7 +137,14 @@ def update_my_email():
 
     email = data.get('email', '').strip()
 
-    if email and '@' not in email:
+    at_idx = email.find('@')
+    if email and (
+        at_idx < 1
+        or at_idx != email.rfind('@')
+        or at_idx == len(email) - 1
+        or ' ' in email
+        or '.' not in email[at_idx + 1:]
+    ):
         return jsonify({'error': 'Invalid email address'}), 400
 
     # Clearing the email is always allowed
@@ -248,3 +261,158 @@ def resend_verification():
         return jsonify({'error': 'Failed to send verification email. Check server logs.'}), 500
 
     return jsonify({'message': f'Verification code resent to {user.email}'}), 200
+
+
+# ── Low-stock alerts ──────────────────────────────────────────────────────────
+
+_LOW_STOCK_COOLDOWN_HOURS = 24
+
+
+def _send_low_stock_email(to_address, item_name, current_count, threshold):
+    """Send a low-stock alert email."""
+    subject = f'Low stock alert – {item_name}'
+    qty = f'{current_count} item{"" if current_count == 1 else "s"}'
+    text = (
+        f'Low stock alert for "{item_name}".\n\n'
+        f'You have {qty} remaining in your freezer '
+        f'(alert threshold: {threshold}).\n\n'
+        'Time to restock!'
+    )
+    html = (
+        f'<p>Low stock alert for <strong>{item_name}</strong>.</p>'
+        f'<p>You have <strong>{qty}</strong> remaining in your freezer '
+        f'(alert threshold: {threshold}).</p>'
+        '<p>Time to restock!</p>'
+    )
+    send_email(to_addresses=to_address, subject=subject, text_body=text, html_body=html)
+
+
+def check_and_send_low_stock_alerts(item_name):
+    """Check all low-stock alerts for item_name and fire emails as needed.
+
+    Called after an item's status changes to consumed/thrown_out.
+    """
+    if not is_email_configured():
+        return
+
+    current_count = Item.query.filter(
+        func.lower(Item.name) == item_name.lower(),
+        Item.status == 'in_freezer',
+    ).count()
+
+    alerts = LowStockAlert.query.filter(
+        func.lower(LowStockAlert.item_name) == item_name.lower(),
+        LowStockAlert.enabled == True,
+        LowStockAlert.threshold >= current_count,
+    ).all()
+
+    for alert in alerts:
+        # Respect cooldown to avoid email spam
+        if alert.last_sent_at:
+            hours_since = (datetime.utcnow() - alert.last_sent_at).total_seconds() / 3600
+            if hours_since < _LOW_STOCK_COOLDOWN_HOURS:
+                continue
+
+        user = alert.user
+        if not user or not user.email or not user.email_verified:
+            continue
+
+        try:
+            _send_low_stock_email(user.email, item_name, current_count, alert.threshold)
+            alert.last_sent_at = datetime.utcnow()
+            db.session.commit()
+        except RuntimeError:
+            logging.exception('Failed to send low-stock alert for "%s" to %s', item_name, user.email)
+
+
+@notifications_bp.route('/low-stock', methods=['GET'])
+@jwt_required()
+def list_low_stock_alerts():
+    """Return all low-stock alerts for the current user."""
+    current_user_id = int(get_jwt_identity())
+    alerts = LowStockAlert.query.filter_by(user_id=current_user_id).order_by(LowStockAlert.item_name).all()
+    return jsonify([a.to_dict() for a in alerts]), 200
+
+
+@notifications_bp.route('/low-stock', methods=['POST'])
+@jwt_required()
+def create_low_stock_alert():
+    """Create a new low-stock alert for the current user."""
+    current_user_id = int(get_jwt_identity())
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Request body required'}), 400
+
+    item_name = (data.get('item_name') or '').strip()
+    if not item_name:
+        return jsonify({'error': 'item_name is required'}), 400
+
+    # Normalise to the canonical casing stored in the items table so that
+    # alert.item_name always matches exactly what appears in the inventory.
+    canonical = Item.query.filter(
+        func.lower(Item.name) == item_name.lower(),
+        Item.status == 'in_freezer',
+    ).with_entities(Item.name).first()
+    if canonical:
+        item_name = canonical[0]
+
+    threshold = data.get('threshold', 2)
+    try:
+        threshold = int(threshold)
+        if threshold < 1:
+            raise ValueError
+    except (TypeError, ValueError):
+        return jsonify({'error': 'threshold must be a positive integer'}), 400
+
+    existing = LowStockAlert.query.filter(
+        LowStockAlert.user_id == current_user_id,
+        func.lower(LowStockAlert.item_name) == item_name.lower(),
+    ).first()
+    if existing:
+        return jsonify({'error': f'An alert for "{item_name}" already exists'}), 409
+
+    alert = LowStockAlert(user_id=current_user_id, item_name=item_name, threshold=threshold)
+    db.session.add(alert)
+    db.session.commit()
+    return jsonify(alert.to_dict()), 201
+
+
+@notifications_bp.route('/low-stock/<int:alert_id>', methods=['PUT'])
+@jwt_required()
+def update_low_stock_alert(alert_id):
+    """Update threshold and/or enabled flag for an alert."""
+    current_user_id = int(get_jwt_identity())
+    alert = LowStockAlert.query.filter_by(id=alert_id, user_id=current_user_id).first()
+    if not alert:
+        return jsonify({'error': 'Alert not found'}), 404
+
+    data = request.get_json() or {}
+
+    if 'threshold' in data:
+        try:
+            threshold = int(data['threshold'])
+            if threshold < 1:
+                raise ValueError
+            alert.threshold = threshold
+        except (TypeError, ValueError):
+            return jsonify({'error': 'threshold must be a positive integer'}), 400
+
+    if 'enabled' in data:
+        alert.enabled = bool(data['enabled'])
+
+    db.session.commit()
+    return jsonify(alert.to_dict()), 200
+
+
+@notifications_bp.route('/low-stock/<int:alert_id>', methods=['DELETE'])
+@jwt_required()
+def delete_low_stock_alert(alert_id):
+    """Delete a low-stock alert."""
+    current_user_id = int(get_jwt_identity())
+    alert = LowStockAlert.query.filter_by(id=alert_id, user_id=current_user_id).first()
+    if not alert:
+        return jsonify({'error': 'Alert not found'}), 404
+
+    db.session.delete(alert)
+    db.session.commit()
+    return jsonify({'message': 'Alert deleted'}), 200
