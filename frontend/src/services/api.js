@@ -148,6 +148,9 @@ export const itemsAPI = {
   getQRImage: (qrCode) =>
     `/api/items/qr/${qrCode}/image`,
 
+  getItemNames: (status = 'in_freezer') =>
+    api.get('/items/names', { params: { status } }),
+
   lookupUPC: (upc) =>
     api.get(`/items/lookup-upc/${upc}`),
 

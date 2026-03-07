@@ -340,6 +340,15 @@ def create_low_stock_alert():
     if not item_name:
         return jsonify({'error': 'item_name is required'}), 400
 
+    # Normalise to the canonical casing stored in the items table so that
+    # alert.item_name always matches exactly what appears in the inventory.
+    canonical = Item.query.filter(
+        func.lower(Item.name) == item_name.lower(),
+        Item.status == 'in_freezer',
+    ).with_entities(Item.name).first()
+    if canonical:
+        item_name = canonical[0]
+
     threshold = data.get('threshold', 2)
     try:
         threshold = int(threshold)
