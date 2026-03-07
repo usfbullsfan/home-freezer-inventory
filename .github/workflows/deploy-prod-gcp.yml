@@ -80,6 +80,11 @@ jobs:
             echo "Pulling latest code from main..."
             git fetch origin
             git reset --hard origin/main
+            # gunicorn 22+ creates a gunicorn.ctl control socket in backend/.
+            # backend/ is owned by gh-deploy after git reset, so the service user
+            # can't create it. chmod o+w follows the same pattern used for instance/
+            # and node_modules throughout this script.
+            chmod o+w backend
             echo "✓ Code updated"
 
             # Stop services before updating dependencies
@@ -90,6 +95,11 @@ jobs:
             sudo timeout 30 systemctl stop freezer-frontend 2>/dev/null || sudo systemctl kill freezer-frontend 2>/dev/null || true
             # Remove stale gunicorn control socket so the new process can create it cleanly
             sudo rm -f backend/gunicorn.ctl 2>/dev/null || true
+            # Remove SQLite WAL/SHM lock files left by a killed gunicorn worker.
+            # If a worker held a write lock when it was SIGKILL'd these files survive
+            # and cause the next worker's db.create_all() to block indefinitely.
+            rm -f backend/instance/*.db-wal backend/instance/*.db-shm 2>/dev/null || \
+              sudo rm -f backend/instance/*.db-wal backend/instance/*.db-shm 2>/dev/null || true
             echo "✓ Services stopped"
 
             # Update backend dependencies
@@ -104,6 +114,10 @@ jobs:
             echo "Updating frontend dependencies..."
             cd frontend
             npm install --silent
+            # Delete vite's temp dir so the service (michaelt452) can recreate it as its own user.
+            # node_modules is owned by gh-deploy, so michaelt452 can't create subdirs without o+w.
+            rm -rf node_modules/.vite-temp 2>/dev/null || true
+            chmod o+w node_modules
             cd ..
             echo "✓ Frontend dependencies updated"
 
@@ -137,6 +151,8 @@ jobs:
             echo "Clearing old frontend dist..."
             sudo chown -R "$(whoami)":"$(whoami)" frontend/dist 2>/dev/null || true
             sudo chown -R "$(whoami)":"$(whoami)" frontend/public 2>/dev/null || true
+            # Make public writable by any service user so generate-version.js can write version.json
+            chmod -R a+w frontend/public 2>/dev/null || true
             rm -rf frontend/dist 2>/dev/null || true
             mkdir -p frontend/dist
             echo "✓ Ready for dist upload"
@@ -171,42 +187,47 @@ jobs:
             set -e
 
             echo "Restarting services..."
+            # Remove stale SQLite WAL/SHM files one final time right before restart.
+            # Migrations may have left WAL files; if the gunicorn worker starts while
+            # a WAL file is present it can block indefinitely in db.create_all().
+            sudo rm -f /home/michaelt452/freezer-inventory/backend/instance/*.db-wal \
+                       /home/michaelt452/freezer-inventory/backend/instance/*.db-shm 2>/dev/null || true
             sudo systemctl restart freezer-backend
             sudo systemctl restart freezer-frontend
             echo "✓ Services restarted"
 
-            # Backend health check (retry up to 30 seconds)
+            # Backend health check (retry up to 120 seconds)
             echo "Running health check..."
-            for i in {1..6}; do
+            for i in {1..24}; do
               if curl -f --max-time 5 http://localhost:5001/api/health > /dev/null 2>&1; then
                 echo "✓ Backend health check passed"
                 break
               fi
-              if [ $i -eq 6 ]; then
-                echo "✗ Backend health check failed after 30s!"
-                sudo systemctl status freezer-backend --no-pager
+              if [ $i -eq 24 ]; then
+                echo "✗ Backend health check failed after 120s!"
+                sudo systemctl status freezer-backend --no-pager || true
                 echo "--- Recent logs ---"
                 journalctl -u freezer-backend -n 50 --no-pager 2>/dev/null || sudo journalctl -u freezer-backend -n 50 --no-pager 2>/dev/null || true
                 exit 1
               fi
-              echo "  Waiting for backend... (attempt $i/6)"
+              echo "  Waiting for backend... (attempt $i/24)"
               sleep 5
             done
 
-            # Frontend health check (retry up to 30 seconds)
-            for i in {1..6}; do
+            # Frontend health check (retry up to 60 seconds)
+            for i in {1..12}; do
               if curl -f --max-time 5 http://localhost:3000 > /dev/null 2>&1; then
                 echo "✓ Frontend health check passed"
                 break
               fi
-              if [ $i -eq 6 ]; then
-                echo "✗ Frontend health check failed after 30s!"
-                sudo systemctl status freezer-frontend --no-pager
+              if [ $i -eq 12 ]; then
+                echo "✗ Frontend health check failed after 60s!"
+                sudo systemctl status freezer-frontend --no-pager || true
                 echo "--- Recent logs ---"
                 journalctl -u freezer-frontend -n 50 --no-pager 2>/dev/null || sudo journalctl -u freezer-frontend -n 50 --no-pager 2>/dev/null || true
                 exit 1
               fi
-              echo "  Waiting for frontend... (attempt $i/6)"
+              echo "  Waiting for frontend... (attempt $i/12)"
               sleep 5
             done
 

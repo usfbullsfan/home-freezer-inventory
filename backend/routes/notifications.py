@@ -137,7 +137,8 @@ def update_my_email():
 
     email = data.get('email', '').strip()
 
-    if email and '@' not in email:
+    import re
+    if email and not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
         return jsonify({'error': 'Invalid email address'}), 400
 
     # Clearing the email is always allowed
