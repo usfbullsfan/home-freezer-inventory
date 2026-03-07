@@ -40,13 +40,25 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qr
   const [nameSuggestions, setNameSuggestions] = useState([]);
   const [sourceSuggestions, setSourceSuggestions] = useState([]);
 
-  // Fetch distinct names + sources for autocomplete on mount
+  // Fetch distinct names + sources for autocomplete on mount.
+  // Prefer the lightweight /items/names endpoint; fall back to extracting
+  // unique values from the full item list (works with any API version).
   useEffect(() => {
-    if (typeof itemsAPI.getItemNames !== 'function') return;
-    itemsAPI.getItemNames('all').then((res) => {
-      setNameSuggestions(res.data.names || []);
-      setSourceSuggestions(res.data.sources || []);
-    }).catch(() => {});
+    const load = async () => {
+      try {
+        if (typeof itemsAPI.getItemNames === 'function') {
+          const res = await itemsAPI.getItemNames('all');
+          setNameSuggestions(res.data.names || []);
+          setSourceSuggestions(res.data.sources || []);
+        } else {
+          const res = await itemsAPI.getItems();
+          const items = Array.isArray(res.data) ? res.data : [];
+          setNameSuggestions([...new Set(items.map(i => i.name).filter(Boolean))].sort());
+          setSourceSuggestions([...new Set(items.map(i => i.source).filter(Boolean))].sort());
+        }
+      } catch (_) {}
+    };
+    load();
   }, []);
 
   useEffect(() => {
