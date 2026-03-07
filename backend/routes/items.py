@@ -270,7 +270,6 @@ def get_item_names():
       status – filter by item status (default: 'in_freezer', pass 'all' to include history)
     """
     status = request.args.get('status', 'in_freezer')
-    from sqlalchemy import func as sa_func
     query = db.session.query(Item.name, Item.source)
     if status != 'all':
         query = query.filter(Item.status == status)

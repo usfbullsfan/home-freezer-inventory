@@ -3,6 +3,9 @@ import { useState, useEffect, useRef } from 'react';
 /**
  * Autocomplete input with dropdown suggestions.
  *
+ * The dropdown uses position:fixed so it escapes overflow:hidden/auto
+ * containers (e.g. modals with overflow:hidden + overflow-y:auto scroll).
+ *
  * Props:
  *   value        – controlled value (string)
  *   onChange     – called with new string on every change
@@ -27,13 +30,31 @@ function Autocomplete({
   className,
 }) {
   const [open, setOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const containerRef = useRef(null);
+  const inputRef = useRef(null);
 
   const filtered = suggestions.filter((s) =>
     s.toLowerCase().includes((value || '').toLowerCase())
   );
 
-  // Close dropdown on outside click; in restricted mode, clear invalid input
+  // Recalculate dropdown position whenever it opens or the window scrolls/resizes
+  useEffect(() => {
+    if (!open || !inputRef.current) return;
+    const update = () => {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom, left: rect.left, width: rect.width });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [open]);
+
+  // Close on outside click; in restricted mode clear invalid input on blur
   useEffect(() => {
     const handler = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
@@ -66,6 +87,7 @@ function Autocomplete({
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
       <input
+        ref={inputRef}
         type="text"
         id={id}
         name={name}
@@ -81,10 +103,10 @@ function Autocomplete({
       {showDropdown && (
         <ul
           style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
+            position: 'fixed',
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            width: dropdownPos.width,
             background: 'white',
             border: '1px solid #ced4da',
             borderTop: 'none',
@@ -92,7 +114,7 @@ function Autocomplete({
             margin: 0,
             padding: 0,
             listStyle: 'none',
-            zIndex: 1000,
+            zIndex: 9999,
             boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
             maxHeight: '200px',
             overflowY: 'auto',
