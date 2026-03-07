@@ -64,8 +64,8 @@ function EmailNotifications() {
       try {
         const namesRes = await itemsAPI.getItemNames('in_freezer');
         setItemNameSuggestions(namesRes.data.names || []);
-      } catch {
-        // non-critical
+      } catch (err) {
+        console.error('getItemNames failed:', err?.response?.status, err?.response?.data, err?.message);
       }
     };
     load();
