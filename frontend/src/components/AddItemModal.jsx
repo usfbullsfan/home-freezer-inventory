@@ -537,12 +537,6 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qr
               }}>
                 {lastAddedCode}
               </div>
-              <button
-                className="btn btn-primary"
-                onClick={() => onSave()}
-              >
-                Done
-              </button>
             </div>
           )}
           {!showSuccess && error && <div className="error-message">{error}</div>}
