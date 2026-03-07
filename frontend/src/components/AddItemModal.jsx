@@ -42,6 +42,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qr
 
   // Fetch distinct names + sources for autocomplete on mount
   useEffect(() => {
+    if (typeof itemsAPI.getItemNames !== 'function') return;
     itemsAPI.getItemNames('all').then((res) => {
       setNameSuggestions(res.data.names || []);
       setSourceSuggestions(res.data.sources || []);
