@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { notificationsAPI, itemsAPI } from '../services/api';
+import Autocomplete from '../components/Autocomplete';
 
 function EmailNotifications() {
   // ── Email address state ────────────────────────────────────────────────────
@@ -31,10 +32,8 @@ function EmailNotifications() {
   const [addError, setAddError] = useState('');
   const [addLoading, setAddLoading] = useState(false);
 
-  // Autocomplete for item name
+  // Names available in the freezer for the restricted typeahead
   const [itemNameSuggestions, setItemNameSuggestions] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const suggestionRef = useRef(null);
 
   // ── Load on mount ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -61,19 +60,15 @@ function EmailNotifications() {
       } finally {
         setAlertsLoading(false);
       }
-    };
-    load();
-  }, []);
 
-  // Close suggestions on outside click
-  useEffect(() => {
-    const handler = (e) => {
-      if (suggestionRef.current && !suggestionRef.current.contains(e.target)) {
-        setShowSuggestions(false);
+      try {
+        const namesRes = await itemsAPI.getItemNames('in_freezer');
+        setItemNameSuggestions(namesRes.data.names || []);
+      } catch {
+        // non-critical
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    load();
   }, []);
 
   // ── Email address handlers ─────────────────────────────────────────────────
@@ -140,30 +135,6 @@ function EmailNotifications() {
       setTestEmailError(err.response?.data?.error || 'Failed to send test email.');
     } finally {
       setTestEmailLoading(false);
-    }
-  };
-
-  // ── Autocomplete helpers ───────────────────────────────────────────────────
-  const handleItemNameChange = async (value) => {
-    setNewItemName(value);
-    if (value.trim().length < 1) {
-      setItemNameSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-    try {
-      const res = await itemsAPI.getItems({ status: 'in_freezer' });
-      const items = res.data.items || res.data || [];
-      const lower = value.toLowerCase();
-      const unique = [...new Set(
-        items
-          .map(i => i.name)
-          .filter(n => n.toLowerCase().includes(lower))
-      )].slice(0, 8);
-      setItemNameSuggestions(unique);
-      setShowSuggestions(unique.length > 0);
-    } catch {
-      setItemNameSuggestions([]);
     }
   };
 
@@ -339,32 +310,19 @@ function EmailNotifications() {
 
         {/* Add alert form */}
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
-          <div style={{ flex: '1 1 200px', position: 'relative' }} ref={suggestionRef}>
+          <div style={{ flex: '1 1 200px' }}>
             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem', color: '#495057' }}>
               Item name
             </label>
-            <input
-              type="text"
+            <Autocomplete
               value={newItemName}
-              onChange={(e) => handleItemNameChange(e.target.value)}
-              onFocus={() => itemNameSuggestions.length > 0 && setShowSuggestions(true)}
-              placeholder="e.g. Puppy Chicken"
-              style={{ width: '100%', boxSizing: 'border-box' }}
+              onChange={setNewItemName}
+              suggestions={itemNameSuggestions}
+              placeholder="Type to search…"
+              restricted
             />
-            {showSuggestions && (
-              <ul style={suggestionsStyle}>
-                {itemNameSuggestions.map(name => (
-                  <li
-                    key={name}
-                    onMouseDown={() => { setNewItemName(name); setShowSuggestions(false); }}
-                    style={suggestionItemStyle}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#f0f4ff'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
-                  >
-                    {name}
-                  </li>
-                ))}
-              </ul>
+            {itemNameSuggestions.length === 0 && (
+              <small style={{ color: '#856404' }}>No items currently in the freezer.</small>
             )}
           </div>
           <div style={{ width: '110px' }}>
@@ -382,7 +340,12 @@ function EmailNotifications() {
           <button
             className="btn btn-primary"
             onClick={handleAddAlert}
-            disabled={addLoading}
+            disabled={
+              addLoading ||
+              !itemNameSuggestions.some(
+                (s) => s.toLowerCase() === newItemName.trim().toLowerCase()
+              )
+            }
             style={{ alignSelf: 'flex-end' }}
           >
             {addLoading ? 'Adding…' : 'Add alert'}
@@ -488,30 +451,6 @@ const unverifiedBadgeStyle = {
   padding: '0.15rem 0.5rem',
   borderRadius: '3px',
   fontWeight: '600',
-};
-
-const suggestionsStyle = {
-  position: 'absolute',
-  top: '100%',
-  left: 0,
-  right: 0,
-  background: 'white',
-  border: '1px solid #ced4da',
-  borderRadius: '0 0 4px 4px',
-  margin: 0,
-  padding: 0,
-  listStyle: 'none',
-  zIndex: 100,
-  boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-  maxHeight: '200px',
-  overflowY: 'auto',
-};
-
-const suggestionItemStyle = {
-  padding: '0.5rem 0.75rem',
-  cursor: 'pointer',
-  fontSize: '0.9rem',
-  background: 'white',
 };
 
 const thStyle = {

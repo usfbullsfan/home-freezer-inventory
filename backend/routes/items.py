@@ -261,6 +261,39 @@ def match_api_category_to_local(api_category_str):
     return None, cleaned.title() if cleaned else None
 
 
+@items_bp.route('/names', methods=['GET'])
+@jwt_required()
+def get_item_names():
+    """Return distinct item names and sources for autocomplete.
+
+    Query params:
+      status – filter by item status (default: 'in_freezer', pass 'all' to include history)
+    """
+    status = request.args.get('status', 'in_freezer')
+    query = db.session.query(Item.name, Item.source)
+    if status != 'all':
+        query = query.filter(Item.status == status)
+    rows = query.all()
+
+    # Deduplicate case-insensitively, preserving the first casing seen
+    names_seen: dict = {}
+    sources_seen: dict = {}
+    for name, source in rows:
+        if name:
+            key = name.lower()
+            if key not in names_seen:
+                names_seen[key] = name
+        if source:
+            key = source.lower()
+            if key not in sources_seen:
+                sources_seen[key] = source
+
+    return jsonify({
+        'names': sorted(names_seen.values(), key=lambda x: x.lower()),
+        'sources': sorted(sources_seen.values(), key=lambda x: x.lower()),
+    }), 200
+
+
 @items_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_items():

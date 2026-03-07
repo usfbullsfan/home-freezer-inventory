@@ -3,6 +3,7 @@ import { itemsAPI, categoriesAPI, uploadsAPI } from '../services/api';
 import { addItemToSession } from '../utils/sessionTracking';
 import { toDateInputValue } from '../utils/dateUtils';
 import BarcodeScanner from './BarcodeScanner';
+import Autocomplete from './Autocomplete';
 
 function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qrEnabled = true }) {
   const [formData, setFormData] = useState({
@@ -36,6 +37,16 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qr
   const [selectedCategoryFile, setSelectedCategoryFile] = useState(null);
   const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
   const [suggestedCategory, setSuggestedCategory] = useState('');
+  const [nameSuggestions, setNameSuggestions] = useState([]);
+  const [sourceSuggestions, setSourceSuggestions] = useState([]);
+
+  // Fetch distinct names + sources for autocomplete on mount
+  useEffect(() => {
+    itemsAPI.getItemNames('all').then((res) => {
+      setNameSuggestions(res.data.names || []);
+      setSourceSuggestions(res.data.sources || []);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (item) {
@@ -706,12 +717,12 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qr
 
           <div className="form-group">
             <label htmlFor="name">Item Name *</label>
-            <input
-              type="text"
+            <Autocomplete
               id="name"
               name="name"
               value={formData.name}
-              onChange={handleChange}
+              onChange={(v) => setFormData((prev) => ({ ...prev, name: v }))}
+              suggestions={nameSuggestions}
               required
               placeholder="e.g., Prime Ribeye Steak"
             />
@@ -720,12 +731,12 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qr
           <div className="form-row form-row-2">
             <div className="form-group">
               <label htmlFor="source">Source</label>
-              <input
-                type="text"
+              <Autocomplete
                 id="source"
                 name="source"
                 value={formData.source}
-                onChange={handleChange}
+                onChange={(v) => setFormData((prev) => ({ ...prev, source: v }))}
+                suggestions={sourceSuggestions}
                 placeholder="e.g., Costco"
               />
             </div>
