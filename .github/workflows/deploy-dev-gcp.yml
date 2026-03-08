@@ -113,12 +113,16 @@ jobs:
             npm install --silent
             # Purge vite's cache dirs. They may be owned by a different user from a
             # previous run; the service user must be able to delete/recreate them.
-            sudo rm -rf node_modules/.vite node_modules/.vite-temp 2>/dev/null || true
-            # Re-create vite cache dirs as gh-deploy with open permissions so the
-            # service user (michaelt452) can create/delete subdirs inside them.
-            # chmod o+w on the parent is not enough — subdirs need 777 themselves.
+            # Remove vite cache dirs if gh-deploy owns them (plain rm works for our
+            # files; sudo rm is not allowed for arbitrary paths). If michaelt452 owns
+            # them from a previous service run they survive — that's fine, it can write
+            # to its own dirs already.
+            rm -rf node_modules/.vite node_modules/.vite-temp 2>/dev/null || true
+            # Re-create with 777 so the service user can write inside when gh-deploy
+            # created them fresh. If dirs still exist (owned by michaelt452), chmod
+            # fails silently via || true — michaelt452 has full access as owner anyway.
             mkdir -p node_modules/.vite node_modules/.vite-temp
-            chmod 777 node_modules/.vite node_modules/.vite-temp
+            chmod 777 node_modules/.vite node_modules/.vite-temp 2>/dev/null || true
             # Remove manifest.json if owned by gh-deploy; michaelt452 must write it
             # fresh via generate-version.js on startup. chmod o+w public lets it create
             # new files there but won't let it overwrite an existing gh-deploy-owned file.
