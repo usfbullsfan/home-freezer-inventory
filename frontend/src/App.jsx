@@ -207,7 +207,7 @@ function AppContent() {
                 <>
                   <Route path="/home" element={<MobileLanding qrEnabled={qrEnabled} />} />
                   <Route path="/" element={<Navigate to="/home" replace />} />
-                  <Route path="/inventory" element={<Inventory isMobile={true} qrEnabled={qrEnabled} />} />
+                  <Route path="/inventory" element={<Inventory isMobile={true} qrEnabled={qrEnabled} user={user} />} />
                   <Route path="/item/:qrCode" element={<QRRedirect />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/categories" element={<Categories />} />
@@ -219,7 +219,7 @@ function AppContent() {
               ) : (
                 // Desktop routes (unchanged)
                 <>
-                  <Route path="/" element={<Inventory qrEnabled={qrEnabled} />} />
+                  <Route path="/" element={<Inventory qrEnabled={qrEnabled} user={user} />} />
                   <Route path="/item/:qrCode" element={<QRRedirect />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/categories" element={<Categories />} />

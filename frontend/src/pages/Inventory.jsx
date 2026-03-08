@@ -7,7 +7,7 @@ import QRInputModal from '../components/QRInputModal';
 import QRScanner from '../components/QRScanner';
 import SessionBanner from '../components/SessionBanner';
 
-function Inventory({ isMobile = false, qrEnabled = true }) {
+function Inventory({ isMobile = false, qrEnabled = true, user = null }) {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -131,6 +131,16 @@ function Inventory({ isMobile = false, qrEnabled = true }) {
     loadItems();
     // Refresh session banner
     setSessionKey(prev => prev + 1);
+  };
+
+  const handleDeleteItem = async (itemId) => {
+    try {
+      await itemsAPI.deleteItem(itemId);
+      loadItems();
+    } catch (err) {
+      console.error('Failed to delete item:', err);
+      alert('Failed to delete item');
+    }
   };
 
   const handleStatusChange = async (itemId, newStatus) => {
@@ -415,6 +425,8 @@ function Inventory({ isMobile = false, qrEnabled = true }) {
               item={item}
               onEdit={() => handleEditItem(item)}
               onStatusChange={(status) => handleStatusChange(item.id, status)}
+              onDelete={() => handleDeleteItem(item.id)}
+              isAdmin={user?.role === 'admin'}
               qrEnabled={qrEnabled}
             />
           ))}
