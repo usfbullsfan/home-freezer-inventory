@@ -56,10 +56,10 @@ def rename_name():
         return err
 
     data = request.get_json() or {}
-    old_name = (data.get('old_name') or '').strip()
+    old_name = data.get('old_name') or ''
     new_name = (data.get('new_name') or '').strip()
 
-    if not old_name or not new_name:
+    if not old_name.strip() or not new_name:
         return jsonify({'error': 'old_name and new_name are required'}), 400
     if old_name == new_name:
         return jsonify({'error': 'New name is the same as the old name'}), 400
@@ -153,10 +153,10 @@ def rename_source():
         return err
 
     data = request.get_json() or {}
-    old_source = (data.get('old_source') or '').strip()
+    old_source = data.get('old_source') or ''
     new_source = (data.get('new_source') or '').strip()
 
-    if not old_source or not new_source:
+    if not old_source.strip() or not new_source:
         return jsonify({'error': 'old_source and new_source are required'}), 400
     if old_source == new_source:
         return jsonify({'error': 'New source is the same as the old source'}), 400
