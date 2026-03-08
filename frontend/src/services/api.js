@@ -423,6 +423,13 @@ export const notificationsAPI = {
 
   deleteLowStockAlert: (id) =>
     api.delete(`/notifications/low-stock/${id}`),
+
+  // Expiration notification settings
+  getExpirationSettings: () =>
+    api.get('/notifications/expiration-settings'),
+
+  updateExpirationSettings: (data) =>
+    api.put('/notifications/expiration-settings', data),
 };
 
 export default api;

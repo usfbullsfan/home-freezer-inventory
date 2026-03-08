@@ -169,6 +169,34 @@ class LowStockAlert(db.Model):
         }
 
 
+class ExpirationNotificationSettings(db.Model):
+    __tablename__ = 'expiration_notification_settings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True)
+    enabled = db.Column(db.Boolean, default=False)
+    frequency = db.Column(db.String(10), default='daily')  # 'daily' or 'weekly'
+    day_of_week = db.Column(db.Integer, default=1)  # 0=Mon…6=Sun, used only when frequency='weekly'
+    days_before = db.Column(db.Integer, default=7)
+    all_categories = db.Column(db.Boolean, default=True)
+    category_ids = db.Column(db.Text, default='[]')  # JSON list of category IDs
+    last_sent_at = db.Column(db.DateTime)
+
+    user = db.relationship('User', backref=db.backref('expiration_settings', uselist=False))
+
+    def to_dict(self):
+        import json
+        return {
+            'enabled': bool(self.enabled),
+            'frequency': self.frequency or 'daily',
+            'day_of_week': self.day_of_week if self.day_of_week is not None else 1,
+            'days_before': self.days_before or 7,
+            'all_categories': bool(self.all_categories),
+            'category_ids': json.loads(self.category_ids or '[]'),
+            'last_sent_at': self.last_sent_at.isoformat() if self.last_sent_at else None,
+        }
+
+
 def generate_qr_code():
     """Generate a unique alphanumeric code identifier (e.g., ABC123)"""
     import random
