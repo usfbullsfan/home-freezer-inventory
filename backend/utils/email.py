@@ -110,10 +110,11 @@ def send_expiration_digest(to_address, items, days_before):
     text_body = '\n'.join(lines) + '\n\nLog in to your Freezer Inventory to take action.'
 
     # HTML body
+    em_dash = '\u2014'
     rows = ''.join(
         '<tr>'
         f'<td style="padding:0.4rem 0.75rem;border-bottom:1px solid #eee">{item["name"]}</td>'
-        f'<td style="padding:0.4rem 0.75rem;border-bottom:1px solid #eee">{item.get("category_name") or "\u2014"}</td>'
+        f'<td style="padding:0.4rem 0.75rem;border-bottom:1px solid #eee">{item.get("category_name") or em_dash}</td>'
         f'<td style="padding:0.4rem 0.75rem;border-bottom:1px solid #eee">{item["expiration_date"][:10] if item.get("expiration_date") else "No date"}</td>'
         '</tr>'
         for item in items
