@@ -113,11 +113,6 @@ jobs:
             # Update frontend dependencies
             echo "Updating frontend dependencies..."
             cd frontend
-            # Wipe node_modules entirely so npm install always starts from a clean
-            # slate owned by the deploy user (gh-deploy). Mixed ownership from the
-            # service user (michaelt452) causes EACCES on atomic renames inside npm.
-            # sudo rm is needed because michaelt452-owned subdirs resist plain rm.
-            sudo rm -rf node_modules
             npm install --omit=dev
             # Create vite cache dirs with open permissions so the service user
             # (michaelt452) can write its own cache inside them on startup.
