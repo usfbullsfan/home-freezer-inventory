@@ -84,16 +84,19 @@ function EmailNotifications() {
       }
 
       try {
-        const [expRes, catRes] = await Promise.all([
-          notificationsAPI.getExpirationSettings(),
-          categoriesAPI.getCategories(),
-        ]);
+        const expRes = await notificationsAPI.getExpirationSettings();
         setExpSettings(expRes.data);
-        setCategories(catRes.data || []);
       } catch (err) {
-        console.error('getExpirationSettings/categories failed:', err?.message);
+        console.error('getExpirationSettings failed:', err?.message);
       } finally {
         setExpLoading(false);
+      }
+
+      try {
+        const catRes = await categoriesAPI.getCategories();
+        setCategories(catRes.data || []);
+      } catch (err) {
+        console.error('getCategories failed:', err?.message);
       }
     };
     load();
