@@ -114,9 +114,15 @@ jobs:
             # Purge vite's cache dirs. They may be owned by a different user from a
             # previous run; the service user must be able to delete/recreate them.
             sudo rm -rf node_modules/.vite node_modules/.vite-temp 2>/dev/null || true
-            # Open node_modules and public so the service user can write into them
-            # (create new .vite dirs, write manifest.json via generate-version.js).
-            chmod o+w node_modules
+            # Re-create vite cache dirs as gh-deploy with open permissions so the
+            # service user (michaelt452) can create/delete subdirs inside them.
+            # chmod o+w on the parent is not enough — subdirs need 777 themselves.
+            mkdir -p node_modules/.vite node_modules/.vite-temp
+            chmod 777 node_modules/.vite node_modules/.vite-temp
+            # Remove manifest.json if owned by gh-deploy; michaelt452 must write it
+            # fresh via generate-version.js on startup. chmod o+w public lets it create
+            # new files there but won't let it overwrite an existing gh-deploy-owned file.
+            rm -f public/manifest.json 2>/dev/null || true
             chmod o+w public
             cd ..
             echo "✓ Frontend dependencies updated"
