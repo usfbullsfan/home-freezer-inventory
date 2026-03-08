@@ -1,6 +1,6 @@
 """Notifications blueprint – email settings and test-send endpoint.
 
-Routes (all require JWT):
+Routes (all require JWT unless noted):
   GET  /api/notifications/email/status            – is email configured? (any role)
   GET  /api/notifications/email/settings          – get email settings (admin only)
   POST /api/notifications/email/test              – send a test email to own verified address (any role)
@@ -13,6 +13,10 @@ Routes (all require JWT):
   POST   /api/notifications/low-stock             – create a low-stock alert
   PUT    /api/notifications/low-stock/<id>        – update threshold / enabled
   DELETE /api/notifications/low-stock/<id>        – delete an alert
+
+  GET  /api/notifications/expiration-settings     – get current user's expiration notification prefs
+  PUT  /api/notifications/expiration-settings     – update current user's expiration notification prefs
+  POST /api/notifications/send-expiration-digest  – cron endpoint (no JWT; optional CRON_SECRET header)
 """
 
 import logging
@@ -23,8 +27,8 @@ from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from sqlalchemy import func
-from models import db, User, Item, LowStockAlert
-from utils.email import is_email_configured, send_email, send_verification_email
+from models import db, User, Item, LowStockAlert, ExpirationNotificationSettings
+from utils.email import is_email_configured, send_email, send_verification_email, send_expiration_digest
 
 notifications_bp = Blueprint('notifications', __name__)
 
@@ -416,3 +420,149 @@ def delete_low_stock_alert(alert_id):
     db.session.delete(alert)
     db.session.commit()
     return jsonify({'message': 'Alert deleted'}), 200
+
+
+# ── Expiration notification settings ──────────────────────────────────────────
+
+_EXP_DEFAULTS = {
+    'enabled': False,
+    'frequency': 'daily',
+    'day_of_week': 1,
+    'days_before': 7,
+    'all_categories': True,
+    'category_ids': [],
+    'last_sent_at': None,
+}
+
+
+@notifications_bp.route('/expiration-settings', methods=['GET'])
+@jwt_required()
+def get_expiration_settings():
+    """Return the current user's expiration notification preferences."""
+    current_user_id = int(get_jwt_identity())
+    settings = ExpirationNotificationSettings.query.filter_by(user_id=current_user_id).first()
+    if not settings:
+        return jsonify(_EXP_DEFAULTS), 200
+    return jsonify(settings.to_dict()), 200
+
+
+@notifications_bp.route('/expiration-settings', methods=['PUT'])
+@jwt_required()
+def update_expiration_settings():
+    """Create or update the current user's expiration notification preferences."""
+    import json as _json
+    current_user_id = int(get_jwt_identity())
+    data = request.get_json() or {}
+
+    settings = ExpirationNotificationSettings.query.filter_by(user_id=current_user_id).first()
+    if not settings:
+        settings = ExpirationNotificationSettings(user_id=current_user_id)
+        db.session.add(settings)
+
+    if 'enabled' in data:
+        settings.enabled = bool(data['enabled'])
+
+    if 'frequency' in data:
+        if data['frequency'] not in ('daily', 'weekly'):
+            return jsonify({'error': 'frequency must be "daily" or "weekly"'}), 400
+        settings.frequency = data['frequency']
+
+    if 'day_of_week' in data:
+        try:
+            dow = int(data['day_of_week'])
+            if not 0 <= dow <= 6:
+                raise ValueError
+            settings.day_of_week = dow
+        except (TypeError, ValueError):
+            return jsonify({'error': 'day_of_week must be 0–6'}), 400
+
+    if 'days_before' in data:
+        try:
+            days_val = int(data['days_before'])
+            if days_val < 1:
+                raise ValueError
+            settings.days_before = days_val
+        except (TypeError, ValueError):
+            return jsonify({'error': 'days_before must be a positive integer'}), 400
+
+    if 'all_categories' in data:
+        settings.all_categories = bool(data['all_categories'])
+
+    if 'category_ids' in data:
+        try:
+            ids = [int(i) for i in data['category_ids']]
+            settings.category_ids = _json.dumps(ids)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'category_ids must be a list of integers'}), 400
+
+    db.session.commit()
+    return jsonify(settings.to_dict()), 200
+
+
+@notifications_bp.route('/send-expiration-digest', methods=['POST'])
+def trigger_expiration_digest():
+    """Cron endpoint – send expiration digest emails to all eligible users.
+
+    Not JWT-protected. If CRON_SECRET env var is set the caller must supply
+    the same value in the X-Cron-Secret request header.
+
+    Intended to be called once daily (e.g. via cron, systemd timer, or a
+    hosting-platform scheduler). Weekly-frequency users are skipped on days
+    that don't match their chosen day_of_week.
+    """
+    import json as _json
+
+    cron_secret = os.environ.get('CRON_SECRET', '')
+    if cron_secret and request.headers.get('X-Cron-Secret', '') != cron_secret:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    if not is_email_configured():
+        return jsonify({'error': 'Email not configured on this server'}), 503
+
+    today = datetime.utcnow()
+    results = {'sent': 0, 'skipped': 0, 'errors': 0}
+
+    all_settings = ExpirationNotificationSettings.query.filter_by(enabled=True).all()
+
+    for s in all_settings:
+        user = s.user
+        if not user or not user.email or not user.email_verified:
+            results['skipped'] += 1
+            continue
+
+        # Weekly: only send on the configured day of week
+        if s.frequency == 'weekly' and today.weekday() != s.day_of_week:
+            results['skipped'] += 1
+            continue
+
+        threshold_dt = today + timedelta(days=s.days_before)
+
+        query = Item.query.filter(
+            Item.status == 'in_freezer',
+            Item.expiration_date.isnot(None),
+            Item.expiration_date <= threshold_dt,
+        ).order_by(Item.expiration_date)
+
+        if not s.all_categories:
+            try:
+                cat_ids = _json.loads(s.category_ids or '[]')
+                if cat_ids:
+                    query = query.filter(Item.category_id.in_(cat_ids))
+            except (ValueError, TypeError):
+                pass
+
+        items = query.all()
+        if not items:
+            results['skipped'] += 1
+            continue
+
+        try:
+            send_expiration_digest(user.email, [i.to_dict() for i in items], s.days_before)
+            s.last_sent_at = datetime.utcnow()
+            db.session.commit()
+            results['sent'] += 1
+        except RuntimeError:
+            logging.exception('Failed to send expiration digest to %s', user.email)
+            results['errors'] += 1
+
+    return jsonify(results), 200

@@ -90,6 +90,50 @@ def send_email(to_addresses, subject, text_body, html_body=None):
         logger.exception('Failed to send email to %s', ', '.join(to_addresses))
         raise RuntimeError(f'Email delivery failed: {exc}') from exc
 
+def send_expiration_digest(to_address, items, days_before):
+    """Send an expiration digest email listing items expiring soon.
+
+    Args:
+        to_address: str – recipient email address.
+        items: list of item dicts (from Item.to_dict()).
+        days_before: int – the configured threshold (used in subject/body).
+    """
+    count = len(items)
+    subject = f'Freezer expiration digest – {count} item{"s" if count != 1 else ""} expiring soon'
+
+    # Plain-text body
+    lines = [f'Freezer items expiring within {days_before} day{"s" if days_before != 1 else ""}:\n']
+    for item in items:
+        exp = item['expiration_date'][:10] if item.get('expiration_date') else 'No date'
+        cat = f' [{item["category_name"]}]' if item.get('category_name') else ''
+        lines.append(f'  \u2022 {item["name"]}{cat} \u2014 expires {exp}')
+    text_body = '\n'.join(lines) + '\n\nLog in to your Freezer Inventory to take action.'
+
+    # HTML body
+    rows = ''.join(
+        '<tr>'
+        f'<td style="padding:0.4rem 0.75rem;border-bottom:1px solid #eee">{item["name"]}</td>'
+        f'<td style="padding:0.4rem 0.75rem;border-bottom:1px solid #eee">{item.get("category_name") or "\u2014"}</td>'
+        f'<td style="padding:0.4rem 0.75rem;border-bottom:1px solid #eee">{item["expiration_date"][:10] if item.get("expiration_date") else "No date"}</td>'
+        '</tr>'
+        for item in items
+    )
+    html_body = (
+        f'<p>You have <strong>{count} item{"s" if count != 1 else ""}</strong> '
+        f'expiring within {days_before} day{"s" if days_before != 1 else ""}:</p>'
+        '<table style="border-collapse:collapse;width:100%;font-size:0.9em">'
+        '<thead><tr style="background:#f8f9fa;text-align:left">'
+        '<th style="padding:0.4rem 0.75rem">Item</th>'
+        '<th style="padding:0.4rem 0.75rem">Category</th>'
+        '<th style="padding:0.4rem 0.75rem">Expires</th>'
+        '</tr></thead>'
+        f'<tbody>{rows}</tbody></table>'
+        '<p style="margin-top:1.5rem;color:#888;font-size:0.9em">Log in to your Freezer Inventory to take action.</p>'
+    )
+
+    return send_email(to_addresses=to_address, subject=subject, text_body=text_body, html_body=html_body)
+
+
 def send_verification_email(to_address, code):
     """Send a 6-digit verification code to the given address."""
     return send_email(
