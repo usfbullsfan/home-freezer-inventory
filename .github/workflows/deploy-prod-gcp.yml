@@ -113,24 +113,18 @@ jobs:
             # Update frontend dependencies
             echo "Updating frontend dependencies..."
             cd frontend
-            # Reclaim ownership of any node_modules files written by the service user
-            # (michaelt452). npm rename-renames within node_modules fail with EACCES
-            # when it doesn't own a subdir. sudo chown is available via sudoers.
-            sudo chown -R "$(whoami)":"$(whoami)" node_modules 2>/dev/null || true
+            # Wipe node_modules entirely so npm install always starts from a clean
+            # slate owned by the deploy user (gh-deploy). Mixed ownership from the
+            # service user (michaelt452) causes EACCES on atomic renames inside npm.
+            # sudo rm is needed because michaelt452-owned subdirs resist plain rm.
+            sudo rm -rf node_modules
             npm install --omit=dev
-            # Remove vite cache dirs if gh-deploy owns them (plain rm works for our
-            # files; sudo rm is not allowed for arbitrary paths). If michaelt452 owns
-            # them from a previous service run they survive — that's fine, it can write
-            # to its own dirs already.
-            rm -rf node_modules/.vite node_modules/.vite-temp 2>/dev/null || true
-            # Re-create with 777 so the service user can write inside when gh-deploy
-            # created them fresh. If dirs still exist (owned by michaelt452), chmod
-            # fails silently via || true — michaelt452 has full access as owner anyway.
+            # Create vite cache dirs with open permissions so the service user
+            # (michaelt452) can write its own cache inside them on startup.
             mkdir -p node_modules/.vite node_modules/.vite-temp
-            chmod 777 node_modules/.vite node_modules/.vite-temp 2>/dev/null || true
-            # Remove manifest.json if owned by gh-deploy; generate-version.js writes it
-            # on startup. chmod o+w public lets michaelt452 create new files there but
-            # not overwrite an existing gh-deploy-owned file.
+            chmod 777 node_modules/.vite node_modules/.vite-temp
+            # Remove manifest.json so generate-version.js (running as michaelt452)
+            # can recreate it; chmod o+w lets it write new files into public/.
             rm -f public/manifest.json 2>/dev/null || true
             chmod o+w public
             cd ..
