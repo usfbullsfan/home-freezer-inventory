@@ -23,8 +23,8 @@ def register():
     if not data or not data.get('username'):
         return jsonify({'error': 'Username required'}), 400
 
-    # Normalize username to lowercase for case-insensitive matching
-    username_lower = data['username'].lower()
+    # Normalize username to lowercase and strip whitespace
+    username_lower = data['username'].strip().lower()
 
     if User.query.filter_by(username=username_lower).first():
         return jsonify({'error': 'Username already exists'}), 400
@@ -91,8 +91,8 @@ def login():
     if not data or not data.get('username') or not data.get('password'):
         return jsonify({'error': 'Username and password required'}), 400
 
-    # Normalize username to lowercase for case-insensitive matching
-    username_lower = data['username'].lower()
+    # Normalize username to lowercase and strip whitespace
+    username_lower = data['username'].strip().lower()
 
     user = User.query.filter_by(username=username_lower).first()
 
@@ -208,8 +208,8 @@ def update_user(user_id):
 
     # Update username if provided
     if 'username' in data:
-        # Normalize username to lowercase for case-insensitive matching
-        new_username_lower = data['username'].lower()
+        # Normalize username to lowercase and strip whitespace
+        new_username_lower = data['username'].strip().lower()
 
         if new_username_lower != user.username:
             if User.query.filter_by(username=new_username_lower).first():
