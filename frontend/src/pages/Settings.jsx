@@ -4,6 +4,7 @@ import { settingsAPI, authAPI } from '../services/api';
 import UserManagement from '../components/UserManagement';
 import ImportExport from '../components/ImportExport';
 import FeedbackManagement from '../components/FeedbackManagement';
+import DataCleanup from '../components/DataCleanup';
 import api from '../services/api';
 import { isMobileDevice } from '../utils/deviceDetection';
 import { registerPasskey, supportsPasskeys, generateRecoveryCodes } from '../utils/passkey';
@@ -745,6 +746,10 @@ function Settings({ user, isMobile = false, setUseDesktopInterface }) {
 
           <SettingsSection title="User Management" badge="Admin">
             <UserManagement currentUser={user} />
+          </SettingsSection>
+
+          <SettingsSection title="Data Cleanup" badge="Admin">
+            <DataCleanup />
           </SettingsSection>
 
           <SettingsSection title="Backup & Restore" badge="Admin">
