@@ -113,11 +113,22 @@ jobs:
             # Update frontend dependencies
             echo "Updating frontend dependencies..."
             cd frontend
-            npm install --omit=dev --silent
-            # Delete vite's temp dir so the service (michaelt452) can recreate it as its own user.
-            # node_modules is owned by gh-deploy, so michaelt452 can't create subdirs without o+w.
-            rm -rf node_modules/.vite-temp 2>/dev/null || true
-            chmod o+w node_modules
+            npm install --omit=dev
+            # Remove vite cache dirs if gh-deploy owns them (plain rm works for our
+            # files; sudo rm is not allowed for arbitrary paths). If michaelt452 owns
+            # them from a previous service run they survive — that's fine, it can write
+            # to its own dirs already.
+            rm -rf node_modules/.vite node_modules/.vite-temp 2>/dev/null || true
+            # Re-create with 777 so the service user can write inside when gh-deploy
+            # created them fresh. If dirs still exist (owned by michaelt452), chmod
+            # fails silently via || true — michaelt452 has full access as owner anyway.
+            mkdir -p node_modules/.vite node_modules/.vite-temp
+            chmod 777 node_modules/.vite node_modules/.vite-temp 2>/dev/null || true
+            # Remove manifest.json if owned by gh-deploy; generate-version.js writes it
+            # on startup. chmod o+w public lets michaelt452 create new files there but
+            # not overwrite an existing gh-deploy-owned file.
+            rm -f public/manifest.json 2>/dev/null || true
+            chmod o+w public
             cd ..
             echo "✓ Frontend dependencies updated"
 
