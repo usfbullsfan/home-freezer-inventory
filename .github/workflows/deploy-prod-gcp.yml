@@ -113,6 +113,10 @@ jobs:
             # Update frontend dependencies
             echo "Updating frontend dependencies..."
             cd frontend
+            # Reclaim ownership of any node_modules files written by the service user
+            # (michaelt452). npm rename-renames within node_modules fail with EACCES
+            # when it doesn't own a subdir. sudo chown is available via sudoers.
+            sudo chown -R "$(whoami)":"$(whoami)" node_modules 2>/dev/null || true
             npm install --omit=dev
             # Remove vite cache dirs if gh-deploy owns them (plain rm works for our
             # files; sudo rm is not allowed for arbitrary paths). If michaelt452 owns
