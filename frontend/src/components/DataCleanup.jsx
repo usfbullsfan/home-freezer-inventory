@@ -156,13 +156,18 @@ function DataCleanup() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div style={{ marginBottom: '-1px' }}>
-        <button style={tabStyle('names')} onClick={() => { setActiveTab('names'); setRenaming(null); setConfirmDelete(null); }}>
-          Item Names {names.length > 0 && <span style={{ color: '#6c757d', fontWeight: 'normal' }}>({names.length})</span>}
-        </button>
-        <button style={tabStyle('sources')} onClick={() => { setActiveTab('sources'); setRenaming(null); setConfirmDelete(null); }}>
-          Store Names {sources.length > 0 && <span style={{ color: '#6c757d', fontWeight: 'normal' }}>({sources.length})</span>}
+      {/* Tabs + Refresh */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '-1px' }}>
+        <div>
+          <button style={tabStyle('names')} onClick={() => { setActiveTab('names'); setRenaming(null); setConfirmDelete(null); }}>
+            Item Names {names.length > 0 && <span style={{ color: '#6c757d', fontWeight: 'normal' }}>({names.length})</span>}
+          </button>
+          <button style={tabStyle('sources')} onClick={() => { setActiveTab('sources'); setRenaming(null); setConfirmDelete(null); }}>
+            Store Names {sources.length > 0 && <span style={{ color: '#6c757d', fontWeight: 'normal' }}>({sources.length})</span>}
+          </button>
+        </div>
+        <button style={{ ...btnStyle(), fontSize: '0.8rem', marginBottom: '2px' }} onClick={loadData} disabled={loading}>
+          {loading ? 'Loading…' : 'Refresh'}
         </button>
       </div>
 
@@ -277,11 +282,6 @@ function DataCleanup() {
         )}
       </div>
 
-      <div style={{ marginTop: '0.75rem', textAlign: 'right' }}>
-        <button style={{ ...btnStyle(), fontSize: '0.8rem' }} onClick={loadData} disabled={loading}>
-          Refresh
-        </button>
-      </div>
     </div>
   );
 }
