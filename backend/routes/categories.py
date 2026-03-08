@@ -36,12 +36,16 @@ def create_category():
     if not data or not data.get('name'):
         return jsonify({'error': 'Category name is required'}), 400
 
+    name = data['name'].strip()
+    if not name:
+        return jsonify({'error': 'Category name is required'}), 400
+
     # Check if category already exists
-    if Category.query.filter_by(name=data['name']).first():
+    if Category.query.filter_by(name=name).first():
         return jsonify({'error': 'Category already exists'}), 400
 
     category = Category(
-        name=data['name'],
+        name=name,
         default_expiration_days=data.get('default_expiration_days', 180),
         image_url=data.get('image_url'),
         created_by_user_id=current_user_id
@@ -70,14 +74,15 @@ def update_category(category_id):
     data = request.get_json()
 
     if 'name' in data:
+        new_name = data['name'].strip()
         # Check if new name already exists
         existing = Category.query.filter(
-            Category.name == data['name'],
+            Category.name == new_name,
             Category.id != category_id
         ).first()
         if existing:
             return jsonify({'error': 'Category name already exists'}), 400
-        category.name = data['name']
+        category.name = new_name
 
     if 'default_expiration_days' in data:
         category.default_expiration_days = data['default_expiration_days']

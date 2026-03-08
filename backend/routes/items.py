@@ -424,6 +424,15 @@ def create_item():
 
     data['name'] = _canonical_name(data['name'])
 
+    if data.get('upc'):
+        data['upc'] = data['upc'].strip()
+
+    if data.get('source'):
+        data['source'] = data['source'].strip()
+
+    if data.get('notes'):
+        data['notes'] = data['notes'].strip()
+
     # Validate UPC format if provided (must be 12 digits)
     if data.get('upc'):
         import re
@@ -500,6 +509,7 @@ def update_item(item_id):
 
     # Validate UPC format if provided (must be 12 digits)
     if 'upc' in data and data['upc']:
+        data['upc'] = data['upc'].strip()
         import re
         if not re.match(r'^\d{12}$', data['upc']):
             return jsonify({'error': 'Invalid UPC format. UPC must be exactly 12 digits.'}), 400
@@ -512,7 +522,7 @@ def update_item(item_id):
     if 'image_url' in data:
         item.image_url = data['image_url']
     if 'source' in data:
-        item.source = data['source']
+        item.source = data['source'].strip() if data['source'] else data['source']
     if 'weight' in data:
         item.weight = data['weight']
     if 'weight_unit' in data:
@@ -524,7 +534,7 @@ def update_item(item_id):
     if 'expiration_date' in data:
         item.expiration_date = datetime.fromisoformat(data['expiration_date']) if data['expiration_date'] else None
     if 'notes' in data:
-        item.notes = data['notes']
+        item.notes = data['notes'].strip() if data['notes'] else data['notes']
     new_status = None
     if 'status' in data:
         # Validate status
