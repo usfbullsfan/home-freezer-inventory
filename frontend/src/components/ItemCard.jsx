@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { itemsAPI } from '../services/api';
 import { formatLocalDate, daysBetween } from '../utils/dateUtils';
 
-function ItemCard({ item, onEdit, onStatusChange, qrEnabled = true }) {
+function ItemCard({ item, onEdit, onStatusChange, onDelete, isAdmin = false, qrEnabled = true }) {
   const [showQR, setShowQR] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const getStatusClass = () => {
     return `status-badge status-${item.status}`;
@@ -151,6 +152,22 @@ function ItemCard({ item, onEdit, onStatusChange, qrEnabled = true }) {
           >
             Return to Freezer
           </button>
+        )}
+        {isAdmin && (
+          confirmDelete ? (
+            <>
+              <button className="btn btn-danger" onClick={() => { setConfirmDelete(false); onDelete(); }}>
+                Confirm Delete
+              </button>
+              <button className="btn btn-secondary" onClick={() => setConfirmDelete(false)}>
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button className="btn btn-danger" onClick={() => setConfirmDelete(true)}>
+              Delete
+            </button>
+          )
         )}
       </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { notificationsAPI, itemsAPI } from '../services/api';
+import { notificationsAPI, itemsAPI, categoriesAPI } from '../services/api';
 import Autocomplete from '../components/Autocomplete';
 
 function EmailNotifications() {
@@ -20,6 +20,21 @@ function EmailNotifications() {
   const [testEmailError, setTestEmailError] = useState('');
   const [testEmailSuccess, setTestEmailSuccess] = useState('');
   const [testEmailLoading, setTestEmailLoading] = useState(false);
+
+  // ── Expiration alerts state ────────────────────────────────────────────────
+  const [expSettings, setExpSettings] = useState({
+    enabled: false,
+    frequency: 'daily',
+    day_of_week: 1,
+    days_before: 7,
+    all_categories: true,
+    category_ids: [],
+  });
+  const [expLoading, setExpLoading] = useState(true);
+  const [expSaving, setExpSaving] = useState(false);
+  const [expError, setExpError] = useState('');
+  const [expSuccess, setExpSuccess] = useState('');
+  const [categories, setCategories] = useState([]);
 
   // ── Low-stock alerts state ─────────────────────────────────────────────────
   const [alerts, setAlerts] = useState([]);
@@ -66,6 +81,22 @@ function EmailNotifications() {
         setItemNameSuggestions(namesRes.data.names || []);
       } catch (err) {
         console.error('getItemNames failed:', err?.response?.status, err?.response?.data, err?.message);
+      }
+
+      try {
+        const expRes = await notificationsAPI.getExpirationSettings();
+        setExpSettings(expRes.data);
+      } catch (err) {
+        console.error('getExpirationSettings failed:', err?.message);
+      } finally {
+        setExpLoading(false);
+      }
+
+      try {
+        const catRes = await categoriesAPI.getCategories();
+        setCategories(catRes.data || []);
+      } catch (err) {
+        console.error('getCategories failed:', err?.message);
       }
     };
     load();
@@ -135,6 +166,26 @@ function EmailNotifications() {
       setTestEmailError(err.response?.data?.error || 'Failed to send test email.');
     } finally {
       setTestEmailLoading(false);
+    }
+  };
+
+  // ── Expiration alert handlers ──────────────────────────────────────────────
+  const handleExpSettingChange = (key, value) => {
+    setExpSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveExpSettings = async () => {
+    setExpError('');
+    setExpSuccess('');
+    setExpSaving(true);
+    try {
+      const res = await notificationsAPI.updateExpirationSettings(expSettings);
+      setExpSettings(res.data);
+      setExpSuccess('Expiration alert settings saved.');
+    } catch (err) {
+      setExpError(err.response?.data?.error || 'Failed to save settings.');
+    } finally {
+      setExpSaving(false);
     }
   };
 
@@ -296,6 +347,161 @@ function EmailNotifications() {
         )}
       </section>
 
+      {/* ── Expiration alerts section ─────────────────────────────────────── */}
+      <section style={{ ...sectionStyle, marginTop: '1.5rem' }}>
+        <h3 style={sectionHeadingStyle}>Expiration alerts</h3>
+        <p style={{ margin: '0 0 1rem', fontSize: '0.875rem', color: '#7f8c8d' }}>
+          Get a digest email when items in your freezer are approaching their expiration date.
+          {!myEmailVerified && (
+            <span style={{ color: '#856404' }}> (Add a verified email above to receive alerts.)</span>
+          )}
+        </p>
+
+        {expError && <div className="error-message" style={{ marginBottom: '0.75rem' }}>{expError}</div>}
+        {expSuccess && <div className="success-message" style={{ marginBottom: '0.75rem' }}>{expSuccess}</div>}
+
+        {expLoading ? (
+          <p style={{ color: '#7f8c8d', fontSize: '0.9rem' }}>Loading…</p>
+        ) : (
+          <>
+            {/* Enable toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+              <input
+                type="checkbox"
+                id="exp-enabled"
+                checked={expSettings.enabled}
+                onChange={(e) => handleExpSettingChange('enabled', e.target.checked)}
+                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+              />
+              <label htmlFor="exp-enabled" style={{ cursor: 'pointer', fontWeight: '500' }}>
+                Enable expiration alerts
+              </label>
+            </div>
+
+            {expSettings.enabled && (
+              <>
+                {/* Frequency + days controls */}
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.25rem', alignItems: 'flex-end' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem', color: '#495057' }}>
+                      Frequency
+                    </label>
+                    <select
+                      value={expSettings.frequency}
+                      onChange={(e) => handleExpSettingChange('frequency', e.target.value)}
+                      style={{ padding: '0.375rem 0.75rem', border: '1px solid #ced4da', borderRadius: '4px' }}
+                    >
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                    </select>
+                  </div>
+
+                  {expSettings.frequency === 'weekly' && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem', color: '#495057' }}>
+                        Day of week
+                      </label>
+                      <select
+                        value={expSettings.day_of_week}
+                        onChange={(e) => handleExpSettingChange('day_of_week', parseInt(e.target.value))}
+                        style={{ padding: '0.375rem 0.75rem', border: '1px solid #ced4da', borderRadius: '4px' }}
+                      >
+                        <option value={0}>Monday</option>
+                        <option value={1}>Tuesday</option>
+                        <option value={2}>Wednesday</option>
+                        <option value={3}>Thursday</option>
+                        <option value={4}>Friday</option>
+                        <option value={5}>Saturday</option>
+                        <option value={6}>Sunday</option>
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem', color: '#495057' }}>
+                      Alert days before expiration
+                    </label>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={expSettings.days_before}
+                      onChange={(e) => handleExpSettingChange('days_before', parseInt(e.target.value) || 1)}
+                      min={1}
+                      max={365}
+                      style={{ width: '80px', padding: '0.375rem 0.5rem', border: '1px solid #ced4da', borderRadius: '4px' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Category filter */}
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', color: '#495057', fontWeight: '500' }}>
+                    Categories to monitor
+                  </label>
+                  <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '0.75rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                      <input
+                        type="radio"
+                        name="exp-cat-filter"
+                        checked={expSettings.all_categories}
+                        onChange={() => handleExpSettingChange('all_categories', true)}
+                      />
+                      All categories
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                      <input
+                        type="radio"
+                        name="exp-cat-filter"
+                        checked={!expSettings.all_categories}
+                        onChange={() => handleExpSettingChange('all_categories', false)}
+                      />
+                      Specific categories
+                    </label>
+                  </div>
+
+                  {!expSettings.all_categories && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      {categories.map(cat => (
+                        <label
+                          key={cat.id}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '0.35rem',
+                            cursor: 'pointer', fontSize: '0.875rem',
+                            background: '#f8f9fa', padding: '0.25rem 0.6rem',
+                            borderRadius: '4px', border: '1px solid #dee2e6',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={expSettings.category_ids.includes(cat.id)}
+                            onChange={(e) => {
+                              const ids = e.target.checked
+                                ? [...expSettings.category_ids, cat.id]
+                                : expSettings.category_ids.filter(id => id !== cat.id);
+                              handleExpSettingChange('category_ids', ids);
+                            }}
+                          />
+                          {cat.name}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            <button className="btn btn-primary" onClick={handleSaveExpSettings} disabled={expSaving || !myEmailVerified}>
+              {expSaving ? 'Saving…' : 'Save'}
+            </button>
+            {!myEmailVerified && (
+              <small style={{ color: '#856404', marginLeft: '0.75rem' }}>
+                Verify your email address above to enable this.
+              </small>
+            )}
+          </>
+        )}
+      </section>
+
       {/* ── Low-stock alerts section ──────────────────────────────────────── */}
       <section style={{ ...sectionStyle, marginTop: '1.5rem' }}>
         <h3 style={sectionHeadingStyle}>Low stock alerts</h3>
@@ -331,6 +537,7 @@ function EmailNotifications() {
             </label>
             <input
               type="number"
+              inputMode="numeric"
               value={newThreshold}
               onChange={(e) => setNewThreshold(e.target.value)}
               min={1}
@@ -377,6 +584,7 @@ function EmailNotifications() {
                   <td style={tdStyle}>
                     <input
                       type="number"
+                      inputMode="numeric"
                       defaultValue={alert.threshold}
                       min={1}
                       onBlur={(e) => handleThresholdChange(alert, e.target.value)}
