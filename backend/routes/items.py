@@ -19,6 +19,26 @@ from reportlab.lib.utils import ImageReader
 items_bp = Blueprint('items', __name__)
 
 
+def _canonical_name(name: str) -> str:
+    """Return a case-canonicalized item name.
+
+    Strips whitespace, then looks for an existing item whose name matches
+    case-insensitively.  If one exists, the stored casing is used so that
+    "chicken breast" and "Chicken Breast" are treated as the same item.
+    """
+    name = name.strip()
+    if not name:
+        return name
+    from sqlalchemy import func as _func
+    existing = (
+        Item.query
+        .filter(_func.lower(Item.name) == name.lower())
+        .with_entities(Item.name)
+        .first()
+    )
+    return existing[0] if existing else name
+
+
 def get_base_url():
     """Get the base URL for the application based on environment.
 
@@ -402,6 +422,8 @@ def create_item():
     if not data or not data.get('name'):
         return jsonify({'error': 'Item name is required'}), 400
 
+    data['name'] = _canonical_name(data['name'])
+
     # Validate UPC format if provided (must be 12 digits)
     if data.get('upc'):
         import re
@@ -484,7 +506,7 @@ def update_item(item_id):
 
     # Update fields if provided
     if 'name' in data:
-        item.name = data['name']
+        item.name = _canonical_name(data['name']) if data['name'] else data['name']
     if 'upc' in data:
         item.upc = data['upc']
     if 'image_url' in data:
@@ -1361,7 +1383,7 @@ def import_csv():
                 item = Item(
                     qr_code=qr_code,
                     upc=row.get('UPC') or None,
-                    name=row.get('Name') or 'Unnamed Item',
+                    name=_canonical_name(row.get('Name') or 'Unnamed Item'),
                     source=row.get('Source') or None,
                     weight=float(row['Weight']) if row.get('Weight') else None,
                     weight_unit=row.get('Weight Unit') or 'lb',
