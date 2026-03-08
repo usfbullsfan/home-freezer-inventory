@@ -349,6 +349,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qr
 
   const handleSubmit = async (e, keepOpen = false) => {
     e.preventDefault();
+    document.activeElement.blur();
     setError('');
 
     // Validate UPC if provided
@@ -803,6 +804,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qr
                 <label htmlFor="new_category_expiration">Default Expiration Days</label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   id="new_category_expiration"
                   value={newCategoryData.default_expiration_days}
                   onChange={(e) => setNewCategoryData({ ...newCategoryData, default_expiration_days: parseInt(e.target.value) })}
@@ -878,6 +880,7 @@ function AddItemModal({ item, categories, onClose, onSave, onCategoryCreated, qr
               <label htmlFor="weight">Size</label>
               <input
                 type="number"
+                inputMode="decimal"
                 id="weight"
                 name="weight"
                 value={formData.weight}

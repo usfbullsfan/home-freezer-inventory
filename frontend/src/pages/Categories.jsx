@@ -88,6 +88,7 @@ function Categories() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    document.activeElement.blur();
     setError('');
     setSuccess('');
     setFormError('');
@@ -235,6 +236,7 @@ function Categories() {
                   <label htmlFor="default_expiration_days">Default Expiration (days) *</label>
                   <input
                     type="number"
+                    inputMode="numeric"
                     id="default_expiration_days"
                     value={formData.default_expiration_days}
                     onChange={(e) =>

@@ -331,6 +331,7 @@ function EmailNotifications() {
             </label>
             <input
               type="number"
+              inputMode="numeric"
               value={newThreshold}
               onChange={(e) => setNewThreshold(e.target.value)}
               min={1}
@@ -377,6 +378,7 @@ function EmailNotifications() {
                   <td style={tdStyle}>
                     <input
                       type="number"
+                      inputMode="numeric"
                       defaultValue={alert.threshold}
                       min={1}
                       onBlur={(e) => handleThresholdChange(alert, e.target.value)}
