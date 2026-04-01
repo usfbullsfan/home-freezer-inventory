@@ -23,7 +23,7 @@ jobs:
       # The runner has more CPU/RAM; vite build with 779+ modules was consistently
       # timing out on the server (7+ minutes).
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
