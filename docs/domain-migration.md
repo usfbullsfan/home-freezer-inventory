@@ -29,7 +29,10 @@
 - [ ] DNS: add `freezer.wetpaws.dev` and the dev host, pointing at the same server, tunnel or proxy as today.
 - [ ] TLS certificates for both new hosts. `.dev` is HSTS-preloaded, so HTTPS is required (we already use it).
 - [ ] Reverse proxy / server config: add the new hostnames next to the old ones. The old hosts keep serving normally for now.
-- [ ] Email (Resend): verify `wetpaws.dev`, or a subdomain of it, as a sending domain. If the server's `.env` has `EMAIL_FROM_ADDRESS=...@thefreezer.xyz`, plan to change it. Mail from an expired domain will fail SPF/DKIM.
+- [ ] Email (Resend): `wetpaws.dev` already has a Resend API key, but mail is still sent from `thefreezer.xyz`. Switching is config only, and the emails contain no links to the site (verification uses a code), so it can be done **now**, separately from the website cutover:
+  1. In the dev, then prod, backend `.env`: set `EMAIL_FROM_ADDRESS=<sender>@wetpaws.dev`. If the wetpaws.dev key is restricted to that domain, also set `RESEND_API_KEY` to it. Change both at the same time, because a key restricted to one domain rejects sending from the other.
+  2. Restart the backend and send a test email (Settings → Notifications → test / verification code). Check it isn't flagged as spam.
+  3. Once prod sends from wetpaws.dev, the old thefreezer.xyz key and domain can be removed from Resend.
 - [ ] Merge this prep change and deploy it. It does nothing until the env vars are set.
 - [ ] Check that `https://freezer.wetpaws.dev` loads (with the old config, passkeys won't work there yet; that's expected).
 
@@ -43,6 +46,6 @@
   - reinstall the home-screen app (PWA) from the new URL, because the old icon points at the old domain.
 
 ### After cutover
-- [ ] Update `EMAIL_FROM_ADDRESS` and any external links (README, GitHub repo homepage, bookmarks).
+- [ ] Update any external links (README, GitHub repo homepage, bookmarks).
 - [ ] Watch error logs for passkey `origin`/`rp_id` verification failures.
 - [ ] After 2026-12-31, or after the redirect year if you renew, remove the legacy entries in `frontend/src/utils/hosts.js` and `frontend/vite.config.js`, change `DEFAULT_APP_DOMAIN` in `backend/utils/domains.py` to `freezer.wetpaws.dev`, and delete the passkey rows registered under the old RP ID.
