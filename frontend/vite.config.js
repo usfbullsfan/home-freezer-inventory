@@ -17,7 +17,8 @@ export default defineConfig(({ mode }) => {
         '127.0.0.1',
         'thefreezer.xyz',
         'dev.thefreezer.xyz',
-        '.thefreezer.xyz'  // Allow all subdomains
+        '.thefreezer.xyz',  // Legacy domain + subdomains (expires 2026-12-31)
+        '.freezer.wetpaws.dev'  // New domain + subdomains
       ],
       proxy: {
         '/api': {
@@ -34,7 +35,8 @@ export default defineConfig(({ mode }) => {
         '127.0.0.1',
         'thefreezer.xyz',
         'dev.thefreezer.xyz',
-        '.thefreezer.xyz'  // Allow all subdomains
+        '.thefreezer.xyz',  // Legacy domain + subdomains (expires 2026-12-31)
+        '.freezer.wetpaws.dev'  // New domain + subdomains
       ]
     }
   }

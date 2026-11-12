@@ -99,8 +99,8 @@ function QRScanner({ onScan, onClose }) {
         // QR code detected! Extract the item code from the URL
         const qrData = code.data;
 
-        // The QR code contains a URL like "https://thefreezer.xyz/item/ABC123"
-        // Extract the code from the URL
+        // The QR code contains a URL like "https://<domain>/item/ABC123".
+        // Match on the path only so labels printed under any domain still scan.
         const match = qrData.match(/\/item\/([A-Z0-9]+)/);
         if (match && match[1]) {
           const itemCode = match[1];
