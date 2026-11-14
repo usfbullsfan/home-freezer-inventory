@@ -46,14 +46,16 @@ The deploy user (`gh-deploy`) needs no new sudo rights. The workflows no longer 
 
 Run on the server as `michaelt452` and send back the output. Nothing here changes anything.
 
+The deploy checkouts belong to the deploy user (`gh-deploy`), so `michaelt452` can't run `git` in them. Leave that alone. Download the script into your home directory instead:
+
 ```bash
-cd ~/freezer-inventory-dev && git fetch origin && git checkout origin/claude/elegant-lovelace-teqvdw -- scripts/gcp-memory-report.sh
+curl -fsSL -o ~/gcp-memory-report.sh https://raw.githubusercontent.com/usfbullsfan/home-freezer-inventory/dev/scripts/gcp-memory-report.sh
 ```
 
-(That copies one file from the PR branch into the dev checkout. The next dev deploy's `git reset --hard` tidies it up again. Once the PR is merged, skip this.)
+(Before the PR is merged, use `claude/elegant-lovelace-teqvdw` in place of `dev` in that URL.)
 
 ```bash
-bash ~/freezer-inventory-dev/scripts/gcp-memory-report.sh 2>&1 | tee ~/mem-before.txt
+bash ~/gcp-memory-report.sh 2>&1 | tee ~/mem-before.txt
 ```
 
 If you'd rather not copy the script, these give the essentials:
@@ -204,7 +206,7 @@ Keep the swap file itself: it's the safety net for deploys and spikes. This sett
 Wait at least 10 minutes, ideally a quiet hour, so idle behaviour shows. Then:
 
 ```bash
-bash ~/freezer-inventory-dev/scripts/gcp-memory-report.sh 2>&1 | tee ~/mem-after.txt
+bash ~/gcp-memory-report.sh 2>&1 | tee ~/mem-after.txt
 ```
 
 ```bash
