@@ -8,7 +8,7 @@
  */
 export const DEV_HOSTNAMES = [
   'dev.thefreezer.xyz',       // legacy
-  'd-freezer.wetpaws.dev',
+  'dev.freezer.wetpaws.dev',
   'localhost',
   '127.0.0.1',
 ];

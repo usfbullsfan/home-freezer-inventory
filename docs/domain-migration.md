@@ -6,7 +6,7 @@
 | | Old | New |
 |---|---|---|
 | Prod | `thefreezer.xyz` | `freezer.wetpaws.dev` |
-| Dev | `dev.thefreezer.xyz` | `d-freezer.wetpaws.dev` |
+| Dev | `dev.thefreezer.xyz` | `dev.freezer.wetpaws.dev` |
 
 ## What's already in the code (no behavior change yet)
 
@@ -17,7 +17,7 @@
 
 ## Decisions needed before cutover
 
-1. **Dev hostname: tentatively `d-freezer.wetpaws.dev` (alternative: `dev.freezer.wetpaws.dev`, which shares one RP ID with prod).** It isn't a subdomain of the prod host, so dev and prod each get their own passkey RP ID: set `APP_DEV_DOMAIN=d-freezer.wetpaws.dev` on both backends, `RP_ID=freezer.wetpaws.dev` on prod and `RP_ID=d-freezer.wetpaws.dev` on dev. Side effect: passkeys copied into dev by `sync_prod_to_dev_db.sh` won't work on dev, so re-register a passkey on dev to test.
+1. **Dev hostname: decided, `dev.freezer.wetpaws.dev`.** It's a subdomain of the prod host, so dev and prod share one passkey RP ID (`freezer.wetpaws.dev`), as they do today. Prod passkeys copied to dev by `sync_prod_to_dev_db.sh` keep working on dev.
 2. **Printed QR labels.** Every label printed so far encodes `https://thefreezer.xyz/item/...`. The in-app scanner keeps working with them. A phone's own camera app will **stop opening them** once the domain lapses. Options:
    - Renew `thefreezer.xyz` for one more year and keep it as a redirect only, while labels get reprinted as items are used up. This is cheap and the least disruptive.
    - Let it lapse and reprint every label still in the freezer.
@@ -37,9 +37,9 @@
 - [ ] Check that `https://freezer.wetpaws.dev` loads (with the old config, passkeys won't work there yet; that's expected).
 
 ### Cutover
-- [ ] Dev first. In the dev backend env set `APP_DOMAIN=freezer.wetpaws.dev`, `APP_DEV_DOMAIN=d-freezer.wetpaws.dev` and `RP_ID=d-freezer.wetpaws.dev`, then restart. Test password login, passkey registration and login, QR label generation and phone-camera scanning.
-- [ ] Prod: set `APP_DOMAIN=freezer.wetpaws.dev`, `APP_DEV_DOMAIN=d-freezer.wetpaws.dev` and `RP_ID=freezer.wetpaws.dev`, then restart Gunicorn.
-- [ ] Redirect old to new: in the proxy, send `thefreezer.xyz/*` → `https://freezer.wetpaws.dev/*` and `dev.thefreezer.xyz/*` → the new dev host with a 301, keeping the path so old QR links like `/item/ABC123` still land correctly.
+- [ ] Dev first. In the dev backend `.env` set `APP_DOMAIN=freezer.wetpaws.dev`. Remove any existing `RP_ID` line (it defaults to `APP_DOMAIN`, which is right for both dev and prod), then restart. Test password login, passkey registration and login, QR label generation and phone-camera scanning.
+- [ ] Prod: the same `.env` change (set `APP_DOMAIN`, remove any `RP_ID`), then restart Gunicorn.
+- [ ] Redirect old to new: in the proxy, send `thefreezer.xyz/*` → `https://freezer.wetpaws.dev/*` and `dev.thefreezer.xyz/*` → `https://dev.freezer.wetpaws.dev/*` with a 301, keeping the path so old QR links like `/item/ABC123` still land correctly.
 - [ ] Tell users:
   - log in again (tokens are stored per origin)
   - re-add their passkey under Settings
