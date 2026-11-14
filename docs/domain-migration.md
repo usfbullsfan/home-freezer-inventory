@@ -1,49 +1,50 @@
 # Domain migration: thefreezer.xyz → freezer.wetpaws.dev
 
-**Status:** prepared, not yet cut over.
-**Deadline:** `thefreezer.xyz` expires **2026-12-31**. Cut over by mid-December so there are two-plus weeks of overlap with redirects in place.
+**Status:** in progress. The code is ready, and the servers move over step by step below.
+**Plan:** move the site now, then redirect `thefreezer.xyz` to the new domain until it expires on **2026-12-31**. The old domain won't be renewed.
 
-| | Old | New |
-|---|---|---|
-| Prod | `thefreezer.xyz` | `freezer.wetpaws.dev` |
-| Dev | `dev.thefreezer.xyz` | `dev.freezer.wetpaws.dev` |
+| | Old | New | Cloudflare proxy |
+|---|---|---|---|
+| Prod | `thefreezer.xyz` | `freezer.wetpaws.dev` | Proxied (orange) |
+| Dev | `dev.thefreezer.xyz` | `dfreezer.wetpaws.dev` | Proxied (orange) |
 
-## What's already in the code (no behavior change yet)
+Both new hosts sit one level under `wetpaws.dev`, so Cloudflare's free Universal SSL certificate covers them. A two-level name like `dev.freezer.wetpaws.dev` wouldn't be covered.
 
-- `backend/utils/domains.py` is now the only place that knows the backend's hostnames. It reads `APP_DOMAIN`, `APP_DEV_DOMAIN` and `RP_ID` from the environment. The defaults are still `thefreezer.xyz`, so nothing changes until those variables are set.
-- QR code URLs (`routes/items.py`) and passkey RP ID/origin checks (`routes/passkey.py`) use that module. The origin check now compares exact hostnames, not substrings.
+## How the code handles domains
+
+- `backend/utils/domains.py` holds the backend's hostnames, set by the `APP_DOMAIN`, `APP_DEV_DOMAIN` and `RP_ID` environment variables. Without them the defaults are still `thefreezer.xyz`.
+- QR code URLs (`routes/items.py`) and the passkey checks (`routes/passkey.py`) read from that module.
 - Frontend dev detection (`src/utils/hosts.js`) and the Vite `allowedHosts` accept both the old and new domains.
-- The in-app QR scanner matches only the `/item/<code>` path, so it reads labels printed under either domain.
+- The in-app QR scanner matches only the `/item/<code>` path, so it reads codes from either domain. No labels were printed under the old domain.
 
-## Decisions
+## Server `.env` settings for the new domain
 
-1. **Dev hostname: decided, `dev.freezer.wetpaws.dev`.** It's a subdomain of the prod host, so dev and prod share one passkey RP ID (`freezer.wetpaws.dev`), as they do today. Prod passkeys copied to dev by `sync_prod_to_dev_db.sh` keep working on dev.
-2. **Printed QR labels: none printed, so `thefreezer.xyz` can simply expire.** QR codes printed from now on use whatever `APP_DOMAIN` is set to, so print labels only after the cutover.
-3. **Passkeys (no decision needed, just a heads-up).** A passkey is cryptographically bound to its RP ID, and existing ones belong to `thefreezer.xyz`. **Every user will have to register a new passkey on the new domain**, logging in with their password first. A WebAuthn "related origins" file could keep old passkeys working for a while, but only as long as `thefreezer.xyz` is still served. That isn't worth doing, since the domain won't be renewed.
+| Variable | Prod | Dev |
+|---|---|---|
+| `APP_DOMAIN` | `freezer.wetpaws.dev` | `freezer.wetpaws.dev` |
+| `APP_DEV_DOMAIN` | `dfreezer.wetpaws.dev` | `dfreezer.wetpaws.dev` |
+| `RP_ID` | `freezer.wetpaws.dev` | `dfreezer.wetpaws.dev` |
+| `EMAIL_FROM_ADDRESS` | `<sender>@wetpaws.dev` | `<sender>@wetpaws.dev` |
+| `RESEND_API_KEY` | the wetpaws.dev key | the wetpaws.dev key |
 
-## Cutover runbook
+**Passkeys:** a passkey only works for the RP ID it was created under. Existing passkeys belong to `thefreezer.xyz`, so after the switch everyone logs in with their password and adds a new passkey. Dev and prod have separate RP IDs, so prod passkeys copied to dev by `sync_prod_to_dev_db.sh` won't work on dev. Add a separate passkey on dev for testing.
 
-### Before cutover (can be done any time)
-- [ ] DNS: add `freezer.wetpaws.dev` and the dev host, pointing at the same server, tunnel or proxy as today.
-- [ ] TLS certificates for both new hosts. `.dev` is HSTS-preloaded, so HTTPS is required (we already use it).
-- [ ] Reverse proxy / server config: add the new hostnames next to the old ones. The old hosts keep serving normally for now.
-- [ ] Email (Resend): `wetpaws.dev` already has a Resend API key, but mail is still sent from `thefreezer.xyz`. Switching is config only, and the emails contain no links to the site (verification uses a code), so it can be done **now**, separately from the website cutover:
-  1. In the dev, then prod, backend `.env`: set `EMAIL_FROM_ADDRESS=<sender>@wetpaws.dev`. If the wetpaws.dev key is restricted to that domain, also set `RESEND_API_KEY` to it. Change both at the same time, because a key restricted to one domain rejects sending from the other.
-  2. Restart the backend and send a test email (Settings → Notifications → test / verification code). Check it isn't flagged as spam.
-  3. Once prod sends from wetpaws.dev, the old thefreezer.xyz key and domain can be removed from Resend.
-- [ ] Merge this prep change and deploy it. It does nothing until the env vars are set.
-- [ ] Check that `https://freezer.wetpaws.dev` loads (with the old config, passkeys won't work there yet; that's expected).
+## Steps
 
-### Cutover
-- [ ] Dev first. In the dev backend `.env` set `APP_DOMAIN=freezer.wetpaws.dev`. Remove any existing `RP_ID` line (it defaults to `APP_DOMAIN`, which is right for both dev and prod), then restart. Test password login, passkey registration and login, QR label generation and phone-camera scanning.
-- [ ] Prod: the same `.env` change (set `APP_DOMAIN`, remove any `RP_ID`), then restart Gunicorn.
-- [ ] Redirect old to new: in the proxy, send `thefreezer.xyz/*` → `https://freezer.wetpaws.dev/*` and `dev.thefreezer.xyz/*` → `https://dev.freezer.wetpaws.dev/*` with a 301, keeping the path so old QR links like `/item/ABC123` still land correctly.
-- [ ] Tell users:
-  - log in again (tokens are stored per origin)
-  - re-add their passkey under Settings
-  - reinstall the home-screen app (PWA) from the new URL, because the old icon points at the old domain.
+1. [ ] **DNS (Cloudflare → wetpaws.dev → DNS):** add an A record `freezer` and an A record `dfreezer`, both pointing at the server's IP and both Proxied, matching the other subdomains.
+2. [ ] **HTTPS + nginx:** give nginx a certificate for the new names, the same way the other wetpaws.dev sites have theirs. Add `freezer.wetpaws.dev` and `dfreezer.wetpaws.dev` as server names, routed the same way as the existing prod and dev sites. Reload nginx and check that both new URLs load the app. Passkeys won't work on them yet, which is expected.
+3. [ ] **Switch dev:** deploy the `dev` branch, set the dev `.env` values from the table, and restart the dev backend. Test password login, adding and using a passkey, QR code generation, and scanning a new QR code with the phone camera.
+4. [ ] **Ship the code to prod:** merge `dev` into `main` and deploy.
+5. [ ] **Switch prod:** set the prod `.env` values from the table, restart Gunicorn, and run the same tests.
+6. [ ] **Redirect:** in nginx, send `thefreezer.xyz/*` → `https://freezer.wetpaws.dev/*` and `dev.thefreezer.xyz/*` → `https://dfreezer.wetpaws.dev/*` with a 301, keeping the path.
+7. [ ] **Tell users:**
+   - log in again on the new address (logins are stored per domain)
+   - add a new passkey in Settings
+   - reinstall the home-screen app from the new URL.
+8. [ ] **Email (any time):** set `EMAIL_FROM_ADDRESS` and `RESEND_API_KEY` from the table, restart, and send a test email. Then remove the `thefreezer.xyz` domain and key from Resend.
 
-### After cutover
+## After 2026-12-31
+- [ ] Remove the `thefreezer.xyz` server blocks from nginx.
+- [ ] Remove the legacy entries in `frontend/src/utils/hosts.js` and `frontend/vite.config.js`. Change `DEFAULT_APP_DOMAIN` in `backend/utils/domains.py` to `freezer.wetpaws.dev`.
+- [ ] Delete the passkey rows registered under the old RP ID.
 - [ ] Update any external links (README, GitHub repo homepage, bookmarks).
-- [ ] Watch error logs for passkey `origin`/`rp_id` verification failures.
-- [ ] After 2026-12-31, or after the redirect year if you renew, remove the legacy entries in `frontend/src/utils/hosts.js` and `frontend/vite.config.js`, change `DEFAULT_APP_DOMAIN` in `backend/utils/domains.py` to `freezer.wetpaws.dev`, and delete the passkey rows registered under the old RP ID.
