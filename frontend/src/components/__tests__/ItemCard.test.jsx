@@ -49,7 +49,7 @@ describe('ItemCard', () => {
   it('calculates days in freezer', () => {
     render(<ItemCard item={mockItem} onEdit={mockOnEdit} onStatusChange={mockOnStatusChange} />);
     expect(screen.getByText('Days in freezer:')).toBeInTheDocument();
-    expect(screen.getByText(/0 days/)).toBeInTheDocument();
+    expect(screen.getByText('0 days')).toBeInTheDocument();
   });
 
   it('shows expiration warning for items expiring soon', () => {
@@ -94,7 +94,7 @@ describe('ItemCard', () => {
 
     render(<ItemCard item={futureItem} onEdit={mockOnEdit} onStatusChange={mockOnStatusChange} />);
     expect(screen.getByText('Days in freezer:')).toBeInTheDocument();
-    expect(screen.getByText(/0 days/)).toBeInTheDocument();
+    expect(screen.getByText('0 days')).toBeInTheDocument();
   });
 
   it('displays notes when present', () => {
