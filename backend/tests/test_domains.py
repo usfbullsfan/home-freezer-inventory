@@ -57,3 +57,13 @@ def test_origin_mapping_new_domain(monkeypatch):
     assert domains.origin_for_request_url('https://freezer.wetpaws.dev') == 'https://freezer.wetpaws.dev'
     # Old domain is no longer the expected origin once switched
     assert domains.origin_for_request_url('https://thefreezer.xyz') == 'https://freezer.wetpaws.dev'
+
+
+def test_wetpaws_layout(monkeypatch):
+    """Planned production layout: dev is a sibling host with its own RP ID."""
+    monkeypatch.setenv('APP_DOMAIN', 'freezer.wetpaws.dev')
+    monkeypatch.setenv('APP_DEV_DOMAIN', 'dfreezer.wetpaws.dev')
+    assert domains.origin_for_request_url('https://dfreezer.wetpaws.dev/login') == 'https://dfreezer.wetpaws.dev'
+    assert domains.origin_for_request_url('https://freezer.wetpaws.dev/') == 'https://freezer.wetpaws.dev'
+    monkeypatch.setenv('FLASK_ENV', 'development')
+    assert domains.get_base_url() == 'https://dfreezer.wetpaws.dev'
