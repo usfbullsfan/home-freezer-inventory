@@ -188,6 +188,7 @@ ExecStart=$APP_DIR/backend/venv/bin/gunicorn "app:create_app()" \\
     --workers 1 \\
     --worker-class gthread \\
     --threads $BACKEND_THREADS \\
+    --no-control-socket \\
     --access-logfile - \\
     --error-logfile -
 Restart=always
