@@ -67,6 +67,10 @@ jobs:
             EMAIL_FROM_ADDRESS=${EMAIL_FROM_ADDRESS}
             EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-Freezer Inventory}
             CRON_SECRET=${CRON_SECRET}
+            # Public domain (see docs/domain-migration.md). Not secrets.
+            APP_DOMAIN=freezer.wetpaws.dev
+            APP_DEV_DOMAIN=dfreezer.wetpaws.dev
+            RP_ID=freezer.wetpaws.dev
             EOF
             echo "✓ Environment variables configured"
 

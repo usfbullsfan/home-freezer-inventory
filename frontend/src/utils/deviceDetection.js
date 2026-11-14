@@ -2,6 +2,8 @@
  * Device detection utilities for mobile-first design
  */
 
+import { isDevHostname } from './hosts';
+
 /**
  * Check if the current device is mobile based on screen width and user agent
  * @returns {boolean} True if mobile device
@@ -50,8 +52,7 @@ export const isDesktopSiteRequested = () => {
  * @returns {boolean} True if dev environment
  */
 export const isDevEnvironment = () => {
-  const hostname = window.location.hostname;
-  return hostname === 'dev.thefreezer.xyz' || hostname === 'localhost' || hostname === '127.0.0.1';
+  return isDevHostname();
 };
 
 /**

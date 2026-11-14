@@ -16,6 +16,8 @@ from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas as pdf_canvas
 from reportlab.lib.utils import ImageReader
 
+from utils.domains import get_base_url
+
 items_bp = Blueprint('items', __name__)
 
 
@@ -37,20 +39,6 @@ def _canonical_name(name: str) -> str:
         .first()
     )
     return existing[0] if existing else name
-
-
-def get_base_url():
-    """Get the base URL for the application based on environment.
-
-    Returns the appropriate domain for QR codes and links.
-    """
-    # Check if we're in development mode
-    is_dev = os.environ.get('FLASK_ENV') == 'development'
-
-    if is_dev:
-        return 'https://dev.thefreezer.xyz'
-    else:
-        return 'https://thefreezer.xyz'
 
 
 def get_category_stock_image(category_name):
