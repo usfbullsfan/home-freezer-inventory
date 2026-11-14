@@ -33,9 +33,12 @@ Both new hosts sit one level under `wetpaws.dev`, so Cloudflare's free Universal
 
 1. [ ] **DNS (Cloudflare → wetpaws.dev → DNS):** add an A record `freezer` and an A record `dfreezer`, both pointing at the server's IP and both Proxied, matching the other subdomains.
 2. [ ] **HTTPS + nginx:** give nginx a certificate for the new names, the same way the other wetpaws.dev sites have theirs. Add `freezer.wetpaws.dev` and `dfreezer.wetpaws.dev` as server names, routed the same way as the existing prod and dev sites. Reload nginx and check that both new URLs load the app. Passkeys won't work on them yet, which is expected.
-3. [ ] **Switch dev:** deploy the `dev` branch, set the dev `.env` values from the table, and restart the dev backend. While still logged in on `dev.thefreezer.xyz`, regenerate your own activation code, then activate it on `dfreezer.wetpaws.dev` and add a passkey. Test passkey login, QR code generation, and scanning a new QR code with the phone camera.
+3. [ ] **Switch dev:** while logged in on `dev.thefreezer.xyz`, regenerate your own activation code and note it, but don't enter it yet. Then set the dev `.env` values from the table and run `scripts/deploy-gcp.sh` from `~/freezer-inventory-dev`. Finally, activate the code on `dfreezer.wetpaws.dev` and add a passkey. Test passkey login, QR code generation, and scanning a new QR code with the phone camera.
 4. [ ] **Ship the code to prod:** merge `dev` into `main` and deploy.
-5. [ ] **Switch prod:** set the prod `.env` values from the table and restart Gunicorn. Then, **before turning on the redirect** and while your admin login on `thefreezer.xyz` is still valid, regenerate activation codes for every user in User Management, yours last. Activate yours on `freezer.wetpaws.dev`, add a passkey, and check you can log in. Then send the other users their codes.
+5. [ ] **Switch prod.** Restarting the backend logs everyone out, so create the codes first:
+   1. While logged in on `thefreezer.xyz`, regenerate activation codes for every user in User Management, yours last, and note them. Don't enter them yet. This deletes the old passkeys, so nobody can log in until step 3.
+   2. Set the prod `.env` values from the table and run `scripts/deploy-gcp.sh` from `~/freezer-inventory`.
+   3. Activate your code on `freezer.wetpaws.dev`, add a passkey and check you can log in. Then send the other users their codes.
 6. [ ] **Redirect:** in nginx, send `thefreezer.xyz/*` → `https://freezer.wetpaws.dev/*` and `dev.thefreezer.xyz/*` → `https://dfreezer.wetpaws.dev/*` with a 301, keeping the path.
 7. [ ] **Tell users:**
    - go to the new address and activate with the code you sent them (this creates their new passkey)
