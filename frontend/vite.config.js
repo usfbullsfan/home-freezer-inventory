@@ -15,11 +15,8 @@ export default defineConfig(({ mode }) => {
       allowedHosts: [
         'localhost',
         '127.0.0.1',
-        'thefreezer.xyz',
-        'dev.thefreezer.xyz',
-        '.thefreezer.xyz',  // Legacy domain + subdomains (expires 2026-12-31)
-        'freezer.wetpaws.dev',  // New prod domain
-        'dfreezer.wetpaws.dev'  // New dev domain
+        'freezer.wetpaws.dev',  // Prod
+        'dfreezer.wetpaws.dev'  // Dev
       ],
       proxy: {
         '/api': {
@@ -34,11 +31,8 @@ export default defineConfig(({ mode }) => {
       allowedHosts: [
         'localhost',
         '127.0.0.1',
-        'thefreezer.xyz',
-        'dev.thefreezer.xyz',
-        '.thefreezer.xyz',  // Legacy domain + subdomains (expires 2026-12-31)
-        'freezer.wetpaws.dev',  // New prod domain
-        'dfreezer.wetpaws.dev'  // New dev domain
+        'freezer.wetpaws.dev',  // Prod
+        'dfreezer.wetpaws.dev'  // Dev
       ]
     }
   }
