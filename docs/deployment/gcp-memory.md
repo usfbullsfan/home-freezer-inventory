@@ -266,3 +266,13 @@ sudo rm /etc/systemd/system/freezer-backend-dev.service.d/low-memory.conf && sud
 - upload the build to `frontend/.dist-upload/` and swap it into `frontend/dist` with a rename just before the restart. nginx keeps serving the old build during the deploy, instead of a missing or half-copied one,
 - restart gunicorn (logging everyone out), and restart the Node frontend only if it is still enabled,
 - check the backend on `127.0.0.1`, then ask the local nginx for `/` and `/api/health`. If the origin only accepts Cloudflare (authenticated origin pulls), that local check can't pass; it is reported as a warning and doesn't fail the deploy.
+
+## Troubleshooting: backend hangs on restart
+
+Symptom: `systemctl restart freezer-backend` takes a long time and `/api/health` doesn't answer. The journal shows `Control socket listening at …/gunicorn.ctl`, but no `Booting worker with pid` line after it, and both gunicorn processes are in `futex_do_wait`:
+
+```bash
+for p in $(pgrep -f "backend/venv/bin/gunicorn"); do echo "$p $(cat /proc/$p/wchan)"; done
+```
+
+Cause: gunicorn 25 runs its control socket in a background thread of the master process, then forks the worker. If that thread holds the logging lock at the moment of the fork, the worker inherits a locked lock and hangs before it boots. It's a timing race, so it happens only sometimes. The app doesn't use the control socket, so `gcp-low-memory-setup.sh` and `server-setup-gcp.sh` pass `--no-control-socket`. To get out of a hang, run `sudo systemctl restart freezer-backend` again.
