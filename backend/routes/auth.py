@@ -2,6 +2,17 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from models import db, User
 from datetime import timedelta
+from utils.activation_codes import (
+    generate_activation_code,
+    normalize_activation_code,
+    has_ambiguous_chars,
+    codes_match,
+)
+
+ACTIVATION_CODE_NOT_RECOGNISED = (
+    "That code wasn't recognised. Check for typos, "
+    "or ask your administrator for a new one."
+)
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -11,7 +22,6 @@ def register():
     """Register a new user (admin only) - generates activation code for passkey enrollment"""
     from flask_jwt_extended import get_jwt
     import secrets
-    import string
 
     claims = get_jwt()
 
@@ -29,8 +39,8 @@ def register():
     if User.query.filter_by(username=username_lower).first():
         return jsonify({'error': 'Username already exists'}), 400
 
-    # Generate activation code (8 characters: uppercase letters + digits)
-    activation_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+    # Generate activation code (8 characters, no look-alike characters)
+    activation_code = generate_activation_code()
 
     user = User(
         username=username_lower,
@@ -51,6 +61,27 @@ def register():
     }), 201
 
 
+def _find_user_for_activation_code(code):
+    """Find the pending user for a normalized activation code.
+
+    Tries an exact match first. If that misses and the code contains a
+    look-alike character (0/O, 1/I/L), falls back to a look-alike-tolerant
+    comparison against pending codes, which covers codes issued with the old
+    alphabet and users who read O as 0 (or vice versa). Ambiguous fallbacks
+    (more than one candidate) are treated as no match.
+    """
+    user = User.query.filter_by(activation_code=code, activated=False).first()
+    if user or not has_ambiguous_chars(code):
+        return user
+
+    pending = User.query.filter(
+        User.activated.is_(False),
+        User.activation_code.isnot(None),
+    ).all()
+    matches = [u for u in pending if codes_match(code, u.activation_code)]
+    return matches[0] if len(matches) == 1 else None
+
+
 @auth_bp.route('/activate', methods=['POST'])
 def activate():
     """Activate account with one-time activation code and enroll passkey"""
@@ -59,11 +90,16 @@ def activate():
     if not data or not data.get('activation_code'):
         return jsonify({'error': 'Activation code required'}), 400
 
-    # Find user with this activation code
-    user = User.query.filter_by(activation_code=data['activation_code'], activated=False).first()
+    code = normalize_activation_code(data['activation_code'])
+    if not code:
+        return jsonify({'error': ACTIVATION_CODE_NOT_RECOGNISED}), 401
+
+    user = _find_user_for_activation_code(code)
 
     if not user:
-        return jsonify({'error': 'Invalid or already used activation code'}), 401
+        # Same message whether the code never existed or was already used,
+        # so the response doesn't reveal which codes are valid.
+        return jsonify({'error': ACTIVATION_CODE_NOT_RECOGNISED}), 401
 
     # Mark as activated and clear the activation code
     user.activated = True
@@ -289,8 +325,6 @@ def reset_user_password(user_id):
 def regenerate_activation_code(user_id):
     """Regenerate activation code for a user (admin only)"""
     from flask_jwt_extended import get_jwt
-    import secrets
-    import string
     import sqlite3
     from flask import current_app
 
@@ -305,7 +339,7 @@ def regenerate_activation_code(user_id):
 
     try:
         # Generate new activation code
-        activation_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+        activation_code = generate_activation_code()
 
         # Delete any existing passkeys for this user (they'll need to re-register)
         db_uri = current_app.config['SQLALCHEMY_DATABASE_URI']
