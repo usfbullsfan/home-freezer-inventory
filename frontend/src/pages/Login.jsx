@@ -427,8 +427,12 @@ function Login({ setUser }) {
                 required
                 disabled={loading}
                 style={{ fontFamily: 'monospace', letterSpacing: '0.1em' }}
-                placeholder="XXXXXXXX"
-                maxLength={8}
+                placeholder="XXXX-XXXX"
+                maxLength={12}
+                autoComplete="one-time-code"
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
               />
             </div>
 

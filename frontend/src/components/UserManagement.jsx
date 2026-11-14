@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { authAPI } from '../services/api';
 
+// Show 8-character activation codes as ABCD-EFGH. The backend accepts the
+// code with or without the hyphen.
+const formatActivationCode = (code) =>
+  code && code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code;
+
 function UserManagement({ currentUser }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -442,14 +447,14 @@ function UserManagement({ currentUser }) {
                   fontWeight: 'bold',
                   color: '#2c3e50'
                 }}>
-                  {activationCode}
+                  {formatActivationCode(activationCode)}
                 </div>
               </div>
 
               <button
                 className="btn btn-secondary"
                 onClick={() => {
-                  navigator.clipboard.writeText(activationCode);
+                  navigator.clipboard.writeText(formatActivationCode(activationCode));
                   setSuccess('Activation code copied to clipboard!');
                 }}
                 style={{ width: '100%', marginBottom: '0.5rem' }}
@@ -503,14 +508,14 @@ function UserManagement({ currentUser }) {
                   fontWeight: 'bold',
                   color: '#2c3e50'
                 }}>
-                  {activationCode}
+                  {formatActivationCode(activationCode)}
                 </div>
               </div>
 
               <button
                 className="btn btn-secondary"
                 onClick={() => {
-                  navigator.clipboard.writeText(activationCode);
+                  navigator.clipboard.writeText(formatActivationCode(activationCode));
                   setSuccess('Activation code copied to clipboard!');
                 }}
                 style={{ width: '100%', marginBottom: '0.5rem' }}
