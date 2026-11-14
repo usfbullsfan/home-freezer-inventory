@@ -27,17 +27,16 @@ echo ""
 if [ "$ENVIRONMENT" = "prod" ]; then
     APP_DIR="/home/$USER/freezer-inventory"
     BACKEND_PORT=5001
-    FRONTEND_PORT=3000
     BACKEND_SERVICE="freezer-backend"
-    FRONTEND_SERVICE="freezer-frontend"
     GIT_BRANCH="main"
+    # Threads in the single gunicorn worker. See docs/deployment/gcp-memory.md.
+    BACKEND_THREADS=4
 else
     APP_DIR="/home/$USER/freezer-inventory-dev"
     BACKEND_PORT=5002
-    FRONTEND_PORT=3001
     BACKEND_SERVICE="freezer-backend-dev"
-    FRONTEND_SERVICE="freezer-frontend-dev"
     GIT_BRANCH="dev"
+    BACKEND_THREADS=2
 fi
 
 echo -e "${GREEN}Step 1: Updating system packages...${NC}"
@@ -53,6 +52,7 @@ sudo apt-get install -y \
     python3-venv \
     nodejs \
     npm \
+    nginx \
     git \
     curl \
     ufw \
@@ -72,12 +72,10 @@ sudo ufw default allow outgoing
 # Allow SSH (important - do this first!)
 sudo ufw allow 22/tcp
 
-# Allow HTTP
+# Allow HTTP/HTTPS (nginx). gunicorn listens on 127.0.0.1 only, so its
+# port is not opened.
 sudo ufw allow 80/tcp
-
-# Allow application ports
-sudo ufw allow $BACKEND_PORT/tcp
-sudo ufw allow $FRONTEND_PORT/tcp
+sudo ufw allow 443/tcp
 
 # Enable UFW
 sudo ufw --force enable
@@ -160,11 +158,18 @@ mkdir -p instance
 echo -e "${GREEN}✓ Backend setup complete${NC}"
 echo ""
 
-echo -e "${GREEN}Step 9: Setting up Node.js frontend...${NC}"
+echo -e "${GREEN}Step 9: Building the frontend...${NC}"
+# Only needed for the very first install: after that, the deploy workflows
+# build on the GitHub runner and upload frontend/dist. Nothing on the server
+# runs Node once the build exists.
 cd "$APP_DIR/frontend"
 npm install
 npm run build
-echo -e "${GREEN}✓ Frontend setup complete${NC}"
+# nginx (www-data) reads the build straight from the checkout, so it must be
+# able to traverse the home directory (o+x lets it pass through, not list it).
+chmod o+x "/home/$USER" "$APP_DIR" "$APP_DIR/frontend"
+chmod -R a+rX "$APP_DIR/frontend/dist"
+echo -e "${GREEN}✓ Frontend built${NC}"
 echo ""
 
 echo -e "${GREEN}Step 10: Creating systemd service for backend...${NC}"
@@ -179,8 +184,10 @@ User=$USER
 WorkingDirectory=$APP_DIR/backend
 Environment="PATH=$APP_DIR/backend/venv/bin"
 ExecStart=$APP_DIR/backend/venv/bin/gunicorn "app:create_app()" \\
-    --bind 0.0.0.0:$BACKEND_PORT \\
-    --workers 2 \\
+    --bind 127.0.0.1:$BACKEND_PORT \\
+    --workers 1 \\
+    --worker-class gthread \\
+    --threads $BACKEND_THREADS \\
     --access-logfile - \\
     --error-logfile -
 Restart=always
@@ -196,49 +203,36 @@ sudo systemctl start $BACKEND_SERVICE
 echo -e "${GREEN}✓ Backend service created and started${NC}"
 echo ""
 
-echo -e "${GREEN}Step 11: Creating systemd service for frontend...${NC}"
-cat << EOF | sudo tee /etc/systemd/system/$FRONTEND_SERVICE.service > /dev/null
-[Unit]
-Description=Freezer Inventory Frontend ($ENVIRONMENT) - GCP
-After=network.target $BACKEND_SERVICE.service
-
-[Service]
-Type=simple
-User=$USER
-WorkingDirectory=$APP_DIR/frontend
-Environment="PATH=/usr/bin:/usr/local/bin"
-Environment="NODE_ENV=production"
-ExecStart=/usr/bin/npm run preview -- --port $FRONTEND_PORT --host 0.0.0.0
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl enable $FRONTEND_SERVICE
-sudo systemctl start $FRONTEND_SERVICE
-echo -e "${GREEN}✓ Frontend service created and started${NC}"
+echo -e "${GREEN}Step 11: Installing nginx snippet for the frontend...${NC}"
+# nginx serves frontend/dist and proxies /api to gunicorn; there is no Node
+# frontend service. The site's server block (server_name, TLS) is set up by
+# hand and includes this snippet; see docs/deployment/gcp-memory.md.
+sudo mkdir -p /etc/nginx/snippets
+# The snippet's paths assume the michaelt452 user; adjust them to $USER.
+sed "s|/home/michaelt452/|/home/$USER/|" "$APP_DIR/deployment/nginx/freezer-$ENVIRONMENT.conf" \
+    | sudo tee "/etc/nginx/snippets/freezer-$ENVIRONMENT.conf" > /dev/null
+echo -e "${GREEN}✓ Installed /etc/nginx/snippets/freezer-$ENVIRONMENT.conf${NC}"
+echo -e "${YELLOW}  Add 'include snippets/freezer-$ENVIRONMENT.conf;' to the site's server block,${NC}"
+echo -e "${YELLOW}  then run: sudo nginx -t && sudo systemctl reload nginx${NC}"
 echo ""
 
 echo -e "${GREEN}Step 12: Verifying services...${NC}"
 sleep 5
 
 # Check backend health
-if curl -f http://localhost:$BACKEND_PORT/api/health > /dev/null 2>&1; then
+if curl -f http://127.0.0.1:$BACKEND_PORT/api/health > /dev/null 2>&1; then
     echo -e "${GREEN}✓ Backend service is healthy (port $BACKEND_PORT)${NC}"
 else
     echo -e "${RED}✗ Backend service health check failed${NC}"
     echo "Check logs with: sudo journalctl -u $BACKEND_SERVICE -n 50"
 fi
 
-# Check frontend
-if curl -f http://localhost:$FRONTEND_PORT > /dev/null 2>&1; then
-    echo -e "${GREEN}✓ Frontend service is healthy (port $FRONTEND_PORT)${NC}"
+# Check frontend build (served by nginx once the site includes the snippet)
+if sudo -u www-data test -r "$APP_DIR/frontend/dist/index.html"; then
+    echo -e "${GREEN}✓ Frontend build is readable by nginx${NC}"
 else
-    echo -e "${RED}✗ Frontend service health check failed${NC}"
-    echo "Check logs with: sudo journalctl -u $FRONTEND_SERVICE -n 50"
+    echo -e "${RED}✗ nginx (www-data) cannot read $APP_DIR/frontend/dist/index.html${NC}"
+    echo "Check permissions with: namei -l $APP_DIR/frontend/dist/index.html"
 fi
 echo ""
 
@@ -252,20 +246,20 @@ echo ""
 echo "Environment: $ENVIRONMENT"
 echo "Application directory: $APP_DIR"
 echo "Backend service: $BACKEND_SERVICE (port $BACKEND_PORT)"
-echo "Frontend service: $FRONTEND_SERVICE (port $FRONTEND_PORT)"
+echo "Frontend: static files in $APP_DIR/frontend/dist, served by nginx"
 echo ""
 if [ "$EXTERNAL_IP" != "unknown" ]; then
-    echo -e "${GREEN}🌐 Access your application at:${NC}"
-    echo "   http://$EXTERNAL_IP:$FRONTEND_PORT"
+    echo -e "${GREEN}🌐 Once the nginx site is set up, the app is served by nginx on${NC}"
+    echo "   http(s)://<your domain>  (server IP: $EXTERNAL_IP)"
     echo ""
 fi
 echo "📋 Useful commands:"
 echo "   Check backend status:  sudo systemctl status $BACKEND_SERVICE"
-echo "   Check frontend status: sudo systemctl status $FRONTEND_SERVICE"
+echo "   Check nginx status:    sudo systemctl status nginx"
 echo "   View backend logs:     sudo journalctl -u $BACKEND_SERVICE -f"
-echo "   View frontend logs:    sudo journalctl -u $FRONTEND_SERVICE -f"
+echo "   View nginx errors:     sudo tail -f /var/log/nginx/error.log"
 echo "   Restart backend:       sudo systemctl restart $BACKEND_SERVICE"
-echo "   Restart frontend:      sudo systemctl restart $FRONTEND_SERVICE"
+echo "   Reload nginx:          sudo nginx -t && sudo systemctl reload nginx"
 echo ""
 echo "🔒 Security:"
 echo "   Firewall (UFW):        sudo ufw status"

@@ -98,7 +98,12 @@ jobs:
             # If graceful stop takes >30s, force-kill via systemctl kill.
             echo "Stopping services..."
             sudo timeout 30 systemctl stop freezer-backend 2>/dev/null || sudo systemctl kill freezer-backend 2>/dev/null || true
-            sudo timeout 30 systemctl stop freezer-frontend 2>/dev/null || sudo systemctl kill freezer-frontend 2>/dev/null || true
+            # nginx now serves frontend/dist directly (docs/deployment/gcp-memory.md).
+            # The Node "vite preview" service is only touched on servers that
+            # have not been switched over yet, where it is still enabled.
+            if systemctl is-enabled --quiet freezer-frontend 2>/dev/null; then
+              sudo timeout 30 systemctl stop freezer-frontend 2>/dev/null || sudo systemctl kill freezer-frontend 2>/dev/null || true
+            fi
             # Remove stale gunicorn control socket so the new process can create it cleanly
             sudo rm -f backend/gunicorn.ctl 2>/dev/null || true
             # Remove SQLite WAL/SHM lock files left by a killed gunicorn worker.
@@ -115,21 +120,6 @@ jobs:
             pip install -r requirements.txt --quiet
             cd ..
             echo "✓ Backend dependencies updated"
-
-            # Update frontend dependencies
-            echo "Updating frontend dependencies..."
-            cd frontend
-            npm install --omit=dev
-            # Create vite cache dirs with open permissions so the service user
-            # (michaelt452) can write its own cache inside them on startup.
-            mkdir -p node_modules/.vite node_modules/.vite-temp
-            chmod 777 node_modules/.vite node_modules/.vite-temp
-            # Remove manifest.json so generate-version.js (running as michaelt452)
-            # can recreate it; chmod o+w lets it write new files into public/.
-            rm -f public/manifest.json 2>/dev/null || true
-            chmod o+w public
-            cd ..
-            echo "✓ Frontend dependencies updated"
 
             # Run database migrations
             echo "Running database migrations..."
@@ -152,20 +142,11 @@ jobs:
             cd ..
             echo "✓ Database migrations complete"
 
-            # Clear stale dist so the SCP upload replaces it cleanly.
-            # Fix ownership of any root-owned files from prior deployments, then
-            # remove the directory. Both are best-effort; if they fail (e.g. no
-            # passwordless sudo configured yet), SCP will still overwrite same-named
-            # files and new hashed filenames will be added alongside old ones.
-            # Run `sudo chown -R michaelt452:michaelt452 frontend/dist` on the server
-            # once to permanently resolve ownership and enable clean removal each deploy.
-            echo "Clearing old frontend dist..."
-            sudo chown -R "$(whoami)":"$(whoami)" frontend/dist 2>/dev/null || true
-            sudo chown -R "$(whoami)":"$(whoami)" frontend/public 2>/dev/null || true
-            # Make public writable by any service user so generate-version.js can write version.json
-            chmod -R a+w frontend/public 2>/dev/null || true
-            rm -rf frontend/dist 2>/dev/null || true
-            mkdir -p frontend/dist
+            # Upload the new build to a staging dir. nginx keeps serving the
+            # current frontend/dist until it is swapped in just before the restart.
+            echo "Preparing frontend upload dir..."
+            rm -rf frontend/.dist-upload 2>/dev/null || true
+            mkdir -p frontend/.dist-upload
             echo "✓ Ready for dist upload"
 
             # Delete boot_id file to invalidate all sessions on deployment
@@ -182,7 +163,7 @@ jobs:
           username: ${{ secrets.GCP_USERNAME }}
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
           source: "frontend/dist"
-          target: "/home/michaelt452/freezer-inventory/frontend"
+          target: "/home/michaelt452/freezer-inventory/frontend/.dist-upload"
           strip_components: 1
           overwrite: true
 
@@ -203,14 +184,34 @@ jobs:
             # a WAL file is present it can block indefinitely in db.create_all().
             sudo rm -f /home/michaelt452/freezer-inventory/backend/instance/*.db-wal \
                        /home/michaelt452/freezer-inventory/backend/instance/*.db-shm 2>/dev/null || true
+
+            # Swap in the new frontend build. Renaming is near-instant, so nginx
+            # never serves a half-copied build. Old copies are renamed rather than
+            # deleted in place, so a leftover file we can't delete never blocks this.
+            cd /home/michaelt452/freezer-inventory/frontend
+            if [ ! -s .dist-upload/dist/index.html ]; then
+              echo "✗ Uploaded frontend build is missing index.html"
+              exit 1
+            fi
+            if [ -d dist ]; then mv dist "dist.old.$(date +%s)"; fi
+            mv .dist-upload/dist dist
+            # nginx (www-data) reads these files directly.
+            chmod -R a+rX dist 2>/dev/null || true
+            rm -rf .dist-upload dist.old.* 2>/dev/null || true
+            cd ..
+            echo "✓ Frontend build swapped in"
+
             sudo systemctl restart freezer-backend
-            sudo systemctl restart freezer-frontend
+            if systemctl is-enabled --quiet freezer-frontend 2>/dev/null; then
+              echo "⚠️  freezer-frontend (Node) is still enabled; restarting it. See docs/deployment/gcp-memory.md to retire it."
+              sudo systemctl restart freezer-frontend
+            fi
             echo "✓ Services restarted"
 
             # Backend health check (retry up to 120 seconds)
             echo "Running health check..."
             for i in {1..24}; do
-              if curl -f --max-time 5 http://localhost:5001/api/health > /dev/null 2>&1; then
+              if curl -f --max-time 5 http://127.0.0.1:5001/api/health > /dev/null 2>&1; then
                 echo "✓ Backend health check passed"
                 break
               fi
@@ -225,22 +226,38 @@ jobs:
               sleep 5
             done
 
-            # Frontend health check (retry up to 60 seconds)
-            for i in {1..12}; do
-              if curl -f --max-time 5 http://localhost:3000 > /dev/null 2>&1; then
-                echo "✓ Frontend health check passed"
-                break
+            # Frontend health check
+            if systemctl is-enabled --quiet freezer-frontend 2>/dev/null; then
+              # Not switched over yet: Node "vite preview" still serves :3000.
+              for i in {1..12}; do
+                if curl -f --max-time 5 http://localhost:3000 > /dev/null 2>&1; then
+                  echo "✓ Frontend (Node) health check passed"
+                  break
+                fi
+                if [ $i -eq 12 ]; then
+                  echo "✗ Frontend health check failed after 60s!"
+                  sudo systemctl status freezer-frontend --no-pager || true
+                  journalctl -u freezer-frontend -n 50 --no-pager 2>/dev/null || sudo journalctl -u freezer-frontend -n 50 --no-pager 2>/dev/null || true
+                  exit 1
+                fi
+                echo "  Waiting for frontend... (attempt $i/12)"
+                sleep 5
+              done
+            else
+              # nginx serves frontend/dist. Ask nginx for the page on this host
+              # (TLS name check skipped: the certificate is for the public name).
+              code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 5 \
+                       --resolve freezer.wetpaws.dev:443:127.0.0.1 https://freezer.wetpaws.dev/ || true)
+              api=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 5 \
+                       --resolve freezer.wetpaws.dev:443:127.0.0.1 https://freezer.wetpaws.dev/api/health || true)
+              if [ "$code" = "200" ] && [ "$api" = "200" ]; then
+                echo "✓ nginx serves the frontend and /api"
+              else
+                # Not fatal: the origin may require Cloudflare client certificates,
+                # which this local check can't present. The build is in place.
+                echo "⚠️  Local nginx check returned page=$code api=$api; check https://freezer.wetpaws.dev/ by hand"
               fi
-              if [ $i -eq 12 ]; then
-                echo "✗ Frontend health check failed after 60s!"
-                sudo systemctl status freezer-frontend --no-pager || true
-                echo "--- Recent logs ---"
-                journalctl -u freezer-frontend -n 50 --no-pager 2>/dev/null || sudo journalctl -u freezer-frontend -n 50 --no-pager 2>/dev/null || true
-                exit 1
-              fi
-              echo "  Waiting for frontend... (attempt $i/12)"
-              sleep 5
-            done
+            fi
 
             # Keep only last 10 backups
             cd /home/michaelt452/freezer-inventory/backups
