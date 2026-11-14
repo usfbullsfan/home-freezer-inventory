@@ -15,13 +15,11 @@
 - Frontend dev detection (`src/utils/hosts.js`) and the Vite `allowedHosts` accept both the old and new domains.
 - The in-app QR scanner matches only the `/item/<code>` path, so it reads labels printed under either domain.
 
-## Decisions needed before cutover
+## Decisions
 
 1. **Dev hostname: decided, `dev.freezer.wetpaws.dev`.** It's a subdomain of the prod host, so dev and prod share one passkey RP ID (`freezer.wetpaws.dev`), as they do today. Prod passkeys copied to dev by `sync_prod_to_dev_db.sh` keep working on dev.
-2. **Printed QR labels.** Every label printed so far encodes `https://thefreezer.xyz/item/...`. The in-app scanner keeps working with them. A phone's own camera app will **stop opening them** once the domain lapses. Options:
-   - Renew `thefreezer.xyz` for one more year and keep it as a redirect only, while labels get reprinted as items are used up. This is cheap and the least disruptive.
-   - Let it lapse and reprint every label still in the freezer.
-3. **Passkeys.** A passkey is cryptographically bound to its RP ID, and existing ones belong to `thefreezer.xyz`. **Every user will have to register a new passkey on the new domain**, logging in with their password first. A WebAuthn "related origins" file could keep old passkeys working for a while, but only as long as `thefreezer.xyz` is still served. That isn't worth doing unless you renew the domain.
+2. **Printed QR labels: none printed, so `thefreezer.xyz` can simply expire.** QR codes printed from now on use whatever `APP_DOMAIN` is set to, so print labels only after the cutover.
+3. **Passkeys (no decision needed, just a heads-up).** A passkey is cryptographically bound to its RP ID, and existing ones belong to `thefreezer.xyz`. **Every user will have to register a new passkey on the new domain**, logging in with their password first. A WebAuthn "related origins" file could keep old passkeys working for a while, but only as long as `thefreezer.xyz` is still served. That isn't worth doing, since the domain won't be renewed.
 
 ## Cutover runbook
 
