@@ -28,6 +28,9 @@ yarn-error.log*
 
 # Build
 frontend/dist/
+# Deploy staging dirs on the server (see deploy-*-gcp.yml)
+frontend/.dist-upload/
+frontend/dist.old.*
 frontend/build/
 frontend/public/version.json
 

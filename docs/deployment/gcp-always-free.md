@@ -546,7 +546,9 @@ sudo journalctl --vacuum-time=7d
 
 **Solution for Option B (both on 1 instance)**:
 
-The e2-micro only has 1 GB RAM. If running both prod and dev:
+The e2-micro only has 1 GB RAM. If running both prod and dev, see
+[gcp-memory.md](gcp-memory.md): nginx serves the frontend directly (no Node
+services) and gunicorn runs a single threaded worker. Older notes:
 1. **Reduce gunicorn workers** in systemd service files:
    ```bash
    sudo nano /etc/systemd/system/freezer-backend.service
