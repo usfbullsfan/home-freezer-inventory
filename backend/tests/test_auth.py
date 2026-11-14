@@ -12,7 +12,7 @@ def test_login_success(client):
     })
 
     assert response.status_code == 200
-    assert 'access_token' in response.json
+    assert 'token' in response.json
     assert 'user' in response.json
     assert response.json['user']['username'] == 'admin'
     assert response.json['user']['role'] == 'admin'

@@ -83,7 +83,7 @@ def admin_token(client):
         'username': 'admin',
         'password': 'admin123'
     })
-    return response.json['access_token']
+    return response.json['token']
 
 
 @pytest.fixture
@@ -93,7 +93,7 @@ def user_token(client):
         'username': 'testuser',
         'password': 'test123'
     })
-    return response.json['access_token']
+    return response.json['token']
 
 
 @pytest.fixture
