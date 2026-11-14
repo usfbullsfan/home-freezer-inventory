@@ -2,6 +2,8 @@
 
 A web-based application for tracking freezer inventory with alphanumeric code labeling. Perfect for managing portioned meats, frozen goods, and keeping track of expiration dates.
 
+**Live site:** [freezer.wetpaws.dev](https://freezer.wetpaws.dev) (formerly `thefreezer.xyz`, which now redirects there; see [docs/domain-migration.md](docs/domain-migration.md))
+
 > **⚠️ IMPORTANT DISCLAIMER**
 > This application was developed with the assistance of Claude AI (Anthropic). While functional, this code should be thoroughly tested and reviewed before deploying to a production environment. Use at your own risk and ensure proper security measures are in place, especially if exposing to the internet.
 

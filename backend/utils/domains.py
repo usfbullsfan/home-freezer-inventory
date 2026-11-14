@@ -6,8 +6,8 @@ domain is a configuration change (environment variables) rather than a code
 change.
 
 Environment variables:
-    APP_DOMAIN      Production hostname (default: thefreezer.xyz)
-    APP_DEV_DOMAIN  Dev hostname (default: dev.<APP_DOMAIN>)
+    APP_DOMAIN      Production hostname (default: freezer.wetpaws.dev)
+    APP_DEV_DOMAIN  Dev hostname (default: dfreezer.wetpaws.dev)
     RP_ID           WebAuthn relying-party ID (default: APP_DOMAIN). Passkeys
                     are bound to this value; changing it invalidates every
                     passkey registered under the old value.
@@ -16,7 +16,8 @@ Environment variables:
 import os
 from urllib.parse import urlparse
 
-DEFAULT_APP_DOMAIN = 'thefreezer.xyz'
+DEFAULT_APP_DOMAIN = 'freezer.wetpaws.dev'
+DEFAULT_DEV_DOMAIN = 'dfreezer.wetpaws.dev'
 
 LOCAL_HOSTNAMES = ('localhost', '127.0.0.1')
 
@@ -26,7 +27,7 @@ def get_app_domain():
 
 
 def get_dev_domain():
-    return os.environ.get('APP_DEV_DOMAIN', f'dev.{get_app_domain()}').strip().lower()
+    return os.environ.get('APP_DEV_DOMAIN', DEFAULT_DEV_DOMAIN).strip().lower()
 
 
 def get_rp_id():
