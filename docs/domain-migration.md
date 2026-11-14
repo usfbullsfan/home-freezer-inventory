@@ -49,4 +49,5 @@ Users who joined by activation code only have a random placeholder password, so 
 - [ ] Remove the `thefreezer.xyz` domain and its API key from Resend, once a prod email has been confirmed arriving from `freezer@wetpaws.dev`.
 - [ ] After the domain expires or is sold, delete the `thefreezer.xyz` zone (and its redirect rules) from Cloudflare.
 - [ ] Optionally, delete the old `thefreezer-prod` and `thefreezer-dev` files from `/etc/nginx/sites-available/`.
-- [ ] Update any external links: README, the GitHub repo's homepage link, bookmarks, and home-screen app icons.
+- [x] README links to the new domain.
+- [ ] Update the GitHub repo's homepage link (About → Website), bookmarks, and home-screen app icons.
