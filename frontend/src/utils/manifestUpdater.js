@@ -3,10 +3,10 @@
  * This runs on app startup to set the correct app name and icons
  */
 
+import { isDevHostname } from './hosts';
+
 export const updateManifest = () => {
-  const isDev = window.location.hostname === 'dev.thefreezer.xyz' ||
-                window.location.hostname === 'localhost' ||
-                window.location.hostname === '127.0.0.1';
+  const isDev = isDevHostname();
 
   // Cache-busting version - update this when logos change
   const logoVersion = 'v2';
