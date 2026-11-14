@@ -102,10 +102,10 @@ crontab -l; sudo crontab -l
 systemctl cat freezer-backend freezer-backend-dev freezer-frontend freezer-frontend-dev
 ```
 
-- The nginx sites show what to replace in step 3. Vite's `preview` server has no `/api` proxy (only the `server` block in `vite.config.js` has one, for local `npm run dev`), so the existing sites most likely already send `/api` straight to gunicorn.
+- The nginx sites show what to replace in step 3. Today they send everything, `/api` included, to Vite, and Vite forwards `/api` to gunicorn (`vite preview` reuses `server.proxy` from `vite.config.js`). After the switch, nginx sends `/api` to gunicorn itself.
 - `proxy_pass` shows anything else still pointing at `:3000` or `:3001`, such as the legacy `thefreezer-prod` / `thefreezer-dev` sites.
 - `namei` shows whether nginx (`www-data`) can reach the build inside the home directory.
-- `systemctl cat` shows the live unit files. `gcp-low-memory-setup.sh` rewrites the backend unit from scratch, so anything added by hand there would need to be carried over.
+- `systemctl cat` shows the live unit files. `gcp-low-memory-setup.sh` doesn't edit them: it adds a drop-in that replaces only `ExecStart`, so hand-added `Environment=` lines (dev's `DATABASE_PATH`, for example) are kept. **The output includes any secrets set in those lines; hide them before sharing it.**
 - `crontab` shows whether a cron job calls the backend on its public IP and port. Calls to `localhost` or `127.0.0.1` keep working after the bind change.
 
 ## Step 2: install the snippet
@@ -168,7 +168,7 @@ cd ~/freezer-inventory-dev && bash scripts/gcp-low-memory-setup.sh dev
 
 On this run it:
 1. checks `nginx -t` and reloads nginx,
-2. rewrites `/etc/systemd/system/freezer-backend-dev.service` to 1 gthread worker with 2 threads, bound to `127.0.0.1:5002`, and restarts it (sessions survive this restart),
+2. adds `/etc/systemd/system/freezer-backend-dev.service.d/low-memory.conf`, which replaces only the gunicorn command (1 gthread worker with 2 threads, bound to `127.0.0.1:5002`). The unit file and its `Environment=` lines stay as they are. Then it restarts the backend; sessions survive this restart,
 3. runs `systemctl disable --now freezer-frontend-dev`. The unit file stays, so rollback is a single command.
 
 For prod, repeat steps 2–4 with `~/freezer-inventory`, `freezer-wetpaws-prod`, `snippets/freezer-prod.conf`, port `3000` and `prod`.
@@ -252,10 +252,10 @@ Then restore the site's old `location / { proxy_pass http://127.0.0.1:3001; }` b
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-To go back to 2 sync workers, edit `/etc/systemd/system/freezer-backend-dev.service` (`--workers 2`, drop the `--worker-class` and `--threads` lines), then:
+To go back to the old gunicorn command, remove the drop-in:
 
 ```bash
-sudo systemctl daemon-reload && sudo systemctl restart freezer-backend-dev
+sudo rm /etc/systemd/system/freezer-backend-dev.service.d/low-memory.conf && sudo systemctl daemon-reload && sudo systemctl restart freezer-backend-dev
 ```
 
 ## How deploys work now

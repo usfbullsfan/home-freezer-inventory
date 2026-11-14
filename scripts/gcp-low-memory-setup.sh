@@ -2,7 +2,8 @@
 # One-time switch of an existing GCP install to the low-memory layout:
 #   - nginx serves frontend/dist itself and proxies /api to gunicorn
 #   - the Node "vite preview" frontend service is stopped and disabled
-#   - gunicorn runs 1 worker with threads, bound to 127.0.0.1
+#   - gunicorn runs 1 worker with threads, bound to 127.0.0.1 (a systemd
+#     drop-in replaces ExecStart only; the unit file is not edited)
 #
 # Run it on the server as the service user (michaelt452), from the checkout of
 # the environment you are switching:
@@ -72,33 +73,23 @@ sudo nginx -t
 sudo systemctl reload nginx
 echo "✓ nginx config valid and reloaded"
 
-# 4. Rewrite the backend unit: 1 worker with threads, localhost only.
-#    nginx is now the only thing that talks to gunicorn.
-cat << EOF | sudo tee /etc/systemd/system/$BACKEND_SERVICE.service > /dev/null
-[Unit]
-Description=Freezer Inventory Backend ($ENVIRONMENT) - GCP
-After=network.target
-
+# 4. Change only the gunicorn command line, with a systemd drop-in.
+#    The unit file itself stays as it is, including its Environment= lines
+#    (dev's DATABASE_PATH=freezer_inventory_dev.db must not be lost).
+#    nginx is now the only thing that talks to gunicorn, hence 127.0.0.1.
+#    Rollback: delete the drop-in, daemon-reload, restart.
+DROPIN_DIR="/etc/systemd/system/$BACKEND_SERVICE.service.d"
+sudo mkdir -p "$DROPIN_DIR"
+cat << EOF | sudo tee "$DROPIN_DIR/low-memory.conf" > /dev/null
+# Added by scripts/gcp-low-memory-setup.sh (docs/deployment/gcp-memory.md).
 [Service]
-Type=notify
-User=$USER
-WorkingDirectory=$APP_DIR/backend
-Environment="PATH=$APP_DIR/backend/venv/bin"
-ExecStart=$APP_DIR/backend/venv/bin/gunicorn "app:create_app()" \\
-    --bind 127.0.0.1:$BACKEND_PORT \\
-    --workers 1 \\
-    --worker-class gthread \\
-    --threads $THREADS \\
-    --access-logfile - \\
-    --error-logfile -
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
+ExecStart=
+ExecStart=$APP_DIR/backend/venv/bin/gunicorn "app:create_app()" --bind 127.0.0.1:$BACKEND_PORT --workers 1 --worker-class gthread --threads $THREADS --access-logfile - --error-logfile -
 EOF
 sudo systemctl daemon-reload
-echo "✓ Rewrote $BACKEND_SERVICE.service (1 worker, $THREADS threads, 127.0.0.1:$BACKEND_PORT)"
+echo "✓ Added $DROPIN_DIR/low-memory.conf (1 worker, $THREADS threads, 127.0.0.1:$BACKEND_PORT)"
+echo "  Environment variable names kept from the unit (values hidden):"
+systemctl show -p Environment --value "$BACKEND_SERVICE" | tr ' ' '\n' | sed 's/=.*//; s/^/    /'
 
 # Sessions are tied to backend/instance/.boot_id (backend/app.py). This
 # restart keeps that file, so logged-in users stay logged in; deploys delete
