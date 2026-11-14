@@ -78,13 +78,17 @@ echo "✓ nginx config valid and reloaded"
 #    (dev's DATABASE_PATH=freezer_inventory_dev.db must not be lost).
 #    nginx is now the only thing that talks to gunicorn, hence 127.0.0.1.
 #    Rollback: delete the drop-in, daemon-reload, restart.
+#    --no-control-socket: gunicorn 25 runs its control socket in a thread of
+#    the master and then forks the worker; if that thread holds the logging
+#    lock at fork time, the worker hangs before "Booting worker" and never
+#    serves. This app doesn't use the control socket.
 DROPIN_DIR="/etc/systemd/system/$BACKEND_SERVICE.service.d"
 sudo mkdir -p "$DROPIN_DIR"
 cat << EOF | sudo tee "$DROPIN_DIR/low-memory.conf" > /dev/null
 # Added by scripts/gcp-low-memory-setup.sh (docs/deployment/gcp-memory.md).
 [Service]
 ExecStart=
-ExecStart=$APP_DIR/backend/venv/bin/gunicorn "app:create_app()" --bind 127.0.0.1:$BACKEND_PORT --workers 1 --worker-class gthread --threads $THREADS --access-logfile - --error-logfile -
+ExecStart=$APP_DIR/backend/venv/bin/gunicorn "app:create_app()" --bind 127.0.0.1:$BACKEND_PORT --workers 1 --worker-class gthread --threads $THREADS --no-control-socket --access-logfile - --error-logfile -
 EOF
 sudo systemctl daemon-reload
 echo "✓ Added $DROPIN_DIR/low-memory.conf (1 worker, $THREADS threads, 127.0.0.1:$BACKEND_PORT)"
