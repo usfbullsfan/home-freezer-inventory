@@ -34,7 +34,7 @@ Both new hosts sit one level under `wetpaws.dev`, so Cloudflare's free Universal
 1. [ ] **DNS (Cloudflare → wetpaws.dev → DNS):** add an A record `freezer` and an A record `dfreezer`, both pointing at the server's IP and both Proxied, matching the other subdomains.
 2. [ ] **HTTPS + nginx:** give nginx a certificate for the new names, the same way the other wetpaws.dev sites have theirs. Add `freezer.wetpaws.dev` and `dfreezer.wetpaws.dev` as server names, routed the same way as the existing prod and dev sites. Reload nginx and check that both new URLs load the app. Passkeys won't work on them yet, which is expected.
 3. [ ] **Switch dev:** while logged in on `dev.thefreezer.xyz`, regenerate your own activation code and note it, but don't enter it yet. Then set the dev `.env` values from the table and run `scripts/deploy-gcp.sh` from `~/freezer-inventory-dev`. Finally, activate the code on `dfreezer.wetpaws.dev` and add a passkey. Test passkey login, QR code generation, and scanning a new QR code with the phone camera.
-4. [ ] **Ship the code to prod:** merge `dev` into `main` and deploy.
+4. [ ] **Ship the code to prod:** merge `dev` into `main`. Don't deploy yet: step 5 deploys it together with the `.env` change, so prod restarts only once.
 5. [ ] **Switch prod.** Restarting the backend logs everyone out, so create the codes first:
    1. While logged in on `thefreezer.xyz`, regenerate activation codes for every user in User Management, yours last, and note them. Don't enter them yet. This deletes the old passkeys, so nobody can log in until step 3.
    2. Set the prod `.env` values from the table and run `scripts/deploy-gcp.sh` from `~/freezer-inventory`.
