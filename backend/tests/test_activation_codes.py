@@ -9,7 +9,7 @@ from datetime import timedelta
 import pytest
 from flask_jwt_extended import create_access_token
 
-from models import db, User
+from models import db, User, PasskeyCredential, RecoveryCode
 from utils.activation_codes import (
     ACTIVATION_CODE_ALPHABET,
     ACTIVATION_CODE_LENGTH,
@@ -32,26 +32,6 @@ def admin_headers(app):
             additional_claims={'role': 'admin', 'username': 'admin'},
         )
     return {'Authorization': f'Bearer {token}'}
-
-
-@pytest.fixture
-def passkey_tables(app):
-    """Create the passkey tables, which have no ORM models (see
-    migrations/run_passkey_migration.py), in the test database."""
-    with app.app_context():
-        db.session.execute(db.text(
-            'CREATE TABLE passkey_credentials ('
-            'id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, '
-            'credential_id TEXT NOT NULL UNIQUE, public_key TEXT NOT NULL, '
-            'sign_count INTEGER NOT NULL DEFAULT 0, name TEXT, created_at TEXT, '
-            'last_used_at TEXT)'
-        ))
-        db.session.execute(db.text(
-            'CREATE TABLE recovery_codes ('
-            'id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, '
-            'code_hash TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0, used_at TEXT)'
-        ))
-        db.session.commit()
 
 
 def _add_pending_user(app, username, code):
@@ -84,7 +64,7 @@ class TestGeneration:
         assert len(code) == 8
         assert set(code) <= set(ACTIVATION_CODE_ALPHABET)
 
-    def test_regenerate_returns_unambiguous_code(self, app, client, admin_headers, passkey_tables):
+    def test_regenerate_returns_unambiguous_code(self, app, client, admin_headers):
         user_id = _add_pending_user(app, 'regen', 'OLDCODE1')
         response = client.post(f'/api/auth/users/{user_id}/regenerate-activation',
                                headers=admin_headers)
@@ -93,21 +73,14 @@ class TestGeneration:
         assert len(code) == 8
         assert set(code) <= set(ACTIVATION_CODE_ALPHABET)
 
-    def test_regenerate_deletes_passkeys_and_recovery_codes(self, app, client, admin_headers,
-                                                            passkey_tables):
+    def test_regenerate_deletes_passkeys_and_recovery_codes(self, app, client, admin_headers):
         user_id = _add_pending_user(app, 'regen2', 'OLDCODE2')
         other_id = _add_pending_user(app, 'bystander', 'OLDCODE3')
         with app.app_context():
             for uid in (user_id, other_id):
-                db.session.execute(
-                    db.text('INSERT INTO passkey_credentials (user_id, credential_id, public_key) '
-                            'VALUES (:u, :c, :k)'),
-                    {'u': uid, 'c': f'cred-{uid}', 'k': 'pk'},
-                )
-                db.session.execute(
-                    db.text('INSERT INTO recovery_codes (user_id, code_hash) VALUES (:u, :h)'),
-                    {'u': uid, 'h': f'hash-{uid}'},
-                )
+                db.session.add(PasskeyCredential(user_id=uid, credential_id=f'cred-{uid}',
+                                                 public_key='pk'))
+                db.session.add(RecoveryCode(user_id=uid, code_hash=f'hash-{uid}'))
             db.session.commit()
 
         response = client.post(f'/api/auth/users/{user_id}/regenerate-activation',
@@ -115,28 +88,15 @@ class TestGeneration:
         assert response.status_code == 200
 
         with app.app_context():
-            def count(table, uid):
-                return db.session.execute(
-                    db.text(f'SELECT COUNT(*) FROM {table} WHERE user_id = :u'), {'u': uid}
-                ).scalar()
-
-            assert count('passkey_credentials', user_id) == 0
-            assert count('recovery_codes', user_id) == 0
+            assert PasskeyCredential.query.filter_by(user_id=user_id).count() == 0
+            assert RecoveryCode.query.filter_by(user_id=user_id).count() == 0
             # Other users' credentials are untouched
-            assert count('passkey_credentials', other_id) == 1
-            assert count('recovery_codes', other_id) == 1
+            assert PasskeyCredential.query.filter_by(user_id=other_id).count() == 1
+            assert RecoveryCode.query.filter_by(user_id=other_id).count() == 1
 
             user = db.session.get(User, user_id)
             assert user.activated is False
             assert user.activation_code == response.json['activation_code']
-
-    def test_regenerate_works_without_passkey_tables(self, app, client, admin_headers):
-        # e.g. a Postgres DB built with db.create_all(), where the passkey
-        # migration was never run
-        user_id = _add_pending_user(app, 'regen3', 'OLDCODE4')
-        response = client.post(f'/api/auth/users/{user_id}/regenerate-activation',
-                               headers=admin_headers)
-        assert response.status_code == 200
 
 
 # --- Normalization helpers ------------------------------------------------

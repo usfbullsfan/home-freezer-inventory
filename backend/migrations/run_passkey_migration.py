@@ -6,6 +6,10 @@ Creates: passkey_challenges, passkey_credentials, recovery_codes
 
 Run from the backend directory:
   python3 migrations/run_passkey_migration.py
+
+Note: these tables now have SQLAlchemy models (PasskeyChallenge,
+PasskeyCredential, RecoveryCode in models.py), so db.create_all() at app
+startup creates them on any database. This script is no longer required.
 """
 import os
 import sys

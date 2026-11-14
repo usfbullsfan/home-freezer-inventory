@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from models import db, User
+from models import db, User, delete_passkey_data_for_user
 from datetime import timedelta
 from utils.activation_codes import (
     generate_activation_code,
@@ -286,6 +286,9 @@ def delete_user(user_id):
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
+    # Older SQLite tables have no foreign key to users, so delete explicitly
+    # rather than relying on ON DELETE CASCADE.
+    delete_passkey_data_for_user(user_id)
     db.session.delete(user)
     db.session.commit()
 
@@ -340,17 +343,8 @@ def regenerate_activation_code(user_id):
         activation_code = generate_activation_code()
 
         # Delete any existing passkeys and recovery codes for this user (they'll
-        # need to re-register). Done through db.session so it works on any
-        # database and commits atomically with the new activation code. These
-        # tables have no ORM models and are created by a separate migration, so
-        # skip any that don't exist in this database.
-        existing_tables = set(db.inspect(db.engine).get_table_names())
-        for table in ('passkey_credentials', 'recovery_codes'):
-            if table in existing_tables:
-                db.session.execute(
-                    db.text(f'DELETE FROM {table} WHERE user_id = :user_id'),
-                    {'user_id': user_id},
-                )
+        # need to re-register), in the same transaction as the new code.
+        delete_passkey_data_for_user(user_id)
 
         # Set new activation code and mark as not activated
         user.activation_code = activation_code

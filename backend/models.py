@@ -197,6 +197,62 @@ class ExpirationNotificationSettings(db.Model):
         }
 
 
+# --- Passkey (WebAuthn) authentication ------------------------------------
+# These tables were originally created by migrations/run_passkey_migration.py
+# (SQLite only). Existing SQLite databases store the timestamp columns as ISO
+# text, which SQLAlchemy's SQLite DateTime type reads back without changes.
+
+class PasskeyChallenge(db.Model):
+    """Single-use WebAuthn challenge nonce for registration or login."""
+    __tablename__ = 'passkey_challenges'
+
+    id = db.Column(db.Integer, primary_key=True)
+    challenge = db.Column(db.Text, nullable=False)  # hex-encoded bytes
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'))
+    username = db.Column(db.Text)
+    expires_at = db.Column(db.DateTime, nullable=False)
+
+
+class PasskeyCredential(db.Model):
+    """A registered WebAuthn credential belonging to a user."""
+    __tablename__ = 'passkey_credentials'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    credential_id = db.Column(db.Text, nullable=False, unique=True)  # hex-encoded
+    public_key = db.Column(db.Text, nullable=False)  # hex-encoded
+    sign_count = db.Column(db.Integer, nullable=False, default=0)
+    name = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_used_at = db.Column(db.DateTime)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name or 'Passkey',
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'last_used_at': self.last_used_at.isoformat() if self.last_used_at else None,
+        }
+
+
+class RecoveryCode(db.Model):
+    """One-time code (stored as a SHA-256 hash) for regaining account access."""
+    __tablename__ = 'recovery_codes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    code_hash = db.Column(db.Text, nullable=False)
+    used = db.Column(db.Boolean, nullable=False, default=False)
+    used_at = db.Column(db.DateTime)
+
+
+def delete_passkey_data_for_user(user_id):
+    """Remove all passkey credentials, recovery codes and pending challenges
+    for a user. Adds the deletes to the current session; the caller commits."""
+    for model in (PasskeyCredential, RecoveryCode, PasskeyChallenge):
+        model.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+
 def generate_qr_code():
     """Generate a unique alphanumeric code identifier (e.g., ABC123)"""
     import random
