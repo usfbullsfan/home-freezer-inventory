@@ -325,8 +325,6 @@ def reset_user_password(user_id):
 def regenerate_activation_code(user_id):
     """Regenerate activation code for a user (admin only)"""
     from flask_jwt_extended import get_jwt
-    import sqlite3
-    from flask import current_app
 
     claims = get_jwt()
 
@@ -341,16 +339,18 @@ def regenerate_activation_code(user_id):
         # Generate new activation code
         activation_code = generate_activation_code()
 
-        # Delete any existing passkeys for this user (they'll need to re-register)
-        db_uri = current_app.config['SQLALCHEMY_DATABASE_URI']
-        if db_uri.startswith('sqlite:///'):
-            db_path = db_uri.replace('sqlite:///', '')
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute('DELETE FROM passkey_credentials WHERE user_id = ?', (user_id,))
-            cursor.execute('DELETE FROM recovery_codes WHERE user_id = ?', (user_id,))
-            conn.commit()
-            conn.close()
+        # Delete any existing passkeys and recovery codes for this user (they'll
+        # need to re-register). Done through db.session so it works on any
+        # database and commits atomically with the new activation code. These
+        # tables have no ORM models and are created by a separate migration, so
+        # skip any that don't exist in this database.
+        existing_tables = set(db.inspect(db.engine).get_table_names())
+        for table in ('passkey_credentials', 'recovery_codes'):
+            if table in existing_tables:
+                db.session.execute(
+                    db.text(f'DELETE FROM {table} WHERE user_id = :user_id'),
+                    {'user_id': user_id},
+                )
 
         # Set new activation code and mark as not activated
         user.activation_code = activation_code
