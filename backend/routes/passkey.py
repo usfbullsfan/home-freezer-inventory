@@ -23,7 +23,7 @@ import secrets
 import hashlib
 import base64
 from datetime import datetime, timedelta
-from models import db, User
+from models import db, User, PasskeyChallenge, PasskeyCredential, RecoveryCode
 import os
 from utils.domains import get_rp_id, origin_for_request_url
 
@@ -45,18 +45,42 @@ def get_expected_origin():
     # Use Origin header first (sent with CORS requests), fall back to Referer
     return origin_for_request_url(origin or referer)
 
-def get_db_connection():
-    """Get database connection"""
-    import sqlite3
-    from flask import current_app
+CHALLENGE_TTL = timedelta(minutes=5)
 
-    # Get database path from Flask app config
-    db_uri = current_app.config['SQLALCHEMY_DATABASE_URI']
-    if db_uri.startswith('sqlite:///'):
-        db_path = db_uri.replace('sqlite:///', '')
-        return sqlite3.connect(db_path)
-    else:
-        raise ValueError('Passkey routes only support SQLite databases')
+
+def _store_challenge(challenge, user_id=None, username=None):
+    """Persist a challenge and return its id."""
+    row = PasskeyChallenge(
+        challenge=challenge.hex(),
+        user_id=user_id,
+        username=username,
+        expires_at=datetime.now() + CHALLENGE_TTL,
+    )
+    db.session.add(row)
+    db.session.commit()
+    return row.id
+
+
+def _consume_challenge(challenge_id):
+    """Delete a challenge (single-use) and return it.
+
+    Returns (challenge_row, error_response). Exactly one is not None.
+    """
+    row = db.session.get(PasskeyChallenge, challenge_id)
+    if not row:
+        return None, (jsonify({'error': 'Invalid challenge'}), 400)
+
+    db.session.delete(row)
+    db.session.commit()
+
+    if row.expires_at < datetime.now():
+        return None, (jsonify({'error': 'Challenge expired'}), 400)
+    return row, None
+
+
+def _credential_descriptors(user_id):
+    creds = PasskeyCredential.query.filter_by(user_id=user_id).all()
+    return [PublicKeyCredentialDescriptor(id=bytes.fromhex(c.credential_id)) for c in creds]
 
 # ==================== REGISTRATION ====================
 
@@ -82,28 +106,10 @@ def register_begin():
     challenge = secrets.token_bytes(32)
 
     # Store challenge temporarily
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    expires_at = datetime.now() + timedelta(minutes=5)
-    cursor.execute(
-        'INSERT INTO passkey_challenges (challenge, user_id, expires_at) VALUES (?, ?, ?)',
-        (challenge.hex(), user.id, expires_at.isoformat())
-    )
-    conn.commit()
-    challenge_id = cursor.lastrowid
-    conn.close()
+    challenge_id = _store_challenge(challenge, user_id=user.id)
 
     # Get existing credentials to exclude
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('SELECT credential_id FROM passkey_credentials WHERE user_id = ?', (user.id,))
-    existing_creds = cursor.fetchall()
-    conn.close()
-
-    exclude_credentials = [
-        PublicKeyCredentialDescriptor(id=bytes.fromhex(cred[0]))
-        for cred in existing_creds
-    ]
+    exclude_credentials = _credential_descriptors(user.id)
 
     # Generate registration options
     options = generate_registration_options(
@@ -144,36 +150,15 @@ def register_complete():
     if not credential or not challenge_id:
         return jsonify({'error': 'Missing required fields'}), 400
 
-    # Get challenge
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        'SELECT challenge, user_id, expires_at FROM passkey_challenges WHERE id = ?',
-        (challenge_id,)
-    )
-    result = cursor.fetchone()
-
-    if not result:
-        conn.close()
-        return jsonify({'error': 'Invalid challenge'}), 400
-
-    challenge_hex, user_id, expires_at = result
-
-    # Check expiration
-    if datetime.fromisoformat(expires_at) < datetime.now():
-        cursor.execute('DELETE FROM passkey_challenges WHERE id = ?', (challenge_id,))
-        conn.commit()
-        conn.close()
-        return jsonify({'error': 'Challenge expired'}), 400
-
-    # Delete challenge (single-use)
-    cursor.execute('DELETE FROM passkey_challenges WHERE id = ?', (challenge_id,))
-    conn.commit()
-    conn.close()
+    # Get and consume challenge (single-use)
+    challenge_row, error = _consume_challenge(challenge_id)
+    if error:
+        return error
+    user_id = challenge_row.user_id
 
     # Verify registration
     try:
-        challenge = bytes.fromhex(challenge_hex)
+        challenge = bytes.fromhex(challenge_row.challenge)
         expected_origin = get_expected_origin()
 
         verification = verify_registration_response(
@@ -184,22 +169,14 @@ def register_complete():
         )
 
         # Store credential
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            '''INSERT INTO passkey_credentials
-               (user_id, credential_id, public_key, sign_count, name)
-               VALUES (?, ?, ?, ?, ?)''',
-            (
-                user_id,
-                verification.credential_id.hex(),
-                verification.credential_public_key.hex(),
-                verification.sign_count,
-                name
-            )
-        )
-        conn.commit()
-        conn.close()
+        db.session.add(PasskeyCredential(
+            user_id=user_id,
+            credential_id=verification.credential_id.hex(),
+            public_key=verification.credential_public_key.hex(),
+            sign_count=verification.sign_count,
+            name=name,
+        ))
+        db.session.commit()
 
         return jsonify({
             'success': True,
@@ -207,6 +184,7 @@ def register_complete():
         })
 
     except Exception as e:
+        db.session.rollback()
         # Log the full error for debugging, but don't expose to user
         print(f'Passkey registration verification error: {str(e)}')
         return jsonify({'error': 'Passkey registration failed. Please try again.'}), 400
@@ -228,33 +206,14 @@ def login_begin():
     challenge = secrets.token_bytes(32)
 
     # Store challenge
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    expires_at = datetime.now() + timedelta(minutes=5)
-    cursor.execute(
-        'INSERT INTO passkey_challenges (challenge, username, expires_at) VALUES (?, ?, ?)',
-        (challenge.hex(), username, expires_at.isoformat())
-    )
-    conn.commit()
-    challenge_id = cursor.lastrowid
-    conn.close()
+    challenge_id = _store_challenge(challenge, username=username)
 
     # Get allowed credentials (if username provided)
     allow_credentials = None
     if username:
         user = User.query.filter_by(username=username).first()
         if user:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute('SELECT credential_id FROM passkey_credentials WHERE user_id = ?', (user.id,))
-            creds = cursor.fetchall()
-            conn.close()
-
-            if creds:
-                allow_credentials = [
-                    PublicKeyCredentialDescriptor(id=bytes.fromhex(cred[0]))
-                    for cred in creds
-                ]
+            allow_credentials = _credential_descriptors(user.id) or None
 
     # Generate authentication options
     options = generate_authentication_options(
@@ -284,54 +243,23 @@ def login_complete():
     if not credential or not challenge_id:
         return jsonify({'error': 'Missing required fields'}), 400
 
-    # Get challenge
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        'SELECT challenge, expires_at FROM passkey_challenges WHERE id = ?',
-        (challenge_id,)
-    )
-    result = cursor.fetchone()
-
-    if not result:
-        conn.close()
-        return jsonify({'error': 'Invalid challenge'}), 400
-
-    challenge_hex, expires_at = result
-
-    # Check expiration
-    if datetime.fromisoformat(expires_at) < datetime.now():
-        cursor.execute('DELETE FROM passkey_challenges WHERE id = ?', (challenge_id,))
-        conn.commit()
-        conn.close()
-        return jsonify({'error': 'Challenge expired'}), 400
-
-    # Delete challenge (single-use)
-    cursor.execute('DELETE FROM passkey_challenges WHERE id = ?', (challenge_id,))
-    conn.commit()
-    conn.close()
+    # Get and consume challenge (single-use)
+    challenge_row, error = _consume_challenge(challenge_id)
+    if error:
+        return error
 
     # Get credential from database
     # credential['id'] is base64url-encoded from frontend
     credential_id_bytes = base64.urlsafe_b64decode(credential['id'] + '==')  # Add padding if needed
     credential_id = credential_id_bytes.hex()
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        'SELECT user_id, public_key, sign_count FROM passkey_credentials WHERE credential_id = ?',
-        (credential_id,)
-    )
-    result = cursor.fetchone()
+    stored = PasskeyCredential.query.filter_by(credential_id=credential_id).first()
 
-    if not result:
-        conn.close()
+    if not stored:
         return jsonify({'error': 'Credential not found'}), 404
-
-    user_id, public_key_hex, stored_sign_count = result
 
     # Verify authentication
     try:
-        challenge = bytes.fromhex(challenge_hex)
+        challenge = bytes.fromhex(challenge_row.challenge)
         expected_origin = get_expected_origin()
 
         verification = verify_authentication_response(
@@ -339,22 +267,17 @@ def login_complete():
             expected_challenge=challenge,
             expected_rp_id=RP_ID,
             expected_origin=expected_origin,
-            credential_public_key=bytes.fromhex(public_key_hex),
-            credential_current_sign_count=stored_sign_count,
+            credential_public_key=bytes.fromhex(stored.public_key),
+            credential_current_sign_count=stored.sign_count,
         )
 
         # Update sign count and last_used
-        cursor.execute(
-            '''UPDATE passkey_credentials
-               SET sign_count = ?, last_used_at = ?
-               WHERE credential_id = ?''',
-            (verification.new_sign_count, datetime.now().isoformat(), credential_id)
-        )
-        conn.commit()
-        conn.close()
+        stored.sign_count = verification.new_sign_count
+        stored.last_used_at = datetime.now()
+        db.session.commit()
 
         # Get user
-        user = User.query.get(user_id)
+        user = db.session.get(User, stored.user_id)
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
@@ -375,6 +298,7 @@ def login_complete():
         })
 
     except Exception as e:
+        db.session.rollback()
         # Log the full error for debugging, but don't expose to user
         print(f'Passkey authentication error: {str(e)}')
         return jsonify({'error': 'Passkey authentication failed. Please try again.'}), 400
@@ -390,8 +314,6 @@ def generate_recovery_codes():
 
     # Generate 8 codes
     codes = []
-    conn = get_db_connection()
-    cursor = conn.cursor()
 
     for _ in range(8):
         # Generate 20-character code
@@ -400,13 +322,9 @@ def generate_recovery_codes():
 
         # Hash and store
         code_hash = hashlib.sha256(code.encode()).hexdigest()
-        cursor.execute(
-            'INSERT INTO recovery_codes (user_id, code_hash) VALUES (?, ?)',
-            (user_id, code_hash)
-        )
+        db.session.add(RecoveryCode(user_id=user_id, code_hash=code_hash))
 
-    conn.commit()
-    conn.close()
+    db.session.commit()
 
     return jsonify({'codes': codes})
 
@@ -434,30 +352,19 @@ def use_recovery_code():
     code_hash = hashlib.sha256(code.encode()).hexdigest()
 
     # Find matching unused code
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        'SELECT id FROM recovery_codes WHERE user_id = ? AND code_hash = ? AND used = 0',
-        (user.id, code_hash)
-    )
-    result = cursor.fetchone()
+    recovery_code = RecoveryCode.query.filter_by(
+        user_id=user.id, code_hash=code_hash, used=False
+    ).first()
 
-    if not result:
-        conn.close()
+    if not recovery_code:
         return jsonify({'error': 'Invalid username or code'}), 401
 
-    code_id = result[0]
-
     # Mark as used
-    cursor.execute(
-        'UPDATE recovery_codes SET used = 1, used_at = ? WHERE id = ?',
-        (datetime.now().isoformat(), code_id)
-    )
-    conn.commit()
-    conn.close()
+    recovery_code.used = True
+    recovery_code.used_at = datetime.now()
+    db.session.commit()
 
     # Create temporary token (short expiration - 15 minutes)
-    from datetime import timedelta
     access_token = create_access_token(
         identity=str(user.id),
         expires_delta=timedelta(minutes=15)
@@ -474,25 +381,12 @@ def list_passkeys():
     """List user's registered passkeys"""
     current_user_id = int(get_jwt_identity())
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        'SELECT id, name, created_at, last_used_at FROM passkey_credentials WHERE user_id = ? ORDER BY created_at DESC',
-        (current_user_id,)
-    )
-    passkeys = cursor.fetchall()
-    conn.close()
+    passkeys = (PasskeyCredential.query
+                .filter_by(user_id=current_user_id)
+                .order_by(PasskeyCredential.created_at.desc())
+                .all())
 
-    result = []
-    for pk in passkeys:
-        result.append({
-            'id': pk[0],
-            'name': pk[1] or 'Passkey',
-            'created_at': pk[2],
-            'last_used_at': pk[3]
-        })
-
-    return jsonify({'passkeys': result})
+    return jsonify({'passkeys': [pk.to_dict() for pk in passkeys]})
 
 
 @passkey_bp.route('/delete/<int:passkey_id>', methods=['DELETE'])
@@ -501,20 +395,14 @@ def delete_passkey(passkey_id):
     """Delete a passkey"""
     current_user_id = int(get_jwt_identity())
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
     # Verify ownership
-    cursor.execute('SELECT user_id FROM passkey_credentials WHERE id = ?', (passkey_id,))
-    result = cursor.fetchone()
+    passkey = db.session.get(PasskeyCredential, passkey_id)
 
-    if not result or result[0] != current_user_id:
-        conn.close()
+    if not passkey or passkey.user_id != current_user_id:
         return jsonify({'error': 'Passkey not found'}), 404
 
-    cursor.execute('DELETE FROM passkey_credentials WHERE id = ?', (passkey_id,))
-    conn.commit()
-    conn.close()
+    db.session.delete(passkey)
+    db.session.commit()
 
     return jsonify({'message': 'Passkey deleted successfully'})
 

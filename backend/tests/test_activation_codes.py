@@ -4,13 +4,12 @@ Tests for activation code generation and normalized lookup.
 These build their own admin token with create_access_token rather than going
 through the shared login fixtures in conftest.py.
 """
-import sqlite3
 from datetime import timedelta
 
 import pytest
 from flask_jwt_extended import create_access_token
 
-from models import db, User
+from models import db, User, PasskeyCredential, RecoveryCode
 from utils.activation_codes import (
     ACTIVATION_CODE_ALPHABET,
     ACTIVATION_CODE_LENGTH,
@@ -65,19 +64,7 @@ class TestGeneration:
         assert len(code) == 8
         assert set(code) <= set(ACTIVATION_CODE_ALPHABET)
 
-    def test_regenerate_returns_unambiguous_code(self, app, client, admin_headers, monkeypatch):
-        # The endpoint deletes passkeys through its own raw sqlite3 connection,
-        # which for an in-memory test DB is a separate, empty database. Give it
-        # one with the tables it expects.
-        real_connect = sqlite3.connect
-
-        def connect_with_tables(*args, **kwargs):
-            conn = real_connect(':memory:')
-            conn.execute('CREATE TABLE passkey_credentials (user_id INTEGER)')
-            conn.execute('CREATE TABLE recovery_codes (user_id INTEGER)')
-            return conn
-
-        monkeypatch.setattr(sqlite3, 'connect', connect_with_tables)
+    def test_regenerate_returns_unambiguous_code(self, app, client, admin_headers):
         user_id = _add_pending_user(app, 'regen', 'OLDCODE1')
         response = client.post(f'/api/auth/users/{user_id}/regenerate-activation',
                                headers=admin_headers)
@@ -85,6 +72,31 @@ class TestGeneration:
         code = response.json['activation_code']
         assert len(code) == 8
         assert set(code) <= set(ACTIVATION_CODE_ALPHABET)
+
+    def test_regenerate_deletes_passkeys_and_recovery_codes(self, app, client, admin_headers):
+        user_id = _add_pending_user(app, 'regen2', 'OLDCODE2')
+        other_id = _add_pending_user(app, 'bystander', 'OLDCODE3')
+        with app.app_context():
+            for uid in (user_id, other_id):
+                db.session.add(PasskeyCredential(user_id=uid, credential_id=f'cred-{uid}',
+                                                 public_key='pk'))
+                db.session.add(RecoveryCode(user_id=uid, code_hash=f'hash-{uid}'))
+            db.session.commit()
+
+        response = client.post(f'/api/auth/users/{user_id}/regenerate-activation',
+                               headers=admin_headers)
+        assert response.status_code == 200
+
+        with app.app_context():
+            assert PasskeyCredential.query.filter_by(user_id=user_id).count() == 0
+            assert RecoveryCode.query.filter_by(user_id=user_id).count() == 0
+            # Other users' credentials are untouched
+            assert PasskeyCredential.query.filter_by(user_id=other_id).count() == 1
+            assert RecoveryCode.query.filter_by(user_id=other_id).count() == 1
+
+            user = db.session.get(User, user_id)
+            assert user.activated is False
+            assert user.activation_code == response.json['activation_code']
 
 
 # --- Normalization helpers ------------------------------------------------

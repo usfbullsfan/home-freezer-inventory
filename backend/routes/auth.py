@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from models import db, User
+from models import db, User, delete_passkey_data_for_user
 from datetime import timedelta
 from utils.activation_codes import (
     generate_activation_code,
@@ -286,6 +286,9 @@ def delete_user(user_id):
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
+    # Older SQLite tables have no foreign key to users, so delete explicitly
+    # rather than relying on ON DELETE CASCADE.
+    delete_passkey_data_for_user(user_id)
     db.session.delete(user)
     db.session.commit()
 
@@ -325,8 +328,6 @@ def reset_user_password(user_id):
 def regenerate_activation_code(user_id):
     """Regenerate activation code for a user (admin only)"""
     from flask_jwt_extended import get_jwt
-    import sqlite3
-    from flask import current_app
 
     claims = get_jwt()
 
@@ -341,16 +342,9 @@ def regenerate_activation_code(user_id):
         # Generate new activation code
         activation_code = generate_activation_code()
 
-        # Delete any existing passkeys for this user (they'll need to re-register)
-        db_uri = current_app.config['SQLALCHEMY_DATABASE_URI']
-        if db_uri.startswith('sqlite:///'):
-            db_path = db_uri.replace('sqlite:///', '')
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute('DELETE FROM passkey_credentials WHERE user_id = ?', (user_id,))
-            cursor.execute('DELETE FROM recovery_codes WHERE user_id = ?', (user_id,))
-            conn.commit()
-            conn.close()
+        # Delete any existing passkeys and recovery codes for this user (they'll
+        # need to re-register), in the same transaction as the new code.
+        delete_passkey_data_for_user(user_id)
 
         # Set new activation code and mark as not activated
         user.activation_code = activation_code
