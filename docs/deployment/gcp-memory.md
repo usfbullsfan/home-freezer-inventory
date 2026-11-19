@@ -267,6 +267,16 @@ sudo rm /etc/systemd/system/freezer-backend-dev.service.d/low-memory.conf && sud
 - restart gunicorn (logging everyone out), and restart the Node frontend only if it is still enabled,
 - check the backend on `127.0.0.1`, then ask the local nginx for `/` and `/api/health`. If the origin only accepts Cloudflare (authenticated origin pulls), that local check can't pass; it is reported as a warning and doesn't fail the deploy.
 
+## Request timings in the access log
+
+`backend/gunicorn.conf.py` adds each request's duration in milliseconds to the access log, right after the status and size. gunicorn loads that file from its working directory (`backend/`), so it applies to both environments on the next deploy with no server change. To find slow requests:
+
+```bash
+journalctl -u freezer-backend --since "1 hour ago" -o cat | grep -E '"(GET|POST|PUT|DELETE) ' | awk '{for(i=1;i<=NF;i++) if ($i ~ /^[0-9]+ms$/) print $i, substr($6,2), $7}' | sort -rn | head -20
+```
+
+Use `freezer-backend-dev` for dev. Compare the slow requests with `vmstat 1 5` and the memory report: requests that are slow only right after a quiet spell point to swap, and requests that are always slow point to the code or to CPU.
+
 ## Troubleshooting: backend hangs on restart
 
 Symptom: `systemctl restart freezer-backend` takes a long time and `/api/health` doesn't answer. The journal shows `Control socket listening at …/gunicorn.ctl`, but no `Booting worker with pid` line after it, and both gunicorn processes are in `futex_do_wait`:
