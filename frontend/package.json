@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.13.0",
-    "@simplewebauthn/browser": "^13.2.2",
+    "@simplewebauthn/browser": "^14.0.0",
     "axios": "^1.21.1",
     "jsqr": "^1.4.0",
     "react": "^19.3.1",
